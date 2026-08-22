@@ -66,27 +66,30 @@ onMounted(async () => {
     <NCard v-if="selectedVersions.size === 0" class="main-panel" title="Comparison Suggestions">
       <div class="suggestions-grid">
         <template v-for="diff, i in diffSuggestions">
-          <div>{{ diff[0] }}:</div>
-          <div>
-            <RouterLink :to="{
-              name: 'delta',
-              params: {
-                provider: 'mcje',
-                a: diff[1][0].id,
-                b: diff[1][1].id,
-              }
-            }">
-              <NButton :class="{ accent: i === 0 }" :style="{
-                height: '60px',
-              }">
-                <Row gap="20px">
-                  <MCJEVersionDisplay :version="diff[1][0]"/>
-                  <NIcon :size="24" :component="ArrowRight24Regular" />
-                  <MCJEVersionDisplay :version="diff[1][1]"/>
-                </Row>
-              </NButton>
-            </RouterLink>
-          </div>
+          <div class="suggestion-label" :style="{ '--row': i + 1, '--row-narrow': i * 2 + 1 }">{{ diff[0] }}:</div>
+          <RouterLink class="suggestion-link hover-parent" :style="{ '--row': i + 1, '--row-narrow': i * 2 + 1 }" :to="{
+            name: 'delta',
+            params: {
+              provider: 'mcje',
+              a: diff[1][0].id,
+              b: diff[1][1].id,
+            }
+          }">
+            <NButton
+              class="suggestion-button"
+              :class="{ accent: i === 0 }"
+              :aria-label="`Compare ${diff[1][0].id} to ${diff[1][1].id}`"
+            />
+            <div class="suggestion-cell suggestion-a">
+              <MCJEVersionDisplay :version="diff[1][0]"/>
+            </div>
+            <div class="suggestion-cell suggestion-arrow">
+              <NIcon :size="24" :component="ArrowRight24Regular" />
+            </div>
+            <div class="suggestion-cell suggestion-b">
+              <MCJEVersionDisplay :version="diff[1][1]"/>
+            </div>
+          </RouterLink>
         </template>
       </div>
       <template #footer>
@@ -149,13 +152,108 @@ onMounted(async () => {
 
 .suggestions-grid {
   display: grid;
-  grid-template-columns: auto 2fr;
+  grid-template-columns: auto auto auto auto;
+  justify-content: start;
   column-gap: 8px;
   row-gap: 4px;
-  align-items: center;
+  align-items: stretch;
 
   @media screen and (max-width: 1200px) {
-    grid-template-columns: auto;
+    grid-template-columns: auto auto auto;
+    row-gap: 8px;
+  }
+}
+
+.suggestion-label {
+  display: flex;
+  align-items: center;
+  grid-column: 1;
+  grid-row: var(--row);
+
+  @media screen and (max-width: 1200px) {
+    grid-column: 1 / -1;
+    grid-row: var(--row-narrow);
+  }
+}
+
+.suggestion-link {
+  display: contents;
+}
+
+.suggestion-button {
+  grid-column: 2 / 5;
+  grid-row: var(--row);
+  width: 100%;
+  height: 100%;
+
+  @media screen and (max-width: 1200px) {
+    grid-column: 1 / -1;
+    grid-row: calc(var(--row-narrow) + 1);
+  }
+}
+
+.suggestion-a {
+  grid-column: 2;
+  grid-row: var(--row);
+  padding-left: 15px;
+
+  @media screen and (max-width: 1200px) {
+    grid-column: 1;
+    grid-row: calc(var(--row-narrow) + 1);
+  }
+}
+
+.suggestion-arrow {
+  grid-column: 3;
+  padding-inline: 12px;
+  grid-row: var(--row);
+
+  @media screen and (max-width: 1200px) {
+    grid-column: 2;
+    grid-row: calc(var(--row-narrow) + 1);
+  }
+}
+
+.suggestion-b {
+  grid-column: 4;
+  grid-row: var(--row);
+  padding-right: 15px;
+
+  @media screen and (max-width: 1200px) {
+    grid-column: 3;
+    grid-row: calc(var(--row-narrow) + 1);
+  }
+}
+
+.suggestion-cell {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 60px;
+  user-select: none;
+  font-size: 14px;
+  line-height: 14px;
+  color: var(--color-6);
+  text-shadow: 0 1px 2px #000;
+  transition: color 200ms;
+
+  svg {
+    filter: drop-shadow(0 1px 2px #000);
+  }
+
+  .faded {
+    color: var(--color-5);
+    transition: color 200ms;
+  }
+}
+
+.suggestion-link:hover .suggestion-cell {
+  color: var(--color-7);
+
+  .faded {
+    color: var(--color-6);
   }
 }
 
