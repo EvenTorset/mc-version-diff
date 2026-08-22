@@ -7,7 +7,7 @@ import SettingsMenu from '@/components/SettingsMenu.vue'
 import VersionDiffLogo from '@/components/VersionDiffLogo.vue'
 import { listDeltaProviders } from '@/delta_providers/registry'
 import { asyncRenderable } from '@/util/asyncRenderable'
-import { Settings32Filled } from '@vicons/fluent'
+import { Dismiss24Filled, Settings32Filled } from '@vicons/fluent'
 import { NIcon, NTab, NTabs } from 'naive-ui'
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -16,15 +16,15 @@ const route = useRoute()
 const router = useRouter()
 
 const dps = Array.from(listDeltaProviders())
-const tab = ref<string>(route.params.provider as string || dps[0].id)
+const provider = route.params.provider as string
+const settingsOpen = ref(provider === 'settings')
+const tab = ref<string>(settingsOpen.value ? dps[0].id : provider || dps[0].id)
 
-watch(tab, () => {
-  router.replace({ name: 'home', params: { provider: tab.value === dps[0].id ? '' : tab.value }})
+watch([tab, settingsOpen], () => {
+  router.replace({ name: 'home', params: {
+    provider: settingsOpen.value ? 'settings' : tab.value === dps[0].id ? '' : tab.value
+  }})
 })
-
-function settingsTab() {
-  return <NIcon size={24} component={Settings32Filled}/>
-}
 </script>
 
 <template>
@@ -33,15 +33,33 @@ function settingsTab() {
       <VersionDiffLogo />
     </Row>
     <Col align="stretch" class="tabs-container">
-      <NTabs :default-value="dps[0].id" style="flex: 0;" class="provider-tabs" v-model:value="tab">
+      <NTabs
+        :default-value="dps[0].id"
+        style="flex: 0;"
+        class="provider-tabs"
+        :class="{ hidden: settingsOpen }"
+        v-model:value="tab"
+      >
+        <template #suffix>
+          <button
+            type="button"
+            class="settings-toggle"
+            :class="{ open: settingsOpen }"
+            :aria-label="settingsOpen ? 'Close settings' : 'Open settings'"
+            :aria-expanded="settingsOpen"
+            @click="settingsOpen = !settingsOpen"
+          >
+            <NIcon :size="24" :component="Settings32Filled" class="settings-icon gear" />
+            <NIcon :size="24" :component="Dismiss24Filled" class="settings-icon cross" />
+          </button>
+        </template>
         <NTab v-for="dp in dps" :name="dp.id" :tab="dp.provider.name" />
-        <NTab name="settings" :tab="settingsTab" />
       </NTabs>
       <AnimatedHeight :duration="500">
         <Suspense>
           <Transition name="slide-fade" mode="out-in">
-            <div :key="tab">
-              <SettingsMenu v-if="tab === 'settings'" />
+            <div :key="settingsOpen ? 'settings' : tab">
+              <SettingsMenu v-if="settingsOpen" />
               <template v-else v-for="dp in dps" :key="dp.id">
                 <Content v-if="tab === dp.id" :content="asyncRenderable(dp.provider.selector())" />
               </template>
@@ -60,12 +78,61 @@ function settingsTab() {
   max-width: min(960px, 100vw - 40px);
 }
 
-.provider-tabs .n-tabs-wrapper {
-  display: flex;
+.provider-tabs {
+  .n-tabs-nav-scroll-wrapper {
+    transition: opacity 300ms, visibility 0s;
+  }
 
-  .n-tabs-tab-wrapper:has([data-name="settings"]) {
-    flex-grow: 1 !important;
-    justify-content: flex-end;
+  &.hidden .n-tabs-nav-scroll-wrapper {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 300ms, visibility 0s 300ms;
+  }
+}
+
+.settings-toggle {
+  position: relative;
+  align-self: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  user-select: none;
+  color: var(--color-4);
+  transition: color 200ms;
+
+  &:hover, &.open {
+    color: var(--color-accent);
+  }
+
+  .settings-icon {
+    position: absolute;
+    inset: 0;
+    display: block;
+    transition: opacity 300ms, transform 300ms;
+  }
+
+  .gear {
+    transform: rotate(0deg);
+  }
+
+  .cross {
+    opacity: 0;
+    transform: rotate(-90deg);
+  }
+
+  &.open {
+    .gear {
+      opacity: 0;
+      transform: rotate(90deg);
+    }
+
+    .cross {
+      opacity: 1;
+      transform: rotate(0deg);
+    }
   }
 }
 
