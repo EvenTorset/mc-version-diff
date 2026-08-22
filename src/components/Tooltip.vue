@@ -31,7 +31,7 @@ const styleString = computed(() => cssPropertiesToString(props.style ?? {}))
       'data-easy-tooltip-src': 'next',
       'data-easy-tooltip-class': 'tooltip',
       'data-easy-tooltip-prefer': side,
-      onMouseEnter: $emit('tooltip-open'),
+      onMouseEnter: () => $emit('tooltip-open'),
       ...typeof distance === 'number' ? {
         'data-easy-tooltip-style': `--easy-tooltip-distance: ${distance}px;${styleString}`,
       } : {
