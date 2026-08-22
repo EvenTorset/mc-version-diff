@@ -2,6 +2,7 @@
 import { getLanguage } from '@/util/getLanguage'
 import { VueMonacoDiffEditor } from '@guolao/vue-monaco-editor'
 import * as monaco from 'monaco-editor'
+import '@/monacoSetup.ts'
 import { NSkeleton } from 'naive-ui'
 import { onBeforeUnmount, ref } from 'vue'
 

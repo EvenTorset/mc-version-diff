@@ -2,6 +2,7 @@
 import { getLanguage } from '@/util/getLanguage'
 import { VueMonacoEditor } from '@guolao/vue-monaco-editor'
 import * as monaco from 'monaco-editor'
+import '@/monacoSetup.ts'
 import { onBeforeUnmount } from 'vue'
 
 const props = defineProps<{
