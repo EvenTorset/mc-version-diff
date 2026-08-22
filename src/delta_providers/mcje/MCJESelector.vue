@@ -5,7 +5,7 @@ import Spacer from '@/components/Spacer.vue'
 import MCJEVersionDisplay from '@/delta_providers/mcje/MCJEVersionDisplay.vue'
 import { getDiffSuggestions, loadMCJEManifest, type MCJEManifestVersion } from '@/delta_providers/mcje/version_manifest'
 import { ArrowLeft24Regular, ArrowRight24Regular } from '@vicons/fluent'
-import { NAlert, NButton, NCard, NIcon } from 'naive-ui'
+import { NAlert, NButton, NCard, NIcon, NSkeleton } from 'naive-ui'
 import { computed, ref } from 'vue'
 import { onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
@@ -24,6 +24,7 @@ const ab = computed(() => {
   }
 })
 const errorMessage = ref<string | null>(null)
+const loading = ref(true)
 
 function deselect(id: string) {
   const version = Array.from(selectedVersions.value).find(v => v.id === id)
@@ -50,6 +51,8 @@ onMounted(async () => {
     }
   } catch (err: any) {
     errorMessage.value = err?.message ?? err?.toString?.() ?? 'n/a'
+  } finally {
+    loading.value = false
   }
 })
 </script>
@@ -65,7 +68,15 @@ onMounted(async () => {
     </div>
     <NCard v-if="selectedVersions.size === 0" class="main-panel" title="Comparison Suggestions">
       <div class="suggestions-grid">
-        <template v-for="diff, i in diffSuggestions">
+        <template v-if="loading">
+          <template v-for="i in 3" :key="`placeholder-${i}`">
+            <div class="suggestion-label" :style="{ '--row': i, '--row-narrow': i * 2 - 1 }">
+              <NSkeleton text width="100px" />
+            </div>
+            <NSkeleton class="suggestion-button suggestion-placeholder" :style="{ '--row': i, '--row-narrow': i * 2 - 1 }" />
+          </template>
+        </template>
+        <template v-else v-for="diff, i in diffSuggestions">
           <div class="suggestion-label" :style="{ '--row': i + 1, '--row-narrow': i * 2 + 1 }">{{ diff[0] }}:</div>
           <RouterLink class="suggestion-link hover-parent" :style="{ '--row': i + 1, '--row-narrow': i * 2 + 1 }" :to="{
             name: 'delta',
@@ -224,6 +235,13 @@ onMounted(async () => {
     grid-column: 3;
     grid-row: calc(var(--row-narrow) + 1);
   }
+}
+
+.suggestion-placeholder {
+  width: 420px;
+  max-width: 100%;
+  height: 60px;
+  border-radius: 6px;
 }
 
 .suggestion-cell {

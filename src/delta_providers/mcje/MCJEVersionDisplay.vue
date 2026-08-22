@@ -41,7 +41,7 @@ async function loadDetails() {
 <template>
   <Tooltip v-if="manVer" @tooltip-open="loadDetails" :side="tooltipSide">
     <template #trigger="{ props }">
-      <Row gap="8px" v-bind="props">
+      <Row gap="8px" v-bind="props" @mouseenter="loadDetails">
         <NAvatar
           v-if="manVer.type === 'release'"
           :src="releaseVersionIcon"
