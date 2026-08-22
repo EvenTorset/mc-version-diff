@@ -144,7 +144,7 @@ onMounted(async () => {
 }
 
 .main-panel {
-  width: 800px;
+  flex: 1;
 }
 
 .suggestions-grid {

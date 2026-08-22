@@ -565,6 +565,10 @@ body {
   }
 }
 
+.n-tabs-nav--bar-type>.n-tabs-nav-scroll-wrapper>.v-x-scroll>.n-tabs-nav-scroll-content>.n-tabs-wrapper {
+  min-width: 100%;
+}
+
 /* MARK: easy-tooltips */
 
 .tooltip {
