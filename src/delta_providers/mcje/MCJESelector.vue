@@ -59,7 +59,7 @@ onMounted(async () => {
     <p>An error occurred while loading the version manifest.</p>
     <p>{{ errorMessage }}</p>
   </NAlert>
-  <Row v-else align="stretch">
+  <Row v-else align="stretch" style="height: 100%;">
     <div class="versions-list-wrapper">
       <MCJEVersionsList v-model="selectedVersions" />
     </div>
@@ -140,10 +140,11 @@ onMounted(async () => {
 .versions-list-wrapper {
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: stretch;
   width: 280px;
   min-width: 280px;
   box-sizing: border-box;
+  height: 100%;
 }
 
 .main-panel {

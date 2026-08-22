@@ -122,8 +122,8 @@ onMounted(async () => {
   align-items: stretch;
   max-height: 100dvh;
   container-type: size;
-  height: min(520px, 100dvh - 32px);
-  max-height: min(520px, 100dvh - 32px);
+  height: 100%;
+  max-height: 100%;
 }
 
 .card :deep(.n-card-content) {

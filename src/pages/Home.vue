@@ -1,5 +1,4 @@
 <script setup lang="tsx">
-import AnimatedHeight from '@/components/AnimatedHeight.vue'
 import Col from '@/components/Col.vue'
 import Content from '@/components/Content.vue'
 import Row from '@/components/Row.vue'
@@ -7,7 +6,7 @@ import SettingsMenu from '@/components/SettingsMenu.vue'
 import VersionDiffLogo from '@/components/VersionDiffLogo.vue'
 import { listDeltaProviders } from '@/delta_providers/registry'
 import { asyncRenderable } from '@/util/asyncRenderable'
-import { Dismiss24Filled, Settings32Filled } from '@vicons/fluent'
+import { Dismiss24Filled, Settings24Filled } from '@vicons/fluent'
 import { NIcon, NTab, NTabs } from 'naive-ui'
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -49,24 +48,22 @@ watch([tab, settingsOpen], () => {
             :aria-expanded="settingsOpen"
             @click="settingsOpen = !settingsOpen"
           >
-            <NIcon :size="24" :component="Settings32Filled" class="settings-icon gear" />
+            <NIcon :size="24" :component="Settings24Filled" class="settings-icon gear" />
             <NIcon :size="24" :component="Dismiss24Filled" class="settings-icon cross" />
           </button>
         </template>
         <NTab v-for="dp in dps" :name="dp.id" :tab="dp.provider.name" />
       </NTabs>
-      <AnimatedHeight :duration="500">
-        <Suspense>
-          <Transition name="slide-fade" mode="out-in">
-            <div :key="settingsOpen ? 'settings' : tab">
-              <SettingsMenu v-if="settingsOpen" />
-              <template v-else v-for="dp in dps" :key="dp.id">
-                <Content v-if="tab === dp.id" :content="asyncRenderable(dp.provider.selector())" />
-              </template>
-            </div>
-          </Transition>
-        </Suspense>
-      </AnimatedHeight>
+      <Suspense>
+        <Transition name="slide-fade" mode="out-in">
+          <div :key="settingsOpen ? 'settings' : tab" style="height: 520px;">
+            <SettingsMenu v-if="settingsOpen" />
+            <template v-else v-for="dp in dps" :key="dp.id">
+              <Content v-if="tab === dp.id" :content="asyncRenderable(dp.provider.selector())" />
+            </template>
+          </div>
+        </Transition>
+      </Suspense>
     </Col>
   </Col>
 </template>
@@ -93,9 +90,10 @@ watch([tab, settingsOpen], () => {
 .settings-toggle {
   position: relative;
   align-self: center;
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   padding: 0;
+  margin: -4px;
   border: none;
   background: none;
   cursor: pointer;
@@ -109,7 +107,7 @@ watch([tab, settingsOpen], () => {
 
   .settings-icon {
     position: absolute;
-    inset: 0;
+    inset: 4px;
     display: block;
     transition: opacity 300ms, transform 300ms;
   }
