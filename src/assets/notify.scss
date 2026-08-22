@@ -1,0 +1,68 @@
+.n-notification-wrapper {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.n-notification {
+  --notify-header-size: 28px;
+  --notify-border-width: 2px;
+  --notify-right-padding: calc(var(--notify-header-size) - var(--notify-border-width));
+  padding: 0 var(--notify-border-width) var(--notify-border-width);
+  background-image: radial-gradient(farthest-corner at bottom center, var(--n-icon-color), color-mix(in srgb, var(--n-icon-color) 60%, #000));
+  line-height: 1.2;
+  max-width: min(100vw - 32px, 800px) !important;
+  --n-border-radius: 6px !important;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: var(--notify-header-size) var(--notify-border-width) var(--notify-border-width);
+    background-image: radial-gradient(farthest-corner at bottom center, color-mix(in srgb, var(--n-icon-color) 30%, #000), color-mix(in srgb, var(--n-icon-color) 5%, #000));
+    border-radius: 0 0 5px 5px;
+    pointer-events: none;
+  }
+
+  & * {
+    z-index: 1;
+  }
+}
+
+.n-notification__avatar{
+  left: calc(-1 * var(--notify-border-width)) !important;
+  color: var(--color-6);
+}
+
+.n-notification__close {
+  width: var(--notify-header-size);
+  height: var(--notify-header-size);
+  color: var(--color-6);
+  right: var(--notify-border-width) !important;
+  border-radius: 4px;
+  z-index: 2;
+}
+
+.n-notification-main {
+  margin-left: calc(var(--notify-header-size) - var(--notify-border-width)) !important;
+  padding-right: var(--notify-right-padding);
+  width: calc(100% - var(--notify-header-size) + var(--notify-border-width)) !important;
+}
+
+.n-notification-main__header {
+  margin-left: -26px !important;
+  margin-right: calc(-1 * var(--notify-right-padding) + 12px) !important;
+  padding: 0 calc(var(--notify-header-size) - var(--notify-border-width)) !important;
+  height: var(--notify-header-size);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  user-select: none;
+  cursor: default;
+}
+
+.n-notification-main__content {
+  line-height: inherit !important;
+}
+
+.n-notification-main-footer {
+  gap: 8px;
+}

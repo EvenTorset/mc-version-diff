@@ -1,0 +1,19 @@
+name: Notify main repo
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send repo dispatch event to main repo
+        if: github.repository == 'EvenTorset/mc-version-diff'
+        run: |
+          curl -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.MAIN_REPO_PAT }}" \
+            https://api.github.com/repos/EvenTorset/cccode.pages.dev/dispatches \
+            -d '{"event_type": "mc-version-diff-updated"}'
