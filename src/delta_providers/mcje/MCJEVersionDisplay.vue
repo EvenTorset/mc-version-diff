@@ -60,13 +60,14 @@ async function loadDetails() {
             style: 'image-rendering: pixelated;'
           }"
         />
-        <Col align="flex-start" gap="0">
-          <MCJEVersionNumber :id="manVer.id"/>
+        <Col align="flex-start" gap="4px">
+          <MCJEVersionNumber :id="manVer.id" style="font-size: 16px; line-height: 1;"/>
           <NTime
             :time="new Date(manVer.releaseTime)"
             :to="Date.now()"
             type="relative"
             class="faded"
+            style="font-size: 14px; line-height: 1;"
           />
         </Col>
       </Row>
