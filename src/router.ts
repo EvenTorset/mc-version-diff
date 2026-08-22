@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { getDiffSuggestions, loadMCJEManifest } from './delta_providers/mcje/version_manifest'
+import { URL_BASE } from '@/../urlBase'
 
 const routes: RouteRecordRaw[] = [
   { name: 'home', path: '/', component: () => import('@/pages/Home.vue') },
@@ -8,7 +9,7 @@ const routes: RouteRecordRaw[] = [
 ]
 
 export const router = createRouter({
-  history: createWebHistory('/version-diff-v5-preview'),
+  history: createWebHistory(URL_BASE),
   routes,
 })
 
