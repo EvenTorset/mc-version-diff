@@ -435,7 +435,7 @@ body {
     }
   }
 
-  &:hover:not(.readonly):not([disabled]),&.selected {
+  &:hover:not(.readonly):not([disabled]),&.selected,:where(.hover-parent:hover) &:not(.readonly):not([disabled]) {
     --intr-gradient-start: var(--intr-color);
     --intr-gradient-size: 75% 150%;
     box-shadow: 0 0 8px rgb(from var(--intr-color) calc(1.2 * r) calc(1.2 * g) calc(1.2 * b) / 0.333);
@@ -465,7 +465,7 @@ body {
     border: 1px solid rgb(from var(--intr-color) calc(1.2 * r) calc(1.2 * g) calc(1.2 * b) / 0.3) !important;
     background-color: rgb(from var(--color-0) r g b / 1) !important;
 
-    &:hover:not(.readonly):not([disabled]),&.selected {
+    &:hover:not(.readonly):not([disabled]),&.selected,:where(.hover-parent:hover) &:not(.readonly):not([disabled]) {
       --intr-color: oklch(from var(--color-accent) l calc(c * 1.3) h);
     }
 
