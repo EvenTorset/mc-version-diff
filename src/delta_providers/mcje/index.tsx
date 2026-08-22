@@ -2,7 +2,7 @@ import { registerDeltaProvider } from '@/delta_providers/registry'
 import { getTrackCategory } from '@/delta_providers/category'
 import type { DeltaProvider, DeltaResult, DeltaTrack } from '@/delta_providers'
 import { useRoute } from 'vue-router'
-import { getVersionDetails } from '@/delta_providers/mcje/version_manifest'
+import { getVersionDetails, loadMCJEManifest } from '@/delta_providers/mcje/version_manifest'
 import { getCachedFile } from '@/util/download'
 import zip, { type ParsedZIPFileEntry } from '@/util/zip'
 import type { RehashPayloadItem, RehashWorkerMessage } from '@/util/rehash.worker'
@@ -455,3 +455,5 @@ const provider: DeltaProvider = {
   selector: () => defineAsyncComponent(() => import('./MCJESelector.vue')),
 }
 registerDeltaProvider('mcje', provider)
+
+loadMCJEManifest()?.catch(() => {})
