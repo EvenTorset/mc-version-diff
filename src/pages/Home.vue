@@ -7,7 +7,7 @@ import VersionDiffLogo from '@/components/VersionDiffLogo.vue'
 import { listDeltaProviders } from '@/delta_providers/registry'
 import { asyncRenderable } from '@/util/asyncRenderable'
 import { Dismiss24Filled, Settings24Filled } from '@vicons/fluent'
-import { NIcon, NTab, NTabs } from 'naive-ui'
+import { NIcon, NSkeleton, NTab, NTabs } from 'naive-ui'
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -63,6 +63,12 @@ watch([tab, settingsOpen], () => {
             </template>
           </div>
         </Transition>
+        <template #fallback>
+          <Row align="stretch" gap="12px" style="height: 520px;">
+            <NSkeleton class="panel-placeholder" style="width: 280px; min-width: 280px;" />
+            <NSkeleton class="panel-placeholder" style="flex: 1;" />
+          </Row>
+        </template>
       </Suspense>
     </Col>
   </Col>
@@ -85,6 +91,12 @@ watch([tab, settingsOpen], () => {
     visibility: hidden;
     transition: opacity 300ms, visibility 0s 300ms;
   }
+}
+
+.panel-placeholder {
+  height: 100%;
+  border-radius: 3px;
+  opacity: 0.4;
 }
 
 .settings-toggle {
