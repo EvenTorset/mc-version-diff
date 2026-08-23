@@ -16,6 +16,8 @@ export interface GetFileOptions {
 
 type Manifest = Record<string, CacheManifestEntry>
 
+export const CORS = import.meta.env.PROD ? 'https://cors.dokucraft.co.uk:2096/' : ''
+
 const DEFAULT_DIR_NAME = 'opfs_file_cache'
 
 export async function download(

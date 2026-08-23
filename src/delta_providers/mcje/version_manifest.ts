@@ -2,7 +2,6 @@ import { ref } from 'vue'
 import { download } from '@/util/download'
 import { ProgressHandler } from '@/util/progress'
 
-const cors = ''//import.meta.env.PROD ? 'https://cors.dokucraft.co.uk:2096/' : ''
 const mcjeManifestUrl = 'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json'
 
 export type MCJEManifestVersion = {
@@ -83,7 +82,7 @@ export function loadMCJEManifest(progHandler?: ProgressHandler) {
   if (downloadPromise !== null) {
     return downloadPromise
   }
-  downloadPromise = download(cors + mcjeManifestUrl, allProgHandlers).then(async res => {
+  downloadPromise = download(mcjeManifestUrl, allProgHandlers).then(async res => {
     mcjeManifest = await res.json()
     mcjeManifest!.versions = mcjeManifest!.versions.filter(ver => oldestSupportedVersionDate <= new Date(ver.releaseTime))
     mcjeVersions.value = mcjeManifest!.versions.map(ver => ver.id)
