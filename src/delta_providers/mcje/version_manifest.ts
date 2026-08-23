@@ -60,19 +60,6 @@ export type MCJEVersionDetails = {
 // Pre-1.6 versions are not supported
 const oldestSupportedVersionDate = new Date('2013-06-28T14:48:41+00:00')
 
-// Mojang lists these as snapshots in the manifest, but their IDs are releases
-const versionTypeFixes: Record<string, MCJEManifestVersion['type']> = {
-  '1.3': 'release',
-  '1.4': 'release',
-  '1.4.1': 'release',
-  '1.4.3': 'release',
-  '1.5': 'release',
-  '1.6': 'release',
-  '1.6.3': 'release',
-  '1.7': 'release',
-  '1.7.1': 'release',
-}
-
 let downloadPromise: Promise<void> | null = null
 let mcjeManifest: MCJEManifest | null = null
 const detailsCache: Record<string, MCJEVersionDetails> = {}
@@ -98,10 +85,6 @@ export function loadMCJEManifest(progHandler?: ProgressHandler) {
   downloadPromise = download(mcjeManifestUrl, allProgHandlers).then(async res => {
     mcjeManifest = await res.json()
     mcjeManifest!.versions = mcjeManifest!.versions.filter(ver => oldestSupportedVersionDate <= new Date(ver.releaseTime))
-    for (const ver of mcjeManifest!.versions) {
-      const type = versionTypeFixes[ver.id]
-      if (type) ver.type = type
-    }
     mcjeVersions.value = mcjeManifest!.versions.map(ver => ver.id)
   })
   return downloadPromise
