@@ -6,8 +6,9 @@ import stringify from 'fabulous-json'
 import { Settings } from '@/settings'
 
 registerViewer('text', {
-  test(_dr, track) {
-    return /\.(?:txt|json|mcmeta|vsh|fsh|glsl|lang)$/.test(track.id)
+  test(_dr, _track) {
+    // return /\.(?:txt|json|mcmeta|vsh|fsh|glsl|lang)$/.test(track.id)
+    return true // fallback for all file types without a viewer registered
   },
   async render(dr, track) {
     const td = new TextDecoder()
