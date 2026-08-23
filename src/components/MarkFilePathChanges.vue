@@ -39,6 +39,7 @@ function renderPathSlice(path: string, start: number, end: number): ComponentOrS
     sliceNodes.push(<Dim>{path.slice(extStartPos, extStop)}</Dim>)
   }
 
+  sliceNodes.push(<>&lrm;</>)
   return sliceNodes
 }
 
