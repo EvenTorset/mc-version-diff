@@ -2,7 +2,7 @@ import { registerDeltaProvider } from '@/delta_providers/registry'
 import { getTrackCategory } from '@/delta_providers/category'
 import type { DeltaProvider, DeltaResult, DeltaTrack } from '@/delta_providers'
 import { useRoute } from 'vue-router'
-import { getVersionDetails, loadMCJEManifest } from '@/delta_providers/mcje/version_manifest'
+import { getVersionDetails, loadMCJEManifest, usesLegacyAssets } from '@/delta_providers/mcje/version_manifest'
 import { getCachedFile } from '@/util/download'
 import zip, { type ParsedZIPFileEntry } from '@/util/zip'
 import type { RehashPayloadItem, RehashWorkerMessage } from '@/util/rehash.worker'
@@ -114,9 +114,12 @@ async function downloadJAR(id: string, progressDisplay: ProgressList, rehash: bo
   })
 
   progressBar.progHandler.setMessage('Reading JAR file...')
+  const legacy = usesLegacyAssets(details.releaseTime)
   const archive = zip.parse(
     await file.arrayBuffer(),
-    filePath => /(assets|data)\//.test(filePath) && !filePath.endsWith('.class')
+    filePath => !filePath.endsWith('.class') && (legacy
+      ? !filePath.startsWith('META-INF/')
+      : /(assets|data)\//.test(filePath))
   )
   const entries = Object.entries(archive.files)
 
@@ -203,7 +206,7 @@ const provider: DeltaProvider = {
       expand: true,
       mimeType(_path) { return 'text/plain' },
       test(_dr, track) {
-        return /assets\/[^\/]+\/lang\/.+\.json$/.test(track.id)
+        return /assets\/[^\/]+\/lang\/.+\.json$/.test(track.id) || /^lang\/.+\.lang$/.test(track.id)
       }
     },
     {

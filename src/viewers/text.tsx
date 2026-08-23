@@ -7,7 +7,7 @@ import { Settings } from '@/settings'
 
 registerViewer('text', {
   test(_dr, track) {
-    return /\.(?:txt|json|mcmeta|vsh|fsh|glsl)$/.test(track.id)
+    return /\.(?:txt|json|mcmeta|vsh|fsh|glsl|lang)$/.test(track.id)
   },
   async render(dr, track) {
     const td = new TextDecoder()
