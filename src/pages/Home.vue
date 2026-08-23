@@ -3,6 +3,7 @@ import Col from '@/components/Col.vue'
 import Content from '@/components/Content.vue'
 import Row from '@/components/Row.vue'
 import SettingsMenu from '@/components/SettingsMenu.vue'
+import Tooltip from '@/components/Tooltip.vue'
 import VersionDiffLogo from '@/components/VersionDiffLogo.vue'
 import { listDeltaProviders } from '@/delta_providers/registry'
 import { asyncRenderable } from '@/util/asyncRenderable'
@@ -40,17 +41,23 @@ watch([tab, settingsOpen], () => {
         v-model:value="tab"
       >
         <template #suffix>
-          <button
-            type="button"
-            class="settings-toggle"
-            :class="{ open: settingsOpen }"
-            :aria-label="settingsOpen ? 'Close settings' : 'Open settings'"
-            :aria-expanded="settingsOpen"
-            @click="settingsOpen = !settingsOpen"
-          >
-            <NIcon :size="24" :component="Settings24Filled" class="settings-icon gear" />
-            <NIcon :size="24" :component="Dismiss24Filled" class="settings-icon cross" />
-          </button>
+          <Tooltip>
+            <template #trigger="{ props }">
+              <button
+                v-bind="props"
+                type="button"
+                class="settings-toggle"
+                :class="{ open: settingsOpen }"
+                :aria-label="settingsOpen ? 'Close settings' : 'Open settings'"
+                :aria-expanded="settingsOpen"
+                @click="settingsOpen = !settingsOpen"
+              >
+                <NIcon :size="24" :component="Settings24Filled" class="settings-icon gear" />
+                <NIcon :size="24" :component="Dismiss24Filled" class="settings-icon cross" />
+              </button>
+            </template>
+            {{ settingsOpen ? 'Close settings' : 'Settings' }}
+          </Tooltip>
         </template>
         <NTab v-for="dp in dps" :name="dp.id" :tab="dp.provider.name" />
       </NTabs>
@@ -113,7 +120,7 @@ watch([tab, settingsOpen], () => {
   color: var(--color-4);
   transition: color 200ms;
 
-  &:hover, &.open {
+  &:hover {
     color: var(--color-accent);
   }
 
