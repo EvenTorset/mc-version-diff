@@ -343,7 +343,6 @@ onMounted(async () => {
           minWidth: 0,
           padding: '60px 0',
           marginLeft: diff.tracks.length === 0 ? '20px' : '340px',
-          containerType: 'size',
         }">
           <Col v-if="diff.tracks.length === 0">
             <RouterLink :to="{ name: 'home' }">
