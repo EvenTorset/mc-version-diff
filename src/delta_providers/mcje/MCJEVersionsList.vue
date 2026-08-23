@@ -105,7 +105,14 @@ onMounted(async () => {
                 disabled: !selectedVersions.has(versions[virtualRow.index]) && selectedVersions.size >= 2
               }"
             >
-              <MCJEVersionDisplay :version="versions[virtualRow.index]" tooltip-side="right" />
+              <MCJEVersionDisplay
+                :version="versions[virtualRow.index]"
+                tooltip-side="right"
+                :style="{
+                  padding: '12px 12px 12px 16px',
+                  margin: '-12px -12px -12px -16px',
+                }"
+              />
             </NListItem>
           </template>
         </NList>

@@ -64,7 +64,7 @@ watch([tab, settingsOpen], () => {
           </div>
         </Transition>
         <template #fallback>
-          <Row align="stretch" gap="12px" style="height: 520px;">
+          <Row align="stretch" style="height: 520px;">
             <NSkeleton class="panel-placeholder" style="width: 280px; min-width: 280px;" />
             <NSkeleton class="panel-placeholder" style="flex: 1;" />
           </Row>

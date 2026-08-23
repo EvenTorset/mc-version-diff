@@ -4,7 +4,7 @@ import MCJEVersionNumber from '@/delta_providers/mcje/MCJEVersionNumber.vue'
 import releaseVersionIcon from '@/assets/release_version.webp'
 import snapshotVersionIcon from '@/assets/snapshot_version.webp'
 import Tooltip from '@/components/Tooltip.vue'
-import { onMounted, ref } from 'vue'
+import { mergeProps, onMounted, ref } from 'vue'
 import { getVersion, getVersionDetails, type MCJEManifestVersion, type MCJEVersionDetails } from '@/delta_providers/mcje/version_manifest.ts'
 import Row from '@/components/Row.vue'
 import Dim from '@/components/Dim.vue'
@@ -18,6 +18,10 @@ const props = withDefaults(defineProps<{
   tooltipSide?: TooltipSide
 }>(), {
   tooltipSide: 'above',
+})
+
+defineOptions({
+  inheritAttrs: false
 })
 
 const manVer = ref<MCJEManifestVersion | null>(null)
@@ -41,7 +45,7 @@ async function loadDetails() {
 <template>
   <Tooltip v-if="manVer" @tooltip-open="loadDetails" :side="tooltipSide">
     <template #trigger="{ props }">
-      <Row gap="8px" v-bind="props" @mouseenter="loadDetails">
+      <Row gap="8px" v-bind="mergeProps($attrs, props)" @mouseenter="loadDetails">
         <NAvatar
           v-if="manVer.type === 'release'"
           :src="releaseVersionIcon"
@@ -60,7 +64,7 @@ async function loadDetails() {
             style: 'image-rendering: pixelated;'
           }"
         />
-        <Col align="flex-start" gap="4px">
+        <Col align="flex-start">
           <MCJEVersionNumber :id="manVer.id" style="font-size: 16px; line-height: 1;"/>
           <NTime
             :time="new Date(manVer.releaseTime)"

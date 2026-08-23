@@ -53,6 +53,10 @@ function genNaiveTheme(): GlobalThemeOverrides {
       padding: '0 0 16px 0',
       width: 'fit-content',
     },
+    Skeleton: {
+      color: getCSSVar('--color-2'),
+      colorEnd: getCSSVar('--color-3'),
+    },
   }
 }
 
