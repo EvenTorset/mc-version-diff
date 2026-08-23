@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NAvatar, NTime } from 'naive-ui'
+import { NAvatar, NSkeleton, NTime } from 'naive-ui'
 import MCJEVersionNumber from '@/delta_providers/mcje/MCJEVersionNumber.vue'
 import releaseVersionIcon from '@/assets/release_version.webp'
 import snapshotVersionIcon from '@/assets/snapshot_version.webp'
@@ -45,7 +45,7 @@ async function loadDetails() {
 <template>
   <Tooltip v-if="manVer" @tooltip-open="loadDetails" :side="tooltipSide">
     <template #trigger="{ props }">
-      <Row gap="8px" v-bind="mergeProps($attrs, props)" @mouseenter="loadDetails">
+      <Row gap="8px" v-bind="mergeProps($attrs, props)">
         <NAvatar
           v-if="manVer.type === 'release'"
           :src="releaseVersionIcon"
@@ -82,20 +82,21 @@ async function loadDetails() {
         <Dim>Released:</Dim>
         <NTime :time="new Date(manVer.releaseTime)" />
       </Row>
-      <template v-if="details !== null">
-        <Row>
-          <Dim>Size:</Dim>
-          {{ formatBytes(details.downloads.client.size) }}
-        </Row>
-        <Row>
-          <Dim>Asset index:</Dim>
-          {{ details.assets }}
-        </Row>
-        <Row>
-          <Dim>Type:</Dim>
-          {{ details.type }}
-        </Row>
-      </template>
+      <Row>
+        <Dim>Size:</Dim>
+        <template v-if="details">{{ formatBytes(details.downloads.client.size) }}</template>
+        <NSkeleton v-else text width="64px" />
+      </Row>
+      <Row>
+        <Dim>Asset index:</Dim>
+        <template v-if="details">{{ details.assets }}</template>
+        <NSkeleton v-else text width="24px" />
+      </Row>
+      <Row>
+        <Dim>Type:</Dim>
+        <template v-if="details">{{ details.type }}</template>
+        <NSkeleton v-else text width="60px" />
+      </Row>
     </p>
   </Tooltip>
 </template>

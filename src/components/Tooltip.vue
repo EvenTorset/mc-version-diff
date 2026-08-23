@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { TooltipSide } from '@/types'
+import type { TooltipEvent } from 'easy-tooltips'
 import { computed, type CSSProperties } from 'vue'
 
 const props = defineProps<{
@@ -9,7 +10,9 @@ const props = defineProps<{
   style?: CSSProperties
 }>()
 defineEmits<{
-  'tooltip-open': []
+  'tooltip-open': [event: TooltipEvent]
+  'tooltip-close': [event: TooltipEvent]
+  'tooltip-move': [event: TooltipEvent]
 }>()
 
 function cssPropertiesToString(styleObj: CSSProperties): string {
@@ -31,7 +34,9 @@ const styleString = computed(() => cssPropertiesToString(props.style ?? {}))
       'data-easy-tooltip-src': 'next',
       'data-easy-tooltip-class': 'tooltip',
       'data-easy-tooltip-prefer': side,
-      onMouseEnter: () => $emit('tooltip-open'),
+      onEasyTooltipOpen: (e: TooltipEvent) => $emit('tooltip-open', e),
+      onEasyTooltipClose: (e: TooltipEvent) => $emit('tooltip-close', e),
+      onEasyTooltipMove: (e: TooltipEvent) => $emit('tooltip-move', e),
       ...typeof distance === 'number' ? {
         'data-easy-tooltip-style': `--easy-tooltip-distance: ${distance}px;${styleString}`,
       } : {
