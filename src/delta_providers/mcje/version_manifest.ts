@@ -2,8 +2,8 @@ import { ref } from 'vue'
 import { download } from '@/util/download'
 import { ProgressHandler } from '@/util/progress'
 
-const cors = import.meta.env.PROD ? 'https://cors.dokucraft.co.uk:2096/' : ''
-const mcjeManifestUrl = 'https://launchermeta.mojang.com/mc/game/version_manifest.json'
+const cors = ''//import.meta.env.PROD ? 'https://cors.dokucraft.co.uk:2096/' : ''
+const mcjeManifestUrl = 'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json'
 
 export type MCJEManifestVersion = {
   id: string
