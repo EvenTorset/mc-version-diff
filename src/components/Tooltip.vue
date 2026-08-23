@@ -6,8 +6,9 @@ import { computed, type CSSProperties } from 'vue'
 const props = defineProps<{
   side?: TooltipSide
   distance?: number
-  disable?: boolean
+  disabled?: boolean
   style?: CSSProperties
+  anchor?: 'cursor' | 'cursor-x' | 'cursor-y' | 'pin' | 'pin-x' | 'pin-y'
 }>()
 defineEmits<{
   'tooltip-open': [event: TooltipEvent]
@@ -30,10 +31,11 @@ const styleString = computed(() => cssPropertiesToString(props.style ?? {}))
 <template>
   <slot
     name="trigger"
-    :props="disable ? {} : {
+    :props="disabled ? {} : {
       'data-easy-tooltip-src': 'next',
       'data-easy-tooltip-class': 'tooltip',
       'data-easy-tooltip-prefer': side,
+      'data-easy-tooltip-anchor': anchor,
       onEasyTooltipOpen: (e: TooltipEvent) => $emit('tooltip-open', e),
       onEasyTooltipClose: (e: TooltipEvent) => $emit('tooltip-close', e),
       onEasyTooltipMove: (e: TooltipEvent) => $emit('tooltip-move', e),

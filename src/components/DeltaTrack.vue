@@ -340,6 +340,7 @@ async function copy(version: 'a' | 'b') {
   transition: --border-bottom-radius .5s;
   overflow: clip;
   padding: 1px;
+  max-width: 100cqw;
 
   &::after {
     content: '';

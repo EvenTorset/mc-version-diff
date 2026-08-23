@@ -43,7 +43,7 @@ onMounted(async () => {
   <Row align="stretch">
     <NCard title="Settings">
       <Col align="stretch">
-        <Tooltip>
+        <Tooltip anchor="cursor-x">
           <template #trigger="{ props }">
             <Row v-bind="props" class="setting" @click="Settings.pixelFont = !Settings.pixelFont">
               Pixel font
@@ -54,7 +54,7 @@ onMounted(async () => {
           <h3>Pixel font</h3>
           <p>Use a pixel font when rendering the localization files to better match what it would look like in-game.</p>
         </Tooltip>
-        <Tooltip>
+        <Tooltip anchor="cursor-x">
           <template #trigger="{ props }">
             <Row v-bind="props" class="setting" @click="Settings.formatJSON = !Settings.formatJSON">
               Format JSON

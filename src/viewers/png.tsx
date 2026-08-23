@@ -374,7 +374,7 @@ registerViewer('png', {
         <Tooltip
           distance={20}
           side='right'
-          disable={diffTooltipDisable.value}
+          disabled={diffTooltipDisable.value}
           v-slots={{
             trigger: ({ props }: TooltipTriggerProps) => <>
               <NativeTemplate>
