@@ -6,7 +6,7 @@ const mcjeManifestUrl = 'https://piston-meta.mojang.com/mc/game/version_manifest
 
 export type MCJEManifestVersion = {
   id: string
-  type: 'release' | 'snapshot'
+  type: 'release' | 'snapshot' | 'old_beta' | 'old_alpha'
   url: string
   time: string
   releaseTime: string
@@ -41,7 +41,7 @@ export type MCJEVersionDetails = {
   complianceLevel: number
   downloads: {
     client: MCJEVersionDownloads
-    server: MCJEVersionDownloads
+    server?: MCJEVersionDownloads
   }
   id: string
   javaVersion: {
@@ -57,8 +57,13 @@ export type MCJEVersionDetails = {
   type: string
 }
 
-// Pre-1.6 versions are not supported
-const oldestSupportedVersionDate = new Date('2013-06-28T14:48:41+00:00')
+// 13w24a, the 1.6 snapshot that moved the game's files into assets/. Older
+// versions are texture packs, with the files at the root of the JAR instead
+const legacyAssetsDate = new Date('2013-06-13T15:32:23+00:00')
+
+export function usesLegacyAssets(releaseTime: string) {
+  return new Date(releaseTime) < legacyAssetsDate
+}
 
 let downloadPromise: Promise<void> | null = null
 let mcjeManifest: MCJEManifest | null = null
@@ -84,7 +89,6 @@ export function loadMCJEManifest(progHandler?: ProgressHandler) {
   }
   downloadPromise = download(mcjeManifestUrl, allProgHandlers).then(async res => {
     mcjeManifest = await res.json()
-    mcjeManifest!.versions = mcjeManifest!.versions.filter(ver => oldestSupportedVersionDate <= new Date(ver.releaseTime))
     mcjeVersions.value = mcjeManifest!.versions.map(ver => ver.id)
   })
   return downloadPromise

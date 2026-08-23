@@ -52,11 +52,11 @@ export async function singleHeader(id: string, deselect?: (id: string) => void) 
             href={details.downloads.client.url}
             rel='noreferrer'
             download
-          >client</a><Dim>, </Dim><a
+          >client</a>{details.downloads.server ? <><Dim>, </Dim><a
             href={details.downloads.server.url}
             rel='noreferrer'
             download
-          >server</a>
+          >server</a></> : ''}
         </div>
       </Row>
 
