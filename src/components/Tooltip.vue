@@ -1,20 +1,26 @@
 <script setup lang="ts">
 import type { TooltipSide } from '@/types'
 import type { TooltipEvent } from 'easy-tooltips'
-import { computed, type CSSProperties } from 'vue'
+import { computed, ref, type CSSProperties } from 'vue'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   side?: TooltipSide
   distance?: number
   disabled?: boolean
   style?: CSSProperties
   anchor?: 'cursor' | 'cursor-x' | 'cursor-y' | 'pin' | 'pin-x' | 'pin-y'
-}>()
+  disableOnClick?: boolean
+}>(), {
+  disableOnClick: true,
+})
+
 defineEmits<{
   'tooltip-open': [event: TooltipEvent]
   'tooltip-close': [event: TooltipEvent]
   'tooltip-move': [event: TooltipEvent]
 }>()
+
+const disabledInternal = ref(false)
 
 function cssPropertiesToString(styleObj: CSSProperties): string {
   return Object.entries(styleObj)
@@ -31,19 +37,27 @@ const styleString = computed(() => cssPropertiesToString(props.style ?? {}))
 <template>
   <slot
     name="trigger"
-    :props="disabled ? {} : {
-      'data-easy-tooltip-src': 'next',
-      'data-easy-tooltip-class': 'tooltip',
-      'data-easy-tooltip-prefer': side,
-      'data-easy-tooltip-anchor': anchor,
-      onEasyTooltipOpen: (e: TooltipEvent) => $emit('tooltip-open', e),
-      onEasyTooltipClose: (e: TooltipEvent) => $emit('tooltip-close', e),
-      onEasyTooltipMove: (e: TooltipEvent) => $emit('tooltip-move', e),
-      ...typeof distance === 'number' ? {
-        'data-easy-tooltip-style': `--easy-tooltip-distance: ${distance}px;${styleString}`,
-      } : {
-        'data-easy-tooltip-style': props.style ? `${styleString}` : undefined,
+    :props="{
+      onPointerdown: (e: PointerEvent) => {
+        if (disableOnClick && e.pointerType === 'mouse') {
+          disabledInternal = true
+        }
       },
+      onPointerleave: (e: PointerEvent) => disabledInternal = false,
+      ...!disabled && !disabledInternal && {
+        'data-easy-tooltip-src': 'next',
+        'data-easy-tooltip-class': 'tooltip',
+        'data-easy-tooltip-prefer': side,
+        'data-easy-tooltip-anchor': anchor,
+        onEasyTooltipOpen: (e: TooltipEvent) => $emit('tooltip-open', e),
+        onEasyTooltipClose: (e: TooltipEvent) => $emit('tooltip-close', e),
+        onEasyTooltipMove: (e: TooltipEvent) => $emit('tooltip-move', e),
+        ...typeof distance === 'number' ? {
+          'data-easy-tooltip-style': `--easy-tooltip-distance: ${distance}px;${styleString}`,
+        } : {
+          'data-easy-tooltip-style': props.style ? `${styleString}` : undefined,
+        },
+      }
     }"
   ></slot>
   <template>
