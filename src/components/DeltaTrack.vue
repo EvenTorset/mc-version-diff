@@ -191,7 +191,7 @@ async function copy(version: 'a' | 'b') {
           borderColor: 'rgb(from var(--color-accent) r g b / 0.7)',
         }"
       >Edited</NTag>
-      <Col v-if="track.state === DeltaTrackState.Moved" align="flex-start">
+      <Col v-if="track.state === DeltaTrackState.Moved" align="stretch" style="overflow: hidden;">
         <MarkFilePathChanges
           :original="track.a"
           :modified="track.b"
@@ -361,10 +361,13 @@ async function copy(version: 'a' | 'b') {
   }
 
   .delta-track-action-buttons {
+    position: static;
+    right: 1px;
     transition: opacity .2s ease-out;
   }
 
   &:not(:hover) .delta-track-action-buttons {
+    position: absolute;
     opacity: 0;
   }
 }

@@ -1,10 +1,11 @@
 <script setup lang="tsx">
 import type { ComponentOrStaticRenderableContent, Renderable } from '@/types'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import Content from '@/components/Content.vue'
 import Dim from './Dim.vue'
 import Tooltip from './Tooltip.vue'
 
-defineProps<{
+const props = defineProps<{
   original: string
   modified: string
   code?: boolean
@@ -176,14 +177,55 @@ function markPathChanges(fromPath: string, toPath: string): Renderable {
 
   return nodes
 }
+
+const originalEl = ref<HTMLElement>()
+const modifiedEl = ref<HTMLElement>()
+const originalOverflowing = ref(false)
+const modifiedOverflowing = ref(false)
+
+function checkOverflow(el: HTMLElement | undefined, target: typeof originalOverflowing) {
+  if (!el) return
+  target.value = el.scrollWidth > el.clientWidth
+}
+
+let observer: ResizeObserver | undefined
+
+onMounted(() => {
+  checkOverflow(originalEl.value, originalOverflowing)
+  checkOverflow(modifiedEl.value, modifiedOverflowing)
+
+  observer = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      if (entry.target === originalEl.value) checkOverflow(originalEl.value, originalOverflowing)
+      if (entry.target === modifiedEl.value) checkOverflow(modifiedEl.value, modifiedOverflowing)
+    }
+  })
+  if (originalEl.value) observer.observe(originalEl.value)
+  if (modifiedEl.value) observer.observe(modifiedEl.value)
+})
+
+onBeforeUnmount(() => {
+  observer?.disconnect()
+})
+
+watch(() => [props.original, props.modified], () => {
+  nextTickCheck()
+})
+
+function nextTickCheck() {
+  requestAnimationFrame(() => {
+    checkOverflow(originalEl.value, originalOverflowing)
+    checkOverflow(modifiedEl.value, modifiedOverflowing)
+  })
+}
 </script>
 
 <template>
   <div class="line original">
     <div class="content">
-      <Tooltip>
+      <Tooltip :disabled="!originalOverflowing">
         <template #trigger="{ props: tooltipProps }">
-          <span v-bind="tooltipProps" class="file-path">
+          <span ref="originalEl" v-bind="tooltipProps" class="file-path">
             <Content :content="() => markPathChanges(modified, original)" />
           </span>
         </template>
@@ -193,9 +235,9 @@ function markPathChanges(fromPath: string, toPath: string): Renderable {
   </div>
   <div class="line modified">
     <div class="content">
-      <Tooltip>
+      <Tooltip :disabled="!modifiedOverflowing">
         <template #trigger="{ props: tooltipProps }">
-          <span v-bind="tooltipProps" class="file-path">
+          <span ref="modifiedEl" v-bind="tooltipProps" class="file-path">
             <Content :content="() => markPathChanges(original, modified)" />
           </span>
         </template>
