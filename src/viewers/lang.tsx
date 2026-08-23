@@ -21,12 +21,12 @@ registerViewer('lang', {
     return /assets\/[^\/]+\/lang\/(?!deprecated)[^\/]+.json$/.test(track.id) || /^lang\/[^\/]+\.lang$/.test(track.id)
   },
   async render(dr, track) {
+    const td = new TextDecoder()
+    const parse = (bytes: Uint8Array) => {
+      const text = td.decode(bytes)
+      return track.id.endsWith('.lang') ? parseLang(text) : JSON.parse(text)
+    }
     if (track.state === DeltaTrackState.Edited) {
-      const td = new TextDecoder()
-      const parse = (bytes: Uint8Array) => {
-        const text = td.decode(bytes)
-        return track.id.endsWith('.lang') ? parseLang(text) : JSON.parse(text)
-      }
       const [ orig, mod ]: [
         Record<string, string>,
         Record<string, string>,
@@ -36,15 +36,21 @@ registerViewer('lang', {
       ])
       return <LangDiff original={orig} modified={mod}/>
     }
-    if (track.state === DeltaTrackState.Added || track.state === DeltaTrackState.Moved) {
+    if (track.state === DeltaTrackState.Added) {
+      return <LangDiff
+        original={{}}
+        modified={await dr.getEntry(dr.b, track.b).then(parse)}
+      />
+    }
+    if (track.state === DeltaTrackState.Moved) {
       return <TextView
-        text={new TextDecoder().decode(await dr.getEntry(dr.b, track.b))}
+        text={td.decode(await dr.getEntry(dr.b, track.b))}
         path={track.id}
       ></TextView>
     }
-    return <TextView
-      text={new TextDecoder().decode(await dr.getEntry(dr.a, track.a))}
-      path={track.id}
-    ></TextView>
+    return <LangDiff
+      original={await dr.getEntry(dr.a, track.a).then(parse)}
+      modified={{}}
+    />
   },
 })
