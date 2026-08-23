@@ -207,17 +207,9 @@ onMounted(async () => {
         flex: 1,
         alignSelf: 'stretch',
         marginRight: '20px',
+        marginLeft: diff.tracks.length === 0 ? '20px' : '0',
       }">
-        <Col  v-if="diff.tracks.length > 0" :style="{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '340px',
-          maxHeight: '100vh',
-          overflowY: 'auto',
-          padding: '20px 0 40px',
-          boxSizing: 'border-box',
-        }">
+        <Col  v-if="diff.tracks.length > 0" class="sidebar">
           <Row justify="center">
             <RouterLink :to="{ name: 'home' }">
               <VersionDiffLogo :style="{
@@ -338,12 +330,7 @@ onMounted(async () => {
             </NCard>
           </Transition>
         </Col>
-        <Col align='stretch' :style="{
-          flex: 1,
-          minWidth: 0,
-          padding: '60px 0',
-          marginLeft: diff.tracks.length === 0 ? '20px' : '340px',
-        }">
+        <Col align="stretch" class="main-content-container">
           <Col v-if="diff.tracks.length === 0">
             <RouterLink :to="{ name: 'home' }">
               <VersionDiffLogo />
@@ -363,7 +350,9 @@ onMounted(async () => {
             <h1>No changes</h1>
             <p>{{ diff.a }} and {{ diff.b }} have identical assets and data.</p>
           </Col>
-          <BiTreeList v-else :dr="filteredDiff ?? diff" />
+          <div v-else style="container-type: inline-size;">
+            <BiTreeList :dr="filteredDiff ?? diff" />
+          </div>
         </Col>
       </div>
       <Col v-else justify="safe center" align="safe center" gap="40px" :style="{
@@ -415,6 +404,23 @@ onMounted(async () => {
 .cross-slide-leave-to {
   opacity: 0;
   transform: translateY(-128px);
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  width: 340px;
+  max-height: 100vh;
+  overflow-y: auto;
+  padding: 20px 0 40px;
+  box-sizing: border-box;
+}
+
+.main-content-container {
+  flex: 1;
+  min-width: 0;
+  padding: 60px 0;
+  width: fit-content;
 }
 
 </style>
