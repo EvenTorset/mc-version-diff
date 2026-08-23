@@ -43,7 +43,7 @@ const styleString = computed(() => cssPropertiesToString(props.style ?? {}))
           disabledInternal = true
         }
       },
-      onPointerleave: (e: PointerEvent) => disabledInternal = false,
+      onPointerleave: (_e: PointerEvent) => disabledInternal = false,
       ...!disabled && !disabledInternal && {
         'data-easy-tooltip-src': 'next',
         'data-easy-tooltip-class': 'tooltip',
