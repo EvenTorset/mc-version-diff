@@ -70,15 +70,14 @@ onMounted(async () => {
       <div class="suggestions-grid">
         <template v-if="loading">
           <template v-for="i in 3" :key="`placeholder-${i}`">
-            <div class="suggestion-label" :style="{ '--row': i, '--row-narrow': i * 2 - 1 }">
+            <div class="suggestion-label" :style="{ '--row': i * 3 + 1 }">
               <NSkeleton text width="100px" />
             </div>
-            <NSkeleton class="suggestion-button suggestion-placeholder" :style="{ '--row': i, '--row-narrow': i * 2 - 1 }" />
+            <NSkeleton class="suggestion-button suggestion-placeholder" :style="{ '--row': i * 3 + 1 }" />
           </template>
         </template>
         <template v-else v-for="diff, i in diffSuggestions">
-          <div class="suggestion-label" :style="{ '--row': i + 1, '--row-narrow': i * 2 + 1 }">{{ diff[0] }}:</div>
-          <RouterLink class="suggestion-link hover-parent" :style="{ '--row': i + 1, '--row-narrow': i * 2 + 1 }" :to="{
+          <RouterLink class="suggestion-link hover-parent" :style="{ '--row': i * 3 + 1 }" :to="{
             name: 'delta',
             params: {
               provider: 'mcje',
@@ -86,11 +85,17 @@ onMounted(async () => {
               b: diff[1][1].id,
             }
           }">
-            <NButton
+            <!-- <NButton
               class="suggestion-button"
               :class="{ accent: i === 0 }"
               :aria-label="`Compare ${diff[1][0].id} to ${diff[1][1].id}`"
-            />
+            /> -->
+            <div
+              class="suggestion-button"
+              :class="{ accent: i === 0 }"
+              :aria-label="`Compare ${diff[1][0].id} to ${diff[1][1].id}`"
+            ></div>
+            <div class="suggestion-cell suggestion-label">{{ diff[0] }}</div>
             <div class="suggestion-cell suggestion-a">
               <MCJEVersionDisplay :version="diff[1][0]"/>
             </div>
@@ -101,6 +106,7 @@ onMounted(async () => {
               <MCJEVersionDisplay :version="diff[1][1]"/>
             </div>
           </RouterLink>
+          <div v-if="i < diffSuggestions.length - 1" class="grid-gap" :style="{ '--row': i * 3 + 1 }"></div>
         </template>
       </div>
       <template #footer>
@@ -146,7 +152,8 @@ onMounted(async () => {
   </Row>
 </template>
 
-<style>
+<style lang="scss">
+@use '@/util/gradients.scss' as gradients;
 
 .versions-list-wrapper {
   display: flex;
@@ -164,28 +171,18 @@ onMounted(async () => {
 
 .suggestions-grid {
   display: grid;
-  grid-template-columns: auto auto auto auto;
-  justify-content: start;
+  grid-template-columns: auto auto auto;
+  justify-content: center;
+  align-content: center;
   column-gap: 8px;
-  row-gap: 4px;
-  align-items: stretch;
-
-  @media screen and (max-width: 1200px) {
-    grid-template-columns: auto auto auto;
-    row-gap: 8px;
-  }
+  row-gap: 0;
+  height: 100%;
 }
 
-.suggestion-label {
-  display: flex;
-  align-items: center;
-  grid-column: 1;
-  grid-row: var(--row);
-
-  @media screen and (max-width: 1200px) {
-    grid-column: 1 / -1;
-    grid-row: var(--row-narrow);
-  }
+.grid-gap {
+  height: 12px;
+  grid-column: 1 / -1;
+  grid-row: calc(var(--row) + 2);
 }
 
 .suggestion-link {
@@ -193,48 +190,62 @@ onMounted(async () => {
 }
 
 .suggestion-button {
-  grid-column: 2 / 5;
-  grid-row: var(--row);
+  grid-column: 1 / -1;
+  grid-row: var(--row) / calc(var(--row) + 2);
   width: 100%;
   height: 100%;
+  border-radius: 6px;
+  border: 1px solid var(--color-2);
 
-  @media screen and (max-width: 1200px) {
-    grid-column: 1 / -1;
-    grid-row: calc(var(--row-narrow) + 1);
+  --intr-color: transparent;
+  --intr-color-fade: color-mix(
+    in oklch,
+    var(--intr-color),
+    oklch(from var(--intr-color) l calc(max(c, 0.2) * 2) var(--hue-cold))
+  );
+  --intr-gradient-start: rgb(from var(--intr-color) r g b / calc(alpha * 0.75));
+  --intr-gradient-end-alpha: 0.1;
+  --intr-gradient-end: rgb(from var(--intr-color-fade) r g b / calc(alpha * var(--intr-gradient-end-alpha)));
+  --intr-gradient-size: farthest-corner;
+  --intr-gradient-x: 50%;
+  --intr-gradient-y: 100%;
+  --intr-gradient-start_internal: var(--intr-gradient-start);
+  --intr-gradient-end_internal: var(--intr-gradient-end);
+  background-image: radial-gradient(
+    var(--intr-gradient-size) at var(--intr-gradient-x) var(--intr-gradient-y) in oklch,
+    gradients.scrim(var(--intr-gradient-start_internal), var(--intr-gradient-end_internal))
+  );
+  background-color: transparent;
+  transition:
+    --intr-gradient-start_internal 100ms,
+    --intr-gradient-end_internal 100ms,
+    --intr-gradient-size 100ms,
+    --intr-gradient-x 100ms,
+    --intr-gradient-y 100ms,
+    box-shadow 200ms,
+    color 200ms;
+
+  &.accent {
+    border-color: color-mix(in srgb, var(--color-accent), var(--color-2));
   }
 }
 
 .suggestion-a {
-  grid-column: 2;
-  grid-row: var(--row);
+  grid-column: 1;
+  grid-row: calc(var(--row) + 1);
   padding-left: 15px;
-
-  @media screen and (max-width: 1200px) {
-    grid-column: 1;
-    grid-row: calc(var(--row-narrow) + 1);
-  }
 }
 
 .suggestion-arrow {
-  grid-column: 3;
+  grid-column: 2;
+  grid-row: calc(var(--row) + 1);
   padding-inline: 12px;
-  grid-row: var(--row);
-
-  @media screen and (max-width: 1200px) {
-    grid-column: 2;
-    grid-row: calc(var(--row-narrow) + 1);
-  }
 }
 
 .suggestion-b {
-  grid-column: 4;
-  grid-row: var(--row);
+  grid-column: 3;
+  grid-row: calc(var(--row) + 1);
   padding-right: 15px;
-
-  @media screen and (max-width: 1200px) {
-    grid-column: 3;
-    grid-row: calc(var(--row-narrow) + 1);
-  }
 }
 
 .suggestion-placeholder {
@@ -254,7 +265,7 @@ onMounted(async () => {
   user-select: none;
   font-size: 14px;
   line-height: 14px;
-  color: var(--color-6);
+  color: var(--color-5);
   text-shadow: 0 1px 2px #000;
   transition: color 200ms;
 
@@ -263,16 +274,34 @@ onMounted(async () => {
   }
 
   .faded {
-    color: var(--color-5);
+    color: var(--color-4);
     transition: color 200ms;
   }
 }
 
-.suggestion-link:hover .suggestion-cell {
-  color: var(--color-7);
+.suggestion-label {
+  display: flex;
+  align-items: center;
+  grid-column: 1 / -1;
+  grid-row: var(--row);
+  padding: 8px 12px 0;
+  margin-bottom: -4px;
+  color: var(--color-5);
+  min-height: auto;
+  font-size: 16px;
+}
 
-  .faded {
+.suggestion-link:hover {
+  .suggestion-cell {
     color: var(--color-6);
+
+    .faded {
+      color: var(--color-5);
+    }
+  }
+
+  .suggestion-button {
+    --intr-color: rgb(from var(--color-accent) r g b / calc(alpha * 0.5));
   }
 }
 
