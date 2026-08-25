@@ -1,16 +1,11 @@
 <script setup lang="ts">
-import { renderImageWithMode } from '@/shared_renderer'
-import type { ImageViewMode } from '@/types'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
-const props = withDefaults(defineProps<{
+const props = defineProps<{
   bitmap: ImageBitmap | null
   width?: number
   height?: number
-  mode?: ImageViewMode
-}>(), {
-  mode: 'rgba',
-})
+}>()
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 
@@ -20,7 +15,6 @@ let isRendering = false
 
 let ctx: CanvasRenderingContext2D | null = null
 let observer: IntersectionObserver | null = null
-let currentRequestId = 0
 
 async function render() {
   if (!props.bitmap || !canvas.value) return;
@@ -38,42 +32,17 @@ async function render() {
   isRendering = true
   isDirty = false
 
-  const requestId = ++currentRequestId
   const width = props.width ?? props.bitmap.width
   const height = props.height ?? props.bitmap.height
 
   try {
-    if (props.mode === 'rgba') {
-      if (!ctx) ctx = canvas.value.getContext('2d')
-      if (ctx) {
-        const c = canvas.value
-        if (c.width !== width) c.width = width
-        if (c.height !== height) c.height = height
-        ctx.clearRect(0, 0, width, height)
-        ctx.drawImage(props.bitmap, 0, 0, width, height)
-      }
-    } else {
-      const renderedBitmap = await renderImageWithMode(
-        props.bitmap,
-        props.mode,
-        width,
-        height,
-      )
-
-      if (requestId === currentRequestId && canvas.value) {
-        if (!ctx) ctx = canvas.value.getContext('2d')
-        if (ctx) {
-          const c = canvas.value
-          if (c.width !== width) c.width = width
-          if (c.height !== height) c.height = height
-          ctx.clearRect(0, 0, width, height)
-          ctx.drawImage(renderedBitmap, 0, 0, width, height)
-        }
-      } else {
-        isDirty = true
-      }
-
-      renderedBitmap.close()
+    if (!ctx) ctx = canvas.value.getContext('2d')
+    if (ctx) {
+      const c = canvas.value
+      if (c.width !== width) c.width = width
+      if (c.height !== height) c.height = height
+      ctx.clearRect(0, 0, width, height)
+      ctx.drawImage(props.bitmap, 0, 0, width, height)
     }
   } catch (err) {
     console.error('Failed to render image:', err)
@@ -110,7 +79,6 @@ watch(
     props.bitmap,
     props.width,
     props.height,
-    props.mode,
   ],
   () => {
     isDirty = true

@@ -161,5 +161,8 @@ export async function tgaToBitmap(
   }
 
   const imageData = new ImageData(rgbaData, width, height)
-  return createImageBitmap(imageData)
+  return createImageBitmap(imageData, {
+    premultiplyAlpha: 'none',
+    colorSpaceConversion: 'none',
+  })
 }

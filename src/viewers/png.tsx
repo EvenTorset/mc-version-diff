@@ -11,6 +11,8 @@ import { DeltaTrackState } from '@/delta_providers/states'
 import { popupable } from '@/util/popupable'
 import type { DeltaResult, DeltaTrack } from '@/delta_providers'
 import NativeTemplate from '@/components/NativeTemplate.vue'
+import { imageFromBytes } from '@/util/imageFromBytes'
+import RawImage from '@/components/RawImage.vue'
 
 function diffImage(imgA: ImageBitmap, imgB: ImageBitmap): Promise<ImageBitmap> {
   const iaw = imgA.width
@@ -190,7 +192,10 @@ function diffImage(imgA: ImageBitmap, imgB: ImageBitmap): Promise<ImageBitmap> {
 
   gl.flush()
 
-  const img = createImageBitmap(canvas)
+  const img = createImageBitmap(canvas, {
+    premultiplyAlpha: 'none',
+    colorSpaceConversion: 'none',
+  })
 
   gl.deleteTexture(textureA)
   gl.deleteTexture(textureB)
@@ -209,17 +214,13 @@ function diffImage(imgA: ImageBitmap, imgB: ImageBitmap): Promise<ImageBitmap> {
   return img
 }
 
-function imageFromBytes(input: Uint8Array<ArrayBuffer>) {
-  return createImageBitmap(new Blob([input]), { premultiplyAlpha: 'none' })
-}
-
 export const imageViewMode = ref<ImageViewMode>('rgba')
 function versionImage(
   dr: DeltaResult,
   track: DeltaTrack,
   version: 'a' | 'b',
   img: ImageBitmap,
-  size: number,
+  bytes: Uint8Array<ArrayBuffer>,
   changedDims?: boolean,
   changedSize?: boolean,
   changedClass?: string,
@@ -235,12 +236,12 @@ function versionImage(
       maxWidth={512}
       maxHeight={128}
     >
-      <Bitmap
-        bitmap={img}
+      <RawImage
+        bytes={bytes}
         mode={imageViewMode.value}
         {...popupable({
           title: dr[version],
-          description: `${img.width}x${img.height}, ${formatBytes(size)}`,
+          description: `${img.width}x${img.height}, ${formatBytes(bytes.byteLength)}`,
           group: track.id,
           thumbnails: true,
           zoom: true,
@@ -254,7 +255,7 @@ function versionImage(
       color: changedDims ? changedClass === 'new' ? 'var(--color-success)' : 'var(--color-danger)' : undefined
     }}>{img.width}x{img.height}</span>, <span style={{
       color: changedSize ? changedClass === 'new' ? 'var(--color-success)' : 'var(--color-danger)' : undefined
-    }}>{formatBytes(size)}</span></div>
+    }}>{formatBytes(bytes.byteLength)}</span></div>
   </Col>
 }
 
@@ -316,11 +317,11 @@ registerViewer('png', {
   async render(dr, track) {
     if (track.state === DeltaTrackState.Added || track.state === DeltaTrackState.Moved) {
       const content = await dr.getEntry(dr.b, track.b)
-      return <Row>{versionImage(dr, track, 'b', await imageFromBytes(content), content.byteLength)}</Row>
+      return <Row>{versionImage(dr, track, 'b', await imageFromBytes(content), content)}</Row>
     }
     if (track.state === DeltaTrackState.Removed) {
       const content = await dr.getEntry(dr.a, track.a)
-      return <Row>{versionImage(dr, track, 'a', await imageFromBytes(content), content.byteLength)}</Row>
+      return <Row>{versionImage(dr, track, 'a', await imageFromBytes(content), content)}</Row>
     }
     const [
       [ contentA, imgA ],
@@ -351,7 +352,7 @@ registerViewer('png', {
         track,
         'a',
         imgA,
-        contentA.byteLength,
+        contentA,
         imgA.width !== imgB.width || imgA.height !== imgB.height,
         contentA.byteLength !== contentB.byteLength,
         'old'
@@ -361,7 +362,7 @@ registerViewer('png', {
         track,
         'b',
         imgB,
-        contentB.byteLength,
+        contentB,
         imgA.width !== imgB.width || imgA.height !== imgB.height,
         contentA.byteLength !== contentB.byteLength,
         'new'
