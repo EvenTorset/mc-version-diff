@@ -1,4 +1,5 @@
 import type { DeltaResult } from '@/delta_providers'
+import { legacyVariant } from '@/util/legacyItems'
 
 export interface LootStack {
   id: string
@@ -137,6 +138,7 @@ class Roller {
       const t = strip(f.function || '')
       if (!this.#passes(f.conditions)) continue
       if (t === 'set_count') stack.count = Math.max(1, Math.round(this.#rollNum(f.count, true)))
+      else if (t === 'set_data') stack.id = legacyVariant(stack.id, Math.round(this.#rollNum(f.data, true)))
       else if (t === 'enchant_randomly' || t === 'enchant_with_levels') stack.enchanted = true
       else if (t === 'set_potion') stack.components = { 'minecraft:potion_contents': { potion: f.id } }
       else if (t === 'set_components') stack.components = { ...stack.components, ...f.components }
@@ -146,7 +148,7 @@ class Roller {
   #applyEntry(entry: any, pool: any, out: LootStack[], via?: string) {
     const type = strip(entry.type || 'item')
     if (type === 'item') {
-      const stack: LootStack = { id: entry.name, count: 1, via }
+      const stack: LootStack = { id: legacyVariant(strip(entry.name)), count: 1, via }
       this.#applyFunctions(entry.functions, stack)
       this.#applyFunctions(pool?.functions, stack)
       out.push(stack)
