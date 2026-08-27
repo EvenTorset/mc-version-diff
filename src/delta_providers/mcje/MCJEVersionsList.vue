@@ -71,7 +71,7 @@ watch(filter, (newVal) => {
   clearTimeout(debounceTimer)
   debounceTimer = setTimeout(() => {
     debouncedFilter.value = newVal
-  }, 250)
+  }, 150)
 })
 
 function onKeydown(event: KeyboardEvent) {
