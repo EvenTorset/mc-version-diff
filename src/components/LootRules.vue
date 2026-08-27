@@ -215,7 +215,7 @@ const labels: Record<RowState, string> = {
   &.added .name,
   &.changed .name,
   &.removed .name {
-    --color-dim: rgb(from var(--state-color) r g b / 0.6);
+    --color-dim: color-mix(in srgb, var(--state-color) 75%, var(--color-0-alt));
   }
 
   &.removed .name {
