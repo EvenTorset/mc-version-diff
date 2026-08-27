@@ -1,0 +1,27 @@
+.loot-busy,
+.loot-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 60px 0;
+  color: var(--color-4);
+}
+
+.value {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+
+  &.dim {
+    color: var(--color-4);
+  }
+}
+
+.was {
+  color: var(--color-4);
+}
+
+.arrow {
+  padding-inline: 4px;
+  color: var(--color-3);
+}

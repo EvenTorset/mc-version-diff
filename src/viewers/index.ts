@@ -10,6 +10,7 @@ export type Viewer = {
 await import('./deprecated_lang')
 await import('./lang')
 await import('./mcje_structure')
+await import('./mcje_loot_table')
 await import('./mcje_model')
 await import('./png')
 await import('./text')
