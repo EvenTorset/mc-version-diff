@@ -1,42 +1,94 @@
 <script setup lang="tsx">
 import type { DeltaResult, DeltaTrack } from '@/delta_providers'
-import { StructureViewerEmbed } from '@/util/structureViewer'
+import { StructureViewerEmbed, type CompareResult, type CompareView, type CompareViewArgs, type VirtualHandler } from '@/util/structureViewer'
 import { NSpin } from 'naive-ui'
-import { onMounted, ref, Transition } from 'vue'
+import { onMounted, onBeforeUnmount, ref, watch, Transition } from 'vue'
 
-const structureViewerUrl = 'https://structure-viewer.ewanhowell.com/?minimal&manual&background=transparent'
+const structureViewerUrl = 'https://structure-viewer.ewanhowell.com/?minimal&manual&nosky&background=transparent'
 
 const props = defineProps<{
   dr: DeltaResult
   track: DeltaTrack
-  version: 'a' | 'b'
+  version?: 'a' | 'b'
+  show?: CompareViewArgs['show']
+  view?: CompareView
+}>()
+
+const emit = defineEmits<{
+  counts: [counts: CompareResult['counts']]
 }>()
 
 const doneLoading = ref(false)
 const iframeRef = ref<HTMLIFrameElement>()
+let embed: StructureViewerEmbed | undefined
+
+function compareView(): CompareViewArgs {
+  return {
+    show: { added: true, changed: true, removed: true, ...props.show },
+    view: props.view ?? 'slide',
+  }
+}
+
+watch(() => [props.show, props.view], () => {
+  embed?.send('compare', compareView()).catch(() => {})
+}, { deep: true })
+
+function handlerFor(version: string): VirtualHandler {
+  return {
+    read: path => props.dr.getEntry(version, path).catch(() => null),
+    list: path => props.dr.listEntries(version, path),
+  }
+}
+
+function fileName(path: string) {
+  return path.slice(path.lastIndexOf('/') + 1)
+}
 
 onMounted(async () => {
   if (!iframeRef.value) return;
 
-  const embed = new StructureViewerEmbed(iframeRef.value)
-  embed.registerHandler('custom', {
-    read: (path) => props.dr.getEntry(props.dr[props.version], path).catch(() => null),
-    list: (path) => props.dr.listEntries(props.dr[props.version], path),
-  })
+  embed = new StructureViewerEmbed(iframeRef.value)
 
-  await embed.ready()
+  if (props.version) {
+    const version = props.dr[props.version]
+    const path = props.track[props.version]!
 
-  await embed.send('loadPacks', {
-    packs: [{ handler: 'custom', name: 'Custom' }]
-  })
+    embed.registerHandler('custom', handlerFor(version))
+    await embed.ready()
 
-  await embed.send('loadStructure', {
-    data: await props.dr.getEntry(props.dr[props.version], props.track[props.version]),
-    name: props.track[props.version].slice(props.track[props.version].lastIndexOf('/') + 1),
-  })
+    await embed.send('loadPacks', {
+      packs: [{ handler: 'custom', name: version }]
+    })
+
+    await embed.send('loadStructure', {
+      data: await props.dr.getEntry(version, path),
+      name: fileName(path),
+    })
+  } else {
+    embed.registerHandler('a', handlerFor(props.dr.a))
+    embed.registerHandler('b', handlerFor(props.dr.b))
+    await embed.ready()
+
+    await embed.send('loadPacks', { packs: [{ handler: 'a', name: props.dr.a }] })
+    await embed.send('loadComparePacks', { packs: [{ handler: 'b', name: props.dr.b }] })
+
+    const [ left, right ] = await Promise.all([
+      props.dr.getEntry(props.dr.a, props.track.a),
+      props.dr.getEntry(props.dr.b, props.track.b),
+    ])
+
+    const comparison = await embed.send('compare', {
+      left: { data: left, name: fileName(props.track.a) },
+      right: { data: right, name: fileName(props.track.b) },
+      ...compareView(),
+    })
+    emit('counts', comparison.counts)
+  }
 
   doneLoading.value = true
 })
+
+onBeforeUnmount(() => embed?.destroy())
 </script>
 
 <template>

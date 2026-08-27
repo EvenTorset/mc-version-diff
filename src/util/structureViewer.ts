@@ -62,11 +62,46 @@ export interface LoadWorldResult {
   bounds: WorldBounds | null
 }
 
+export interface LoadComparePacksArgs {
+  base?: BaseSource
+  packs?: PackEntry[]
+}
+
+export interface LoadComparePacksResult {
+  armed: boolean
+  version: string | null
+}
+
+export type CompareFile = Bytes | { data: Bytes; name?: string }
+
+export type CompareView = "slide" | "before" | "after"
+
+export interface CompareViewArgs {
+  show?: { added?: boolean; changed?: boolean; removed?: boolean }
+  view?: CompareView
+  split?: number
+}
+
+export type CompareArgs = CompareViewArgs & (
+  | { path: string }
+  | { left?: CompareFile; right?: CompareFile }
+  | { against: string; path?: string }
+  | { off: true }
+  | {}
+)
+
+export interface CompareResult {
+  on: boolean
+  counts: { added: number; changed: number; removed: number }
+}
+
 export interface CommandMap {
   loadPacks: { args: LoadPacksArgs; result: LoadPacksResult }
   loadStructure: { args: LoadStructureArgs; result: LoadStructureResult }
   listStructures: { args: ListStructuresArgs; result: ListStructuresResult }
   loadWorld: { args: LoadWorldArgs; result: LoadWorldResult }
+  loadComparePacks: { args: LoadComparePacksArgs; result: LoadComparePacksResult }
+  compare: { args: CompareArgs; result: CompareResult }
 }
 
 export type CommandType = keyof CommandMap
@@ -76,10 +111,13 @@ export type CommandMessage =
   | ({ source: Source; type: "loadStructure"; id?: number } & LoadStructureArgs)
   | ({ source: Source; type: "listStructures"; id?: number } & ListStructuresArgs)
   | ({ source: Source; type: "loadWorld"; id?: number } & LoadWorldArgs)
+  | ({ source: Source; type: "loadComparePacks"; id?: number } & LoadComparePacksArgs)
+  | ({ source: Source; type: "compare"; id?: number } & CompareArgs)
 
 export type ReplyMessage =
   | ({ source: Source; reply: number; ok: true } & Partial<
-      LoadPacksResult & LoadStructureResult & ListStructuresResult & LoadWorldResult
+      LoadPacksResult & LoadStructureResult & ListStructuresResult & LoadWorldResult &
+        LoadComparePacksResult & CompareResult
     >)
   | { source: Source; reply: number; ok: false; error: string }
 
