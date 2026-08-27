@@ -61,8 +61,7 @@ export const prettyName = (n: string) =>
 export const stackKey = (s: LootStack | LootOdds) =>
   s.id + '|' + JSON.stringify(s.components ?? null)
 
-// both sides of a diff must sample the same way, so the rolls come from a seeded
-// generator rather than Math.random, which would jitter unchanged items apart
+// seeded rather than Math.random: both sides of a diff must sample identically
 function mulberry32(seed: number) {
   return () => {
     seed = seed + 0x6d2b79f5 | 0
@@ -240,8 +239,7 @@ export async function sampleTable(
   })).sort((a, b) => b.chance - a.chance || strip(a.id).localeCompare(strip(b.id)))
 }
 
-// the looting variant is pre-1.21, the enchanted bonus its replacement; both are
-// read at zero levels, which is all there is to go on outside a world
+// read at zero enchantment levels, the only assumption available outside a world
 function conditionChance(c: any) {
   const type = strip(c.condition || '')
   if (type === 'random_chance' || type === 'random_chance_with_looting') return c.chance ?? 1
@@ -259,6 +257,28 @@ function entryKind(e: any): Pick<LootRuleEntry, 'kind' | 'id'> {
   if (type === 'tag') return { kind: 'tag', id: e.name ?? 'unknown' }
   if (type === 'dynamic') return { kind: 'dynamic', id: e.name ?? 'unknown' }
   return { kind: 'other', id: type }
+}
+
+const oddsCache = new WeakMap<object, Promise<LootOdds[]>>()
+
+export function sampleTableCached(table: any, read: TableReader): Promise<LootOdds[]> {
+  if (table === null || typeof table !== 'object') return sampleTable(table, read)
+  if (!oddsCache.has(table)) oddsCache.set(table, sampleTable(table, read))
+  return oddsCache.get(table)!
+}
+
+export function sameOdds(a: LootOdds, b: LootOdds) {
+  return a.chance === b.chance && a.min === b.min && a.max === b.max && a.avg === b.avg
+    && a.via.join(', ') === b.via.join(', ')
+}
+
+export function oddsChanged(before: LootOdds[], after: LootOdds[]) {
+  if (before.length !== after.length) return true
+  const byKey = new Map(after.map(o => [ stackKey(o), o ]))
+  return before.some(o => {
+    const match = byKey.get(stackKey(o))
+    return !match || !sameOdds(o, match)
+  })
 }
 
 function fmtNum(n: any): string {

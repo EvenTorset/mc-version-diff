@@ -6,6 +6,7 @@ import TextView from '@/components/TextView.vue'
 import type { DeltaResult } from '@/delta_providers'
 import { DeltaTrackState } from '@/delta_providers/states'
 import { Settings } from '@/settings'
+import { deltaTableReader, describeTable, oddsChanged, sampleTableCached } from '@/util/loot'
 import stringify from 'fabulous-json'
 import { NCheckbox, NTab, NTabs } from 'naive-ui'
 import { ref } from 'vue'
@@ -20,8 +21,6 @@ async function readBoth(dr: DeltaResult, version: string, path: string) {
   return { table: JSON.parse(raw), raw }
 }
 
-// collapsing a track tears the whole viewer down; keeping the parsed sides per
-// track preserves table identity, so reopening reuses the sampled odds too
 type Sides = { before: Awaited<ReturnType<typeof readBoth>> | null, after: Awaited<ReturnType<typeof readBoth>> | null }
 const sidesCache = new WeakMap<object, Map<string, Promise<Sides>>>()
 
@@ -38,6 +37,20 @@ function readSides(dr: DeltaResult, track: { a: string, b: string }, single: 'a'
   return cache.get(key)!
 }
 
+async function initialTab(dr: DeltaResult, sides: Sides) {
+  const { before, after } = sides
+  if (!before || !after) return 'items'
+
+  const [ a, b ] = await Promise.all([
+    sampleTableCached(before.table, deltaTableReader(dr, dr.a)),
+    sampleTableCached(after.table, deltaTableReader(dr, dr.b)),
+  ])
+  if (oddsChanged(a, b)) return 'items'
+
+  const rulesChanged = JSON.stringify(describeTable(before.table)) !== JSON.stringify(describeTable(after.table))
+  return rulesChanged ? 'rules' : 'json'
+}
+
 registerViewer('mcje_loot_table', {
   test(_dr, track) {
     return /(?:assets|data)\/[^\/]+\/loot_tables?\/.+\.json$/.test(track.id)
@@ -49,12 +62,13 @@ registerViewer('mcje_loot_table', {
         ? 'b'
         : null
 
-    const { before, after } = await readSides(dr, track, single)
+    const sides = await readSides(dr, track, single)
+    const { before, after } = sides
 
     const beforeSide = before ? { version: dr.a, table: before.table } : undefined
     const afterSide = after ? { version: dr.b, table: after.table } : undefined
 
-    const tab = ref('items')
+    const tab = ref(await initialTab(dr, sides))
     const showUnchanged = ref(false)
     const counts = ref<{ added: number, changed: number, removed: number, same: number } | null>(null)
 

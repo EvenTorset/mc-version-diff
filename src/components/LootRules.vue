@@ -68,8 +68,6 @@ const pools = computed<PoolRow[]>(() => {
   return rows
 })
 
-// entries are matched by name, since a pool's list order shifts as entries come
-// and go while the names are what a reader is tracking
 function diffEntries(before: LootRuleEntry[], after: LootRuleEntry[]): EntryRow[] {
   const rows: EntryRow[] = []
   const taken = new Set<number>()
@@ -212,6 +210,12 @@ const labels: Record<RowState, string> = {
 
   .name {
     color: var(--state-color, inherit);
+  }
+
+  &.added .name,
+  &.changed .name,
+  &.removed .name {
+    --color-dim: rgb(from var(--state-color) r g b / 0.6);
   }
 
   &.removed .name {

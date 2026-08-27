@@ -3,8 +3,6 @@ import type { VirtualHandler } from '@/util/structureViewer'
 
 export type { VirtualHandler }
 
-// the structure viewer embed and block-model-renderer both take a source of
-// this shape in place of a real pack
 export function deltaVirtualHandler(dr: DeltaResult, version: string): VirtualHandler {
   return {
     async read(filePath) {

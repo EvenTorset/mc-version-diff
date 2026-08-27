@@ -1,14 +1,6 @@
-<script lang="ts">
-import type { LootOdds as LootOddsType } from '@/util/loot'
-
-// module scope, not per instance: collapsing and reopening a track remounts
-// the component, and the same parsed table must not rerun 10,000 opens
-const oddsCache = new WeakMap<object, Promise<LootOddsType[]>>()
-</script>
-
 <script setup lang="ts">
 import type { DeltaResult } from '@/delta_providers'
-import { deltaTableReader, sampleTable, prettyName, stackKey, type LootOdds } from '@/util/loot'
+import { deltaTableReader, sameOdds, sampleTableCached, prettyName, stackKey, type LootOdds } from '@/util/loot'
 import ItemIcon from './ItemIcon.vue'
 import Meter from './Meter.vue'
 import Tooltip from './Tooltip.vue'
@@ -52,13 +44,7 @@ const isDiff = computed(() => !!props.before && !!props.after)
 
 function oddsFor(side: LootSide | undefined) {
   if (!side) return null
-  if (side.table === null || typeof side.table !== 'object') {
-    return sampleTable(side.table, deltaTableReader(props.dr, side.version))
-  }
-  if (!oddsCache.has(side.table)) {
-    oddsCache.set(side.table, sampleTable(side.table, deltaTableReader(props.dr, side.version)))
-  }
-  return oddsCache.get(side.table)!
+  return sampleTableCached(side.table, deltaTableReader(props.dr, side.version))
 }
 
 let sampledTables: [ any, any ] | null = null
@@ -76,14 +62,6 @@ watch(() => [ props.before, props.after ], async () => {
   busy.value = false
 }, { immediate: true })
 
-// sampling is seeded, so equal tables give equal numbers and only real moves show
-function sameOdds(a: LootOdds, b: LootOdds) {
-  return a.chance === b.chance && a.min === b.min && a.max === b.max && a.avg === b.avg
-    && via(a) === via(b)
-}
-
-// an item can arrive through a referenced table rather than this one, which is
-// worth saying: a drop can move between files without the mob losing it
 function via(odds: LootOdds) {
   return odds.via.join(', ')
 }
@@ -149,7 +127,6 @@ watch(rows, list => {
   })
 }, { immediate: true })
 
-// only worth a column when something actually rolls a range
 const showAvg = computed(() => rows.value.some(row =>
   [ row.before, row.after ].some(odds => odds && odds.min !== odds.max)))
 
