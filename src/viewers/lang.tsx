@@ -3,7 +3,7 @@ import { registerViewer } from './registry'
 import { DeltaTrackState } from '@/delta_providers/states'
 import LangDiff from '@/components/LangDiff.vue'
 
-// Pre-1.6 versions use key=value lines instead of JSON
+// Pre-1.13 versions use key=value lines instead of JSON
 function parseLang(text: string): Record<string, string> {
   const entries: Record<string, string> = {}
   for (const line of text.split('\n')) {
@@ -18,7 +18,7 @@ function parseLang(text: string): Record<string, string> {
 
 registerViewer('lang', {
   test(_dr, track) {
-    return /assets\/[^\/]+\/lang\/(?!deprecated)[^\/]+.json$/.test(track.id) || /^lang\/[^\/]+\.lang$/.test(track.id)
+    return /assets\/[^\/]+\/lang\/(?!deprecated)[^\/]+.(json|lang)$/.test(track.id) || /^lang\/[^\/]+\.lang$/.test(track.id)
   },
   async render(dr, track) {
     const td = new TextDecoder()

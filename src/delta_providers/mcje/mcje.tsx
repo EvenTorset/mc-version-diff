@@ -277,7 +277,7 @@ const provider: DeltaProvider<MCJEVersionContent> = {
       expand: true,
       mimeType(_path) { return 'text/plain' },
       test(_dr, track) {
-        return /assets\/[^\/]+\/lang\/.+\.json$/.test(track.id) || /^lang\/.+\.lang$/.test(track.id)
+        return /assets\/[^\/]+\/lang\/.+\.(json|lang)$/.test(track.id) || /^lang\/.+\.lang$/.test(track.id)
       }
     },
     {
@@ -301,7 +301,7 @@ const provider: DeltaProvider<MCJEVersionContent> = {
       sort: 8,
       mimeType(_path) { return 'text/plain' },
       test(_dr, track) {
-        return /data\/[^\/]+\/advancement\/.+\.json$/.test(track.id)
+        return /(data\/[^\/]+\/advancement|assets\/[^\/]+\/advancements)\/.+\.json$/.test(track.id)
       }
     },
     {
@@ -309,7 +309,7 @@ const provider: DeltaProvider<MCJEVersionContent> = {
       sort: 9,
       mimeType(_path) { return 'text/plain' },
       test(_dr, track) {
-        return /data\/[^\/]+\/loot_table\/.+\.json$/.test(track.id)
+        return /(data\/[^\/]+\/loot_table|assets\/[^\/]+\/loot_tables)\/.+\.json$/.test(track.id)
       }
     },
     {
@@ -317,7 +317,7 @@ const provider: DeltaProvider<MCJEVersionContent> = {
       sort: 10,
       mimeType(_path) { return 'text/plain' },
       test(_dr, track) {
-        return /data\/[^\/]+\/recipe\/.+\.json$/.test(track.id)
+        return /(data\/[^\/]+\/recipe|assets\/[^\/]+\/recipes)\/.+\.json$/.test(track.id)
       }
     },
     {
@@ -332,7 +332,7 @@ const provider: DeltaProvider<MCJEVersionContent> = {
       name: 'Structures',
       sort: 12,
       test(_dr, track) {
-        return /data\/[^\/]+\/structure\/.+\.nbt$/.test(track.id)
+        return /(data\/[^\/]+\/structure|assets\/[^\/]+\/structures)\/.+\.nbt$/.test(track.id)
       }
     },
     {
