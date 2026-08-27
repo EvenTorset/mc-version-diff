@@ -20,6 +20,24 @@ async function readBoth(dr: DeltaResult, version: string, path: string) {
   return { table: JSON.parse(raw), raw }
 }
 
+// collapsing a track tears the whole viewer down; keeping the parsed sides per
+// track preserves table identity, so reopening reuses the sampled odds too
+type Sides = { before: Awaited<ReturnType<typeof readBoth>> | null, after: Awaited<ReturnType<typeof readBoth>> | null }
+const sidesCache = new WeakMap<object, Map<string, Promise<Sides>>>()
+
+function readSides(dr: DeltaResult, track: { a: string, b: string }, single: 'a' | 'b' | null) {
+  if (!sidesCache.has(dr)) sidesCache.set(dr, new Map())
+  const cache = sidesCache.get(dr)!
+  const key = `${track.a}|${track.b}`
+  if (!cache.has(key)) {
+    cache.set(key, (async () => ({
+      before: single === 'b' ? null : await readBoth(dr, dr.a, track.a),
+      after: single === 'a' ? null : await readBoth(dr, dr.b, track.b),
+    }))())
+  }
+  return cache.get(key)!
+}
+
 registerViewer('mcje_loot_table', {
   test(_dr, track) {
     return /(?:assets|data)\/[^\/]+\/loot_tables?\/.+\.json$/.test(track.id)
@@ -31,8 +49,10 @@ registerViewer('mcje_loot_table', {
         ? 'b'
         : null
 
-    const before = single === 'b' ? null : await readBoth(dr, dr.a, track.a)
-    const after = single === 'a' ? null : await readBoth(dr, dr.b, track.b)
+    const { before, after } = await readSides(dr, track, single)
+
+    const beforeSide = before ? { version: dr.a, table: before.table } : undefined
+    const afterSide = after ? { version: dr.b, table: after.table } : undefined
 
     const tab = ref('items')
     const showUnchanged = ref(false)
@@ -41,8 +61,8 @@ registerViewer('mcje_loot_table', {
     function view_items() {
       return <LootItems
         dr={dr}
-        before={before ? { version: dr.a, table: before.table } : undefined}
-        after={after ? { version: dr.b, table: after.table } : undefined}
+        before={beforeSide}
+        after={afterSide}
         showUnchanged={showUnchanged.value}
         onCounts={value => counts.value = value}
       />

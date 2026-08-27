@@ -1,3 +1,11 @@
+<script lang="ts">
+import type { LootOdds as LootOddsType } from '@/util/loot'
+
+// module scope, not per instance: collapsing and reopening a track remounts
+// the component, and the same parsed table must not rerun 10,000 opens
+const oddsCache = new WeakMap<object, Promise<LootOddsType[]>>()
+</script>
+
 <script setup lang="ts">
 import type { DeltaResult } from '@/delta_providers'
 import { deltaTableReader, sampleTable, prettyName, stackKey, type LootOdds } from '@/util/loot'
@@ -42,14 +50,27 @@ const afterOdds = ref<LootOdds[] | null>(null)
 
 const isDiff = computed(() => !!props.before && !!props.after)
 
-async function oddsFor(side: LootSide | undefined) {
+function oddsFor(side: LootSide | undefined) {
   if (!side) return null
-  return await sampleTable(side.table, deltaTableReader(props.dr, side.version))
+  if (side.table === null || typeof side.table !== 'object') {
+    return sampleTable(side.table, deltaTableReader(props.dr, side.version))
+  }
+  if (!oddsCache.has(side.table)) {
+    oddsCache.set(side.table, sampleTable(side.table, deltaTableReader(props.dr, side.version)))
+  }
+  return oddsCache.get(side.table)!
 }
 
+let sampledTables: [ any, any ] | null = null
+
 watch(() => [ props.before, props.after ], async () => {
+  const tables: [ any, any ] = [ props.before?.table, props.after?.table ]
+  if (sampledTables && sampledTables[0] === tables[0] && sampledTables[1] === tables[1]) return;
+  sampledTables = tables
+
   busy.value = true
   const [ a, b ] = await Promise.all([ oddsFor(props.before), oddsFor(props.after) ])
+  if (sampledTables !== tables) return;
   beforeOdds.value = a
   afterOdds.value = b
   busy.value = false

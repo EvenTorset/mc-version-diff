@@ -3,6 +3,7 @@ import { describeTable, type LootRuleEntry, type LootRulePool } from '@/util/loo
 import Meter from './Meter.vue'
 import { computed } from 'vue'
 import Dim from './Dim.vue'
+import NamespacedPath from './NamespacedPath.vue'
 
 type RowState = 'added' | 'changed' | 'removed' | 'same'
 
@@ -73,7 +74,7 @@ function diffEntries(before: LootRuleEntry[], after: LootRuleEntry[]): EntryRow[
   const rows: EntryRow[] = []
   const taken = new Set<number>()
   for (const entry of before) {
-    const index = after.findIndex((e, i) => !taken.has(i) && e.name === entry.name)
+    const index = after.findIndex((e, i) => !taken.has(i) && e.kind === entry.kind && e.id === entry.id)
     if (index === -1) {
       rows.push({ state: 'removed', before: entry, after: null })
       continue
@@ -90,6 +91,14 @@ function diffEntries(before: LootRuleEntry[], after: LootRuleEntry[]): EntryRow[
 
 function sameEntry(a: LootRuleEntry, b: LootRuleEntry) {
   return a.pct === b.pct && a.count === b.count && a.note === b.note
+}
+
+const KIND_PREFIXES: Record<LootRuleEntry['kind'], string> = {
+  item: '',
+  table: 'table: ',
+  tag: 'tag: ',
+  dynamic: 'dynamic: ',
+  other: '',
 }
 
 function headChanged(a: LootRulePool, b: LootRulePool) {
@@ -146,7 +155,9 @@ const labels: Record<RowState, string> = {
         </div>
         <div class="grid-table-row" v-for="(row, i) of pool.entries" :key="i" :class="row.state">
           <div class="name">
-            {{ entryOf(row).name }}
+            <template v-if="KIND_PREFIXES[entryOf(row).kind]">{{ KIND_PREFIXES[entryOf(row).kind] }}</template>
+            <NamespacedPath v-if="entryOf(row).kind !== 'other'" :value="entryOf(row).id" />
+            <template v-else>{{ entryOf(row).id }}</template>
             <span v-if="noteChanged(row)" class="note">
               · <Dim>{{ row.before!.note || '—' }}</Dim>
               <span class="arrow">→</span>{{ row.after!.note || '—' }}

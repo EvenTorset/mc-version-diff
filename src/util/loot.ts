@@ -19,7 +19,8 @@ export interface LootOdds {
 }
 
 export interface LootRuleEntry {
-  name: string
+  kind: 'item' | 'table' | 'tag' | 'dynamic' | 'other'
+  id: string
   pct: number
   count: string | null
   note: string
@@ -71,12 +72,38 @@ function mulberry32(seed: number) {
   }
 }
 
+async function collectTables(
+  table: any,
+  read: TableReader,
+  resolved = new Map<string, any>(),
+): Promise<Map<string, any>> {
+  for (const pool of table?.pools ?? []) {
+    for (const entry of pool.entries ?? []) await collectEntry(entry, read, resolved)
+  }
+  return resolved
+}
+
+async function collectEntry(entry: any, read: TableReader, resolved: Map<string, any>) {
+  const type = strip(entry.type || 'item')
+  if (type === 'loot_table') {
+    const ref = entry.value ?? entry.name
+    if (typeof ref === 'object') await collectTables(ref, read, resolved)
+    else if (typeof ref === 'string' && !resolved.has(ref)) {
+      const nested = await read(ref)
+      resolved.set(ref, nested)
+      if (nested) await collectTables(nested, read, resolved)
+    }
+  } else if (type === 'alternatives' || type === 'group' || type === 'sequence') {
+    for (const child of entry.children ?? []) await collectEntry(child, read, resolved)
+  }
+}
+
 class Roller {
   #random: () => number
-  #read: TableReader
+  #tables: Map<string, any>
 
-  constructor(read: TableReader, seed: number) {
-    this.#read = read
+  constructor(tables: Map<string, any>, seed: number) {
+    this.#tables = tables
     this.#random = mulberry32(seed)
   }
 
@@ -117,7 +144,7 @@ class Roller {
     }
   }
 
-  async #applyEntry(entry: any, pool: any, out: LootStack[], via?: string) {
+  #applyEntry(entry: any, pool: any, out: LootStack[], via?: string) {
     const type = strip(entry.type || 'item')
     if (type === 'item') {
       const stack: LootStack = { id: entry.name, count: 1, via }
@@ -126,13 +153,13 @@ class Roller {
       out.push(stack)
     } else if (type === 'loot_table') {
       const ref = entry.value ?? entry.name
-      const t = typeof ref === 'object' ? ref : await this.#read(ref)
-      if (t) await this.rollInto(t, out, typeof ref === 'string' ? strip(ref) : via)
+      const t = typeof ref === 'object' ? ref : this.#tables.get(ref)
+      if (t) this.rollInto(t, out, typeof ref === 'string' ? strip(ref) : via)
     } else if (type === 'alternatives' || type === 'group' || type === 'sequence') {
       for (const c of entry.children ?? []) {
         if (type === 'alternatives') {
-          if (this.#passes(c.conditions)) { await this.#applyEntry(c, pool, out, via); break }
-        } else await this.#applyEntry(c, pool, out, via)
+          if (this.#passes(c.conditions)) { this.#applyEntry(c, pool, out, via); break }
+        } else this.#applyEntry(c, pool, out, via)
       }
     }
   }
@@ -148,13 +175,13 @@ class Roller {
     return null
   }
 
-  async rollInto(table: any, out: LootStack[], via?: string) {
+  rollInto(table: any, out: LootStack[], via?: string) {
     for (const pool of table.pools ?? []) {
       if (!this.#passes(pool.conditions)) continue
       const n = Math.round(this.#rollNum(pool.rolls ?? 1, true))
       for (let i = 0; i < n; i++) {
         const entry = this.#pickEntry(pool.entries ?? [])
-        if (entry) await this.#applyEntry(entry, pool, out, via)
+        if (entry) this.#applyEntry(entry, pool, out, via)
       }
     }
   }
@@ -165,7 +192,7 @@ export async function sampleTable(
   read: TableReader,
   opens = 10000,
 ): Promise<LootOdds[]> {
-  const roller = new Roller(read, 0x10770741)
+  const roller = new Roller(await collectTables(table, read), 0x10770741)
   const tally = new Map<string, {
     id: string
     components?: Record<string, any>
@@ -176,10 +203,15 @@ export async function sampleTable(
     via: Set<string>
   }>()
   const perOpen = new Map<string, number>()
+  let lastYield = performance.now()
   for (let i = 0; i < opens; i++) {
+    if ((i & 511) === 0 && performance.now() - lastYield > 12) {
+      await new Promise(resolve => setTimeout(resolve))
+      lastYield = performance.now()
+    }
     perOpen.clear()
     const out: LootStack[] = []
-    await roller.rollInto(table, out)
+    roller.rollInto(table, out)
     for (const s of out) {
       if (!s.id) continue
       const k = stackKey(s)
@@ -217,15 +249,16 @@ function conditionChance(c: any) {
   return null
 }
 
-function entryName(e: any) {
+function entryKind(e: any): Pick<LootRuleEntry, 'kind' | 'id'> {
   const type = strip(e.type || 'item')
-  if (type === 'item') return strip(e.name)
+  if (type === 'item') return { kind: 'item', id: e.name ?? 'unknown' }
   if (type === 'loot_table') {
-    return 'table: ' + (typeof e.value === 'string' ? strip(e.value) : strip(e.name ?? 'inline'))
+    const ref = e.value ?? e.name
+    return typeof ref === 'string' ? { kind: 'table', id: ref } : { kind: 'other', id: 'inline table' }
   }
-  if (type === 'tag') return 'tag: ' + strip(e.name)
-  if (type === 'dynamic') return 'dynamic: ' + strip(e.name)
-  return type
+  if (type === 'tag') return { kind: 'tag', id: e.name ?? 'unknown' }
+  if (type === 'dynamic') return { kind: 'dynamic', id: e.name ?? 'unknown' }
+  return { kind: 'other', id: type }
 }
 
 function fmtNum(n: any): string {
@@ -264,7 +297,7 @@ export function describeTable(table: any): LootRulePool[] {
           else if (fn === 'furnace_smelt') notes.push('smelted')
         }
         return {
-          name: entryName(e),
+          ...entryKind(e),
           pct: +((e.weight ?? 1) / total * 100).toFixed(1),
           count: sc ? fmtNum(sc.count) : null,
           note: notes.join(', '),
