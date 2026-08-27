@@ -6,9 +6,10 @@ import { readNbt } from '@/util/nbt'
 import stringify from 'fabulous-json'
 import type { DeltaResult } from '@/delta_providers'
 import StructureViewer from '@/components/StructureViewer.vue'
+import { reactive, ref, Suspense, type Component } from 'vue'
+import { NCheckbox, NTab, NTabs } from 'naive-ui'
 import Row from '@/components/Row.vue'
-import { Suspense } from 'vue'
-import { NTabPane, NTabs } from 'naive-ui'
+import type { CompareResult, CompareView } from '@/util/structureViewer'
 import { asyncRenderable } from '@/util/asyncRenderable'
 import Content from '@/components/Content.vue'
 
@@ -30,20 +31,57 @@ registerViewer('mcje_structure', {
     return track.id.endsWith('.nbt')
   },
   async render(dr, track) {
+    const version = track.state === DeltaTrackState.Removed
+      ? 'a'
+      : track.state === DeltaTrackState.Added || track.state === DeltaTrackState.Moved
+        ? 'b'
+        : null
+
+    const viewTabs: { name: string, tab: string, view?: CompareView }[] = version
+      ? [{ name: '3d', tab: '3D View' }]
+      : [
+        { name: 'comparison', tab: 'Comparison', view: 'slide' },
+        { name: 'before', tab: 'Before', view: 'before' },
+        { name: 'after', tab: 'After', view: 'after' },
+      ]
+
+    const tab = ref(viewTabs[0].name)
+    const view = ref<CompareView>('slide')
+    const show = reactive({ added: true, changed: true, removed: true })
+    const counts = ref<CompareResult['counts'] | null>(null)
+
     function view_3d() {
-      if (track.state === DeltaTrackState.Removed) {
-        return <StructureViewer dr={dr} track={track} version='a' />
-      }
-      if (
-        track.state === DeltaTrackState.Added ||
-        track.state === DeltaTrackState.Moved
-      ) {
-        return <StructureViewer dr={dr} track={track} version='b' />
-      }
-      return <Row gap='0'>
-        <StructureViewer dr={dr} track={track} version='a' style='flex: 1;' />
-        <StructureViewer dr={dr} track={track} version='b' style='flex: 1;' />
-      </Row>
+      return version
+        ? <StructureViewer dr={dr} track={track} version={version} />
+        : <StructureViewer
+            dr={dr}
+            track={track}
+            show={show}
+            view={view.value}
+            onCounts={value => {
+              counts.value = value
+              show.added = value.added > 0
+              show.changed = value.changed > 0
+              show.removed = value.removed > 0
+            }}
+          />
+    }
+
+    function hasHighlights() {
+      const value = counts.value
+      return !!value && (value.added > 0 || value.changed > 0 || value.removed > 0)
+    }
+
+    function highlightToggle(key: 'added' | 'changed' | 'removed', label: string) {
+      if (!counts.value?.[key]) return null
+      return <NCheckbox
+        size='small'
+        checked={show[key]}
+        onUpdateChecked={value => show[key] = value}
+      >
+        <span class='highlight-count'>{counts.value?.[key]}</span>
+        {label}
+      </NCheckbox>
     }
     async function view_json() {
       if (track.state === DeltaTrackState.Removed) {
@@ -67,20 +105,39 @@ registerViewer('mcje_structure', {
         modified={await jsonNbt(dr, dr.b, track.b)}
       />
     }
-    return () => <NTabs
-      type='bar'
-      class='no-tab-padding pad-tab-buttons'
-      default-value='3d'
-      size='small'
-    >
-      <NTabPane name='3d' tab='3D View'>
+
+    let jsonView: Component | undefined
+
+    return () => <>
+      <NTabs
+        type='bar'
+        class='pad-tab-buttons'
+        size='small'
+        value={tab.value}
+        onUpdateValue={(value: string) => {
+          tab.value = value
+          const mode = viewTabs.find(entry => entry.name === value)?.view
+          if (mode) view.value = mode
+        }}
+      >
+        {{
+          default: () => [
+            ...viewTabs.map(entry => <NTab key={entry.name} name={entry.name} tab={entry.tab} />),
+            <NTab name='json' tab='JSON' />,
+          ],
+          suffix: () => hasHighlights() && tab.value !== 'json' ? <Row class='highlight-toggles' gap='12px'>
+            {highlightToggle('added', 'Added')}
+            {highlightToggle('changed', 'Changed')}
+            {highlightToggle('removed', 'Removed')}
+          </Row> : null,
+        }}
+      </NTabs>
+      <div style={{ display: tab.value === 'json' ? 'none' : undefined }}>
         <Content content={view_3d}/>
-      </NTabPane>
-      <NTabPane name='json' tab='JSON'>
-        <Suspense>
-          <Content content={asyncRenderable(view_json())}/>
-        </Suspense>
-      </NTabPane>
-    </NTabs>
+      </div>
+      {tab.value === 'json' ? <Suspense>
+        <Content content={jsonView ??= asyncRenderable(view_json())}/>
+      </Suspense> : null}
+    </>
   },
 })
