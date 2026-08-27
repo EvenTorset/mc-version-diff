@@ -4,8 +4,8 @@ import { DeltaTrackState } from '@/delta_providers/states'
 import { acquireSharedCamera, releaseSharedCamera, type SharedCamera } from '@/util/sharedCamera'
 import { easeTowardIdle } from '@/util/orbitIdle'
 import { getGlobalTheta } from '@/util/globalRotation'
-//@ts-ignore
-import { createAnimator, getThree, loadModel, resolveModelData } from 'https://esm.sh/block-model-renderer@2'
+import { createAnimator, getThree, loadModel, resolveModelData } from '@/util/blockModelRenderer'
+import { deltaVirtualHandler } from '@/util/virtualHandler'
 import { NSpin } from 'naive-ui'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { onBeforeUnmount, onMounted, ref, Transition, watch } from 'vue'
@@ -91,24 +91,13 @@ function disposeGroupResources(root: ThreeNS.Object3D) {
   })
 }
 
-function deltaAssets(dr: DeltaResult, version: string) {
-  return {
-    async read(filePath: string) {
-      return await dr.getEntry(version, filePath).catch(() => null)
-    },
-    async list(dir: string) {
-      return await dr.listEntries(version, dir).catch(() => [])
-    },
-  }
-}
-
 async function loadModelGroup() {
   THREE = await getThree()
 
   const path = props.track[props.version]
   const raw = await props.dr.getEntry(props.dr[props.version], path)
   const model = JSON.parse(new TextDecoder().decode(raw))
-  const assets = deltaAssets(props.dr, props.dr[props.version])
+  const assets = deltaVirtualHandler(props.dr, props.dr[props.version])
 
   const resolved = await resolveModelData(assets, { model })
   const g = new THREE.Group()

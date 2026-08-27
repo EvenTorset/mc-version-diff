@@ -1,6 +1,7 @@
 <script setup lang="tsx">
 import type { DeltaResult, DeltaTrack } from '@/delta_providers'
-import { StructureViewerEmbed, type CompareResult, type CompareView, type CompareViewArgs, type VirtualHandler } from '@/util/structureViewer'
+import { StructureViewerEmbed, type CompareResult, type CompareView, type CompareViewArgs } from '@/util/structureViewer'
+import { deltaVirtualHandler } from '@/util/virtualHandler'
 import { NSpin } from 'naive-ui'
 import { onMounted, onBeforeUnmount, ref, watch, Transition } from 'vue'
 
@@ -33,13 +34,6 @@ watch(() => [props.show, props.view], () => {
   embed?.send('compare', compareView()).catch(() => {})
 }, { deep: true })
 
-function handlerFor(version: string): VirtualHandler {
-  return {
-    read: path => props.dr.getEntry(version, path).catch(() => null),
-    list: path => props.dr.listEntries(version, path),
-  }
-}
-
 function fileName(path: string) {
   return path.slice(path.lastIndexOf('/') + 1)
 }
@@ -53,7 +47,7 @@ onMounted(async () => {
     const version = props.dr[props.version]
     const path = props.track[props.version]!
 
-    embed.registerHandler('custom', handlerFor(version))
+    embed.registerHandler('custom', deltaVirtualHandler(props.dr, version))
     await embed.ready()
 
     await embed.send('loadPacks', {
@@ -65,8 +59,8 @@ onMounted(async () => {
       name: fileName(path),
     })
   } else {
-    embed.registerHandler('a', handlerFor(props.dr.a))
-    embed.registerHandler('b', handlerFor(props.dr.b))
+    embed.registerHandler('a', deltaVirtualHandler(props.dr, props.dr.a))
+    embed.registerHandler('b', deltaVirtualHandler(props.dr, props.dr.b))
     await embed.ready()
 
     await embed.send('loadPacks', { packs: [{ handler: 'a', name: props.dr.a }] })

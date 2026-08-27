@@ -50,13 +50,25 @@ function defaultViewer() {
   return <Dim style="padding: 4px;"><i>No viewer is registered for this file type.</i></Dim>
 }
 
+let renderPromise: Promise<Renderable> | undefined
+function renderView() {
+  renderPromise ??= (async () => {
+    try {
+      return (await viewer?.render(props.dr, props.track)) ?? defaultViewer
+    } catch (err) {
+      renderPromise = undefined
+      throw err
+    }
+  })()
+  return renderPromise
+}
+
 watch(expanded, async (isExpanded) => {
   isInitialAutoExpanded.value = false
 
-  if (isExpanded) {
-    shouldRenderContent.value = true
-  }
-  view.value = (await viewer?.render(props.dr, props.track)) ?? defaultViewer
+  if (!isExpanded) return;
+  shouldRenderContent.value = true
+  view.value = await renderView()
 })
 
 function handleAnimationEnd() {
@@ -72,7 +84,7 @@ function handleAnimationEnd() {
 
 onMounted(async () => {
   if (expanded.value) {
-    view.value = (await viewer?.render(props.dr, props.track)) ?? defaultViewer
+    view.value = await renderView()
   }
   isInitialRender.value = false
 })

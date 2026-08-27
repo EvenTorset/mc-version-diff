@@ -79,7 +79,7 @@ registerViewer('mcje_structure', {
         checked={show[key]}
         onUpdateChecked={value => show[key] = value}
       >
-        <span class='highlight-count'>{counts.value?.[key]}</span>
+        <span class='toggle-count'>{counts.value?.[key]}</span>
         {label}
       </NCheckbox>
     }
@@ -125,7 +125,7 @@ registerViewer('mcje_structure', {
             ...viewTabs.map(entry => <NTab key={entry.name} name={entry.name} tab={entry.tab} />),
             <NTab name='json' tab='JSON' />,
           ],
-          suffix: () => hasHighlights() && tab.value !== 'json' ? <Row class='highlight-toggles' gap='12px'>
+          suffix: () => hasHighlights() && tab.value !== 'json' ? <Row class='tab-toggles' gap='12px'>
             {highlightToggle('added', 'Added')}
             {highlightToggle('changed', 'Changed')}
             {highlightToggle('removed', 'Removed')}
