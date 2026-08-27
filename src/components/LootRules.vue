@@ -2,6 +2,7 @@
 import { describeTable, type LootRuleEntry, type LootRulePool } from '@/util/loot'
 import Meter from './Meter.vue'
 import { computed } from 'vue'
+import Dim from './Dim.vue'
 
 type RowState = 'added' | 'changed' | 'removed' | 'same'
 
@@ -130,7 +131,7 @@ const labels: Record<RowState, string> = {
         <span class="pool-label">{{ isDiff ? labels[pool.state] : 'Pool' }} {{ pool.index + 1 }}</span>
         <span class="pool-meta">
           <template v-if="pool.state === 'changed' && head(pool.before!) !== head(pool.after!)">
-            <span class="was">{{ head(pool.before!) }}</span>
+            <Dim>{{ head(pool.before!) }}</Dim>
             <span class="arrow">→</span>
           </template>
           {{ head((pool.after ?? pool.before)!) }}
@@ -147,7 +148,7 @@ const labels: Record<RowState, string> = {
           <div class="name">
             {{ entryOf(row).name }}
             <span v-if="noteChanged(row)" class="note">
-              · <span class="was">{{ row.before!.note || '—' }}</span>
+              · <Dim>{{ row.before!.note || '—' }}</Dim>
               <span class="arrow">→</span>{{ row.after!.note || '—' }}
             </span>
             <span v-else-if="entryOf(row).note" class="note"> · {{ entryOf(row).note }}</span>
@@ -158,18 +159,18 @@ const labels: Record<RowState, string> = {
           />
           <div class="right value">
             <template v-if="row.state === 'changed' && row.before!.pct !== row.after!.pct">
-              <span class="was">{{ row.before!.pct }}%</span>
+              <Dim>{{ row.before!.pct }}%</Dim>
               <span class="arrow">→</span>
             </template>
             {{ entryOf(row).pct }}%
           </div>
-          <div class="right value dim">
+          <Dim class="right value" tag="div">
             <template v-if="countChanged(row)">
-              <span class="was">{{ row.before!.count ? `×${row.before!.count}` : '—' }}</span>
+              <Dim>{{ row.before!.count ? `×${row.before!.count}` : '—' }}</Dim>
               <span class="arrow">→</span>
             </template>
             {{ entryOf(row).count ? `×${entryOf(row).count}` : '' }}
-          </div>
+          </Dim>
         </div>
       </div>
     </div>
@@ -221,7 +222,7 @@ const labels: Record<RowState, string> = {
 .pool-meta {
   color: var(--color-4);
   font-size: 14px;
-  font-weight: 400;
+  font-weight: 500;
 }
 
 .grid-table {

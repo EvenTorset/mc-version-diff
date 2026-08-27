@@ -1,12 +1,20 @@
+<script setup lang="ts">
+withDefaults(defineProps<{
+  tag?: string
+}>(), {
+  tag: 'span'
+})
+</script>
+
 <template>
-  <span>
+  <component :is="tag" class="dim">
     <slot></slot>
-  </span>
+  </component>
 </template>
 
 <style lang="scss" scoped>
 
-span {
+.dim {
   color: var(--color-dim);
 }
 

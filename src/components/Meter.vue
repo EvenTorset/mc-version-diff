@@ -23,7 +23,7 @@ function floored(pct: number) {
       :border-radius="3"
       :fill-border-radius="3"
       rail-color="var(--color-2)"
-      color="var(--color-3)"
+      color="color-mix(in oklab, var(--color-danger) 75%, var(--color-3))"
     />
     <NProgress
       type="line"
@@ -33,6 +33,10 @@ function floored(pct: number) {
       :border-radius="3"
       :fill-border-radius="3"
       rail-color="var(--color-2)"
+      :color="old !== undefined
+        ? 'color-mix(in oklab, var(--color-success) 75%, var(--color-3))'
+        : 'var(--color-accent)'
+      "
     />
   </div>
 </template>

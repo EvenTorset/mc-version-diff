@@ -6,6 +6,8 @@ import Meter from './Meter.vue'
 import Tooltip from './Tooltip.vue'
 import { NSpin } from 'naive-ui'
 import { computed, ref, watch } from 'vue'
+import NamespacedPath from './NamespacedPath.vue'
+import Dim from './Dim.vue'
 
 export interface LootSide {
   version: string
@@ -144,10 +146,6 @@ function itemName(row: ItemRow) {
   return potion ? `${name} of ${prettyName(potion)}` : name
 }
 
-function itemId(row: ItemRow) {
-  return row.id.replace(/^minecraft:/, '')
-}
-
 function fmtPct(chance: number) {
   const p = chance * 100
   if (p >= 99.95) return '100%'
@@ -199,10 +197,10 @@ function iconVersion(row: ItemRow) {
                 <template #trigger="{ props }">
                   <span v-bind="props">{{ itemName(row) }}</span>
                 </template>
-                {{ itemId(row) }}
+                <NamespacedPath :value="row.id" />
               </Tooltip>
               <span v-if="viaChanged(row)" class="via">
-                · <span class="was">{{ via(row.before!) ? `via ${via(row.before!)}` : 'direct' }}</span>
+                · <Dim>{{ via(row.before!) ? `via ${via(row.before!)}` : 'direct' }}</Dim>
                 <span class="arrow">→</span>{{ via(row.after!) ? `via ${via(row.after!)}` : 'direct' }}
               </span>
               <span v-else-if="via((row.after ?? row.before)!)" class="via">
@@ -215,25 +213,25 @@ function iconVersion(row: ItemRow) {
             />
             <div class="right value">
               <template v-if="row.state === 'changed'">
-                <span class="was">{{ fmtPct(row.before!.chance) }}</span>
+                <Dim>{{ fmtPct(row.before!.chance) }}</Dim>
                 <span class="arrow">→</span>
               </template>
               {{ fmtPct((row.after ?? row.before)!.chance) }}
             </div>
-            <div class="right value dim">
+            <Dim class="right value" tag="div">
               <template v-if="row.state === 'changed' && fmtCount(row.before!) !== fmtCount(row.after!)">
-                <span class="was">{{ fmtCount(row.before!) }}</span>
+                <Dim>{{ fmtCount(row.before!) }}</Dim>
                 <span class="arrow">→</span>
               </template>
               {{ fmtCount((row.after ?? row.before)!) }}
-            </div>
-            <div v-if="showAvg" class="right value dim">
+            </Dim>
+            <Dim v-if="showAvg" class="right value" tag="div">
               <template v-if="row.state === 'changed' && fmtAvg(row.before!) !== fmtAvg(row.after!)">
-                <span class="was">{{ fmtAvg(row.before!) }}</span>
+                <Dim>{{ fmtAvg(row.before!) }}</Dim>
                 <span class="arrow">→</span>
               </template>
               {{ fmtAvg((row.after ?? row.before)!) }}
-            </div>
+            </Dim>
           </div>
         </div>
       </div>

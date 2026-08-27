@@ -11,14 +11,6 @@
 .value {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-
-  &.dim {
-    color: var(--color-4);
-  }
-}
-
-.was {
-  color: var(--color-4);
 }
 
 .arrow {
