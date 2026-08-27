@@ -43,7 +43,7 @@ const isInitialAutoExpanded = ref(initExpanded)
 const isInitialRender = ref(initExpanded)
 const shouldRenderContent = ref(initExpanded)
 
-const viewer = getViewer(props.dr, props.track)
+const viewer = computed(() => getViewer(props.dr, props.track))
 const view = shallowRef<Renderable>()
 
 function defaultViewer() {
@@ -51,10 +51,11 @@ function defaultViewer() {
 }
 
 let renderPromise: Promise<Renderable> | undefined
+
 function renderView() {
   renderPromise ??= (async () => {
     try {
-      return (await viewer?.render(props.dr, props.track)) ?? defaultViewer
+      return (await viewer.value?.render(props.dr, props.track)) ?? defaultViewer
     } catch (err) {
       renderPromise = undefined
       throw err
@@ -62,6 +63,11 @@ function renderView() {
   })()
   return renderPromise
 }
+
+watch(() => props.track, () => {
+  renderPromise = undefined
+  view.value = undefined
+})
 
 watch(expanded, async (isExpanded) => {
   isInitialAutoExpanded.value = false

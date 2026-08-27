@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { DeltaResult } from '@/delta_providers'
-import { deltaVirtualHandler, type VirtualHandler } from '@/util/virtualHandler'
+import { legacyAssetAlias } from '@/util/legacyItems'
 import { useElementVisible } from '@/util/useElementVisible'
-import { renderItem } from '@/util/blockModelRenderer'
+import { readFile, renderItem, versionAssets } from '@/util/blockModelRenderer'
 import { ref, watchEffect } from 'vue'
 
 const props = withDefaults(defineProps<{
@@ -21,16 +21,30 @@ const icon = ref<ImageBitmap | null>(null)
 
 const cache = new Map<string, Promise<ImageBitmap | null>>()
 
-function render(assets: VirtualHandler, id: string, components: Record<string, any> | undefined, size: number) {
-  return renderItem({ assets, width: size, height: size, id, components: components ?? {} })
+async function assetId(assets: any, id: string) {
+  const [ ns, path ] = id.includes(':') ? id.split(':') : [ 'minecraft', id ]
+  if (await readFile(`assets/${ns}/items/${path}.json`, assets)) return id
+  if (await readFile(`assets/${ns}/models/item/${path}.json`, assets)) return id
+  const alias = legacyAssetAlias(path)
+  return alias ? `${ns}:${alias}` : id
+}
+
+async function render(dr: DeltaResult, version: string, id: string, components: Record<string, any> | undefined, size: number) {
+  const assets = await versionAssets(dr, version)
+  const canvas: HTMLCanvasElement | null = await renderItem({
+    assets,
+    width: size,
+    height: size,
+    id: await assetId(assets, id),
+    components: components ?? {},
+  })
+  return canvas && createImageBitmap(canvas)
 }
 
 function load(dr: DeltaResult, version: string, id: string, components: Record<string, any> | undefined, size: number) {
   const key = `${version}|${id}|${JSON.stringify(components ?? null)}|${size}`
   if (!cache.has(key)) {
-    cache.set(key, render(deltaVirtualHandler(dr, version), id, components, size)
-      .then((canvas: HTMLCanvasElement | null) => canvas && createImageBitmap(canvas))
-      .catch(() => null))
+    cache.set(key, render(dr, version, id, components, size).catch(() => null))
   }
   return cache.get(key)!
 }
