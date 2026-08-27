@@ -67,15 +67,20 @@ registerViewer('mcje_structure', {
           />
     }
 
+    function hasHighlights() {
+      const value = counts.value
+      return !!value && (value.added > 0 || value.changed > 0 || value.removed > 0)
+    }
+
     function highlightToggle(key: 'added' | 'changed' | 'removed', label: string) {
+      if (!counts.value?.[key]) return null
       return <NCheckbox
         size='small'
         checked={show[key]}
-        disabled={!counts.value?.[key]}
         onUpdateChecked={value => show[key] = value}
       >
-        {label}
         <span class='highlight-count'>{counts.value?.[key]}</span>
+        {label}
       </NCheckbox>
     }
     async function view_json() {
@@ -120,7 +125,7 @@ registerViewer('mcje_structure', {
             ...viewTabs.map(entry => <NTab key={entry.name} name={entry.name} tab={entry.tab} />),
             <NTab name='json' tab='JSON' />,
           ],
-          suffix: () => counts.value && tab.value === 'comparison' ? <Row class='highlight-toggles' gap='12px'>
+          suffix: () => hasHighlights() && tab.value !== 'json' ? <Row class='highlight-toggles' gap='12px'>
             {highlightToggle('added', 'Added')}
             {highlightToggle('changed', 'Changed')}
             {highlightToggle('removed', 'Removed')}

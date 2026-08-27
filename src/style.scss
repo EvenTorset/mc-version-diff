@@ -558,12 +558,10 @@ body {
   user-select: none;
 
   .highlight-count {
-    margin-left: 4px;
-    color: var(--color-4);
-  }
-
-  .n-checkbox--disabled .highlight-count {
-    color: inherit;
+    margin-right: 4px;
+    color: var(--color-accent);
+    font-weight: 600;
+    line-height: 1;
   }
 }
 
