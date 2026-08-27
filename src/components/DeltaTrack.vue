@@ -105,6 +105,8 @@ function scrollExpandedIntoView() {
   const viewportHeight = window.innerHeight
 
   if (rect.height + SCROLL_MARGIN * 2 > viewportHeight) {
+    if (rect.top <= SCROLL_MARGIN) return;
+
     window.scrollTo({
       top: window.scrollY + rect.top - SCROLL_MARGIN,
       behavior: 'smooth',
