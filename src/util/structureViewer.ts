@@ -80,6 +80,7 @@ export interface CompareViewArgs {
   show?: { added?: boolean; changed?: boolean; removed?: boolean }
   view?: CompareView
   split?: number
+  labels?: (string | null)[]
 }
 
 export type CompareArgs = CompareViewArgs & (

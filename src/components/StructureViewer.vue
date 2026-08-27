@@ -80,6 +80,7 @@ onMounted(async () => {
     const comparison = await embed.send('compare', {
       left: { data: left, name: fileName(props.track.a) },
       right: { data: right, name: fileName(props.track.b) },
+      labels: [props.dr.a, props.dr.b],
       ...compareView(),
     })
     emit('counts', comparison.counts)
