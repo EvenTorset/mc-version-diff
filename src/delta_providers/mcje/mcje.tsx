@@ -2,9 +2,9 @@ import { registerDeltaProvider } from '@/delta_providers/registry'
 import { getTrackCategory } from '@/delta_providers/category'
 import type { DeltaProvider, DeltaResult, DeltaTrack } from '@/delta_providers'
 import { useRoute } from 'vue-router'
-import { getVersionDetails, loadMCJEManifest, usesLegacyAssets } from '@/delta_providers/mcje/version_manifest'
+import { getVersionDetails, loadMCJEManifest, usesLegacyAssets, type MCJEVersionDetails } from '@/delta_providers/mcje/version_manifest'
 import { getCachedFile } from '@/util/download'
-import zip, { type ParsedZIPFileEntry } from '@/util/zip'
+import zip, { type ParsedZIP, type ParsedZIPFileEntry } from '@/util/zip'
 import type { RehashPayloadItem, RehashWorkerMessage } from '@/util/rehash.worker'
 import RehashWorker from '@/util/rehash.worker?worker'
 import { compareNbt, comparePng, HashEquivalence, terminateCmpWorkers } from '@/comparison'
@@ -99,28 +99,55 @@ function createProgressBar(title: string) {
   }
 }
 
-async function downloadJAR(id: string, progressDisplay: ProgressList, rehash: boolean) {
+export type MCJEVersionContent = {
+  id: string
+  details: MCJEVersionDetails | null
+  file: ParsedZIP
+  entries: Map<string, ParsedZIPFileEntry>
+}
+
+async function getJAR(
+  id: string,
+  progressDisplay: ProgressList,
+  rehash: boolean,
+  content?: Uint8Array<ArrayBuffer>,
+  legacy?: boolean,
+): Promise<MCJEVersionContent> {
   const progressBar = createProgressBar(id)
   const progressBarId = progressDisplay.addItem(progressBar.render)
 
-  progressBar.progHandler.setMessage('Fetching version details...')
-  const details = await getVersionDetails(id, progressBar.progHandler)
-
-  progressBar.progHandler.setMessage('Downloading JAR file...')
-  const file = await getCachedFile(id, details.downloads.client.url, {
-    extension: '.jar',
-    dirName: 'mcje_cache',
-    progHandler: progressBar.progHandler,
-  })
-
-  progressBar.progHandler.setMessage('Reading JAR file...')
-  const legacy = usesLegacyAssets(details.releaseTime)
-  const archive = zip.parse(
-    await file.arrayBuffer(),
-    filePath => !filePath.endsWith('.class') && (legacy
+  const filter = (legacy: boolean) => (filePath: string) => !filePath.endsWith('.class') && (
+    legacy
       ? !filePath.startsWith('META-INF/')
-      : /(assets|data)\//.test(filePath))
+      : /(assets|data)\//.test(filePath)
   )
+
+  const [ details, archive ] = await (async () => {
+    if (content) {
+      progressBar.progHandler.setMessage('Reading JAR file...')
+      return [null, zip.parse(
+        content.buffer,
+        filter(!!legacy)
+      )]
+    } else {
+      progressBar.progHandler.setMessage('Fetching version details...')
+      const details = await getVersionDetails(id, progressBar.progHandler)
+
+      progressBar.progHandler.setMessage('Downloading JAR file...')
+      const file = await getCachedFile(id, details.downloads.client.url, {
+        extension: '.jar',
+        dirName: 'mcje_cache',
+        progHandler: progressBar.progHandler,
+      })
+
+      progressBar.progHandler.setMessage('Reading JAR file...')
+      const legacy = usesLegacyAssets(details.releaseTime)
+      return [details, zip.parse(
+        await file.arrayBuffer(),
+        filter(legacy)
+      )]
+    }
+  })()
   const entries = Object.entries(archive.files)
 
   if (rehash) {
@@ -155,8 +182,52 @@ async function downloadJAR(id: string, progressDisplay: ProgressList, rehash: bo
   }
 }
 
-const provider: DeltaProvider = {
+const provider: DeltaProvider<MCJEVersionContent> = {
   name: 'Java Edition',
+  custom: {
+    accept: '.jar,.zip',
+    options: [
+      {
+        label: 'Rehash',
+        queryParam: 'rehash',
+        type: 'bool',
+        default: false,
+        tooltip: () => <>
+          <h3>Rehash</h3>
+          <p>
+            Recalculates file hashes before comparing.
+          </p>
+          <p><strong>When to use:</strong> If stored hashes are missing or corrupted, causing incorrect comparison results.</p>
+          <p><strong>Downside:</strong> Significantly increases comparison time.</p>
+        </>,
+      },
+      {
+        label: 'Legacy assets',
+        queryParam: 'legacy',
+        type: 'bool',
+        default: false,
+        tooltip: () => <>
+          <h3>Legacy assets</h3>
+          <p>
+            Use the pre-1.6 file structure.
+          </p>
+        </>,
+      },
+    ],
+    async preprocess(a, b, contentA, contentB, progressDisplay) {
+      const loc = new URL(location.href)
+      const rehash = loc.searchParams.get('rehash') === 'true'
+      const legacy = loc.searchParams.get('legacy') === 'true'
+      const [jarA, jarB] = await Promise.all([
+        getJAR(a, progressDisplay, rehash, contentA, legacy),
+        getJAR(b, progressDisplay, rehash, contentB, legacy),
+      ])
+      return {
+        contentA: jarA,
+        contentB: jarB,
+      }
+    },
+  },
   categories: [
     {
       name: 'Textures',
@@ -273,14 +344,18 @@ const provider: DeltaProvider = {
       }
     },
   ],
-  async compare(a, b, progressDisplay): Promise<DeltaResult> {
+  async fetch(a, b, progressDisplay) {
     const rehash = useRoute().query.rehash === 'true'
-
     const [jarA, jarB] = await Promise.all([
-      downloadJAR(a, progressDisplay, rehash),
-      downloadJAR(b, progressDisplay, rehash),
+      getJAR(a, progressDisplay, rehash),
+      getJAR(b, progressDisplay, rehash),
     ])
-
+    return {
+      contentA: jarA,
+      contentB: jarB,
+    }
+  },
+  async compare(a, b, jarA, jarB, progressDisplay) {
     const hashEquivalence = new HashEquivalence()
 
     {

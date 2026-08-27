@@ -1,6 +1,6 @@
 import type { ProgressList } from '@/components/progressList'
 import type { DeltaTrackState } from './states'
-import type { Renderable } from '@/types'
+import type { Renderable, StaticOrAsync } from '@/types'
 
 export type DeltaTrack = {
   id: string
@@ -33,12 +33,60 @@ export type DeltaProviderCategory = {
   test(dr: DeltaResult, track: DeltaTrack): boolean
 }
 
-export interface DeltaProvider {
+export interface DeltaProvider<T> {
+  /** The display name of the provider */
   name: string
-  categories: DeltaProviderCategory[]
+  /**
+   * Options for controlling how the Custom provider will use this provider as
+   * a comparator. If absent, the provider will not be available as a
+   * comparator for the Custom provider.
+   */
+  custom?: {
+    /**
+     * Comma-separated list of unique file type specifiers that the provider
+     * can work with. Used by the Custom provider to filter uploaded files.
+     */
+    accept?: string
+    /** Options that will add URL query arguments */
+    options?: {
+      label: string
+      tooltip: Renderable
+      queryParam: string
+      type: 'bool' // additions need implementation in CustomSelector.vue
+      default: boolean
+    }[]
+    /** Pre-processing step done before comparison */
+    preprocess(
+      a: string,
+      b: string,
+      contentA: Uint8Array<ArrayBuffer>,
+      contentB: Uint8Array<ArrayBuffer>,
+      progressDisplay: ProgressList
+    ): Promise<{
+      contentA: T
+      contentB: T
+    }>
+  }
+  /** A list of categories to show in the delta sidebar */
+  categories: StaticOrAsync<DeltaProviderCategory[]>
+  /** The version selector on the home page. Shown when the provider's tab is selected. */
   selector(): Promise<Renderable> | Renderable
+  /** The header at the top of the delta page */
   header(a: string, b: string): Promise<Renderable> | Renderable
-  compare(a: string, b: string, progressDisplay: ProgressList): Promise<DeltaResult>
+  /** Fetches the content of two versions from their IDs */
+  fetch(a: string, b: string, progressDisplay: ProgressList): Promise<{
+    contentA: T
+    contentB: T
+  }>
+  /** Compares two versions */
+  compare(
+    a: string,
+    b: string,
+    contentA: T,
+    contentB: T,
+    progressDisplay: ProgressList,
+  ): Promise<DeltaResult>
 }
 
 await import('./mcje')
+await import('./custom')

@@ -1,5 +1,9 @@
 import type { Component, VNode } from 'vue'
 
+export type StaticOrAsync<T> = T extends (...args: any[]) => any
+  ? never
+  : T | (() => Promise<T> | T)
+
 export type SingleOrArray<T> = T | T[]
 export type StaticRenderableContent = string | VNode | undefined | null | ImageBitmap
 export type ComponentOrStaticRenderableContent = StaticRenderableContent | Component

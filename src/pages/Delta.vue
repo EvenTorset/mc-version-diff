@@ -20,14 +20,20 @@ import { asyncRenderable } from '@/util/asyncRenderable'
 import CategoryTab from '@/components/CategoryTab.vue'
 import TransitionList from '@/components/TransitionList.vue'
 import Notify from '@/notify'
+import { resolveStaticOrAsync } from '@/util/resolveStaticOrAsync'
 
 const route = useRoute()
 const router = useRouter()
 
 const progressDisplay = createProgressList()
 
-const provider = shallowRef<DeltaProvider | null>(null)
+const provider = shallowRef<DeltaProvider<unknown> | null>(null)
 const diff = shallowRef<DeltaResult>()
+const provCategories = ref<DeltaProviderCategory[]>([])
+
+watch(provider, async p => {
+  provCategories.value = await resolveStaticOrAsync(p?.categories ?? [])
+})
 
 const symUncategorized = Symbol('Uncategorized')
 
@@ -71,7 +77,7 @@ const categoriesUnordered = computed<Map<DeltaProviderCategory | typeof symUncat
   if (!dr || !prov) return new Map()
   return Map.groupBy(
     tracksFilteredByStateAndPath.value,
-    track => prov.categories.find(c => c.test(dr, track)) ?? symUncategorized
+    track => provCategories.value.find(c => c.test(dr, track)) ?? symUncategorized
   )
 })
 const categories = computed(() => (
@@ -188,7 +194,10 @@ onMounted(async () => {
     return;
   }
   try {
-    diff.value = await provider.value.compare(route.params.a as string, route.params.b as string, progressDisplay)
+    const a = route.params.a as string
+    const b = route.params.b as string
+    const { contentA, contentB } = await provider.value.fetch(a, b, progressDisplay)
+    diff.value = await provider.value.compare(a, b, contentA, contentB, progressDisplay)
   } catch (err: any) {
     Notify.error({
       content: err?.message ?? err?.toString() ?? 'Unknown error.'
@@ -307,7 +316,7 @@ onMounted(async () => {
           </NCard>
           <Transition name="slide-fade">
             <NCard
-              v-if="provider?.categories.find(c => c.name === selectedCategory)?.isImages"
+              v-if="provCategories.find(c => c.name === selectedCategory)?.isImages"
               title="Image Display"
               :style="{
                 width: 'calc(100% - 24px)',

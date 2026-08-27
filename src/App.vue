@@ -57,6 +57,18 @@ function genNaiveTheme(): GlobalThemeOverrides {
       color: getCSSVar('--color-2'),
       colorEnd: getCSSVar('--color-3'),
     },
+    InternalSelectMenu: {
+      color: getCSSVar('--color-1'),
+      borderRadius: '6px',
+      optionColorActive: getCSSVar('--color-2'),
+      optionColorPending: getCSSVar('--color-2'),
+      optionColorActivePending: getCSSVar('--color-2'),
+      optionTextColorActive: getCSSVar('--color-6'),
+    },
+    Upload: {
+      draggerColor: getCSSVar('--color-2'),
+      draggerBorder: '1px dashed var(--color-3)',
+    }
   }
 }
 

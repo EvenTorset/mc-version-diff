@@ -5,7 +5,7 @@ import Spacer from '@/components/Spacer.vue'
 import Tooltip from '@/components/Tooltip.vue'
 import { Settings } from '@/settings'
 import { formatBytes } from '@/util/bytes'
-import { getOPFSSize } from '@/util/download'
+import { getCacheSize } from '@/util/download'
 import { NButton, NCard, NInputNumber, NSelect, NSpin, NSwitch } from 'naive-ui'
 import { computed, onMounted, ref } from 'vue'
 
@@ -14,7 +14,7 @@ async function clearOPFS(): Promise<void> {
   for await (const name of root.keys()) {
     await root.removeEntry(name, { recursive: true });
   }
-  cacheTotal.value = await getOPFSSize()
+  cacheTotal.value = await getCacheSize()
 }
 
 const cacheTotal = ref<{ size: number, count: number }>({
@@ -35,7 +35,7 @@ const cacheSizeMaxDV = computed({
 })
 
 onMounted(async () => {
-  cacheTotal.value = await getOPFSSize()
+  cacheTotal.value = await getCacheSize()
 })
 </script>
 

@@ -569,6 +569,10 @@ body {
   min-width: 100%;
 }
 
+.n-upload-dragger {
+  user-select: none;
+}
+
 /* MARK: easy-tooltips */
 
 .tooltip {
