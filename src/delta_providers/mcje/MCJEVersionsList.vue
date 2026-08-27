@@ -1,19 +1,23 @@
 <script setup lang="ts">
 import { getVersionList, loadMCJEManifest, type MCJEManifestVersion } from '@/delta_providers/mcje/version_manifest.ts'
-import { NCard, NIcon, NList, NListItem, NProgress, NSwitch } from 'naive-ui'
-import { computed, onMounted, ref } from 'vue'
-import { Beaker16Filled } from '@vicons/fluent'
+import { NButton, NCard, NIcon, NInput, NList, NListItem, NProgress, NSwitch, type InputInst } from 'naive-ui'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { Beaker16Filled, Eraser20Filled } from '@vicons/fluent'
 import { useVirtualizer } from '@tanstack/vue-virtual'
 import MCJEVersionDisplay from '@/delta_providers/mcje/MCJEVersionDisplay.vue'
 import Tooltip from '@/components/Tooltip.vue'
 import { ProgressHandler } from '@/util/progress.ts'
 import Row from '@/components/Row.vue'
+import Col from '@/components/Col.vue'
 
 const loadingProgress = ref(0)
 const showSnapshots = ref(true)
 const snapshotsAndReleases = ref<MCJEManifestVersion[]>([])
 const releasesOnly = ref<MCJEManifestVersion[]>([])
-const versions = computed<MCJEManifestVersion[]>(() => showSnapshots.value ? snapshotsAndReleases.value : releasesOnly.value)
+const versions = computed<MCJEManifestVersion[]>(() => {
+  const base = showSnapshots.value ? snapshotsAndReleases.value : releasesOnly.value
+  return base.filter(v => v.id.includes(debouncedFilter.value))
+})
 const selectedVersions = defineModel<Set<MCJEManifestVersion>>({ default: () => new Set() })
 
 const parentRef = ref<HTMLElement | null>(null)
@@ -57,6 +61,38 @@ onMounted(async () => {
     // Errors with loading the manifest will be handled by the selector component.
   }
 })
+
+const filterInput = ref<InputInst | null>(null)
+const filter = ref<string>('')
+const debouncedFilter = ref<string>('')
+let debounceTimer: ReturnType<typeof setTimeout> | undefined
+
+watch(filter, (newVal) => {
+  clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    debouncedFilter.value = newVal
+  }, 250)
+})
+
+function onKeydown(event: KeyboardEvent) {
+  if (
+    (event.ctrlKey || event.metaKey)
+    && event.key.toLowerCase() === 'f'
+    && filterInput.value?.inputElRef !== document.activeElement
+  ) {
+    event.preventDefault()
+    filterInput.value?.select()
+  }
+}
+
+function onFilterInputMounted() {
+  window.addEventListener('keydown', onKeydown)
+}
+
+onBeforeUnmount(() => {
+  clearTimeout(debounceTimer)
+  window.removeEventListener('keydown', onKeydown)
+})
 </script>
 
 <template>
@@ -72,52 +108,77 @@ onMounted(async () => {
         Show snapshots
       </Tooltip>
     </template>
-    <NProgress
-      v-if="loadingProgress < 100"
-      type="circle"
-      processing
-      :percentage="loadingProgress"
-    ></NProgress>
-    <div v-else ref="parentRef" class="list-container" :key="String(showSnapshots)">
-      <div
-        :style="{
-          height: `${totalSize}px`,
-          width: '100%',
-          position: 'relative',
-        }"
+    <Col align="stretch" style="height: calc(100cqh - 30px)">
+      <NInput
+        clearable
+        placeholder="Filter..."
+        ref="filterInput"
+        @vue:mounted="onFilterInputMounted"
+        v-model:value="filter"
+        style="margin: 0 4px; width: calc(100% - 8px);"
       >
-        <NList hoverable clickable>
-          <template v-for="virtualRow in virtualRows" :key="String(virtualRow.key)">
-            <NListItem
-              v-if="showSnapshots || versions[virtualRow.index].type !== 'snapshot'"
-              :style="{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: `${virtualRow.size}px`,
-                transform: `translateY(${virtualRow.start}px)`,
-              }"
-              @click="toggle(versions[virtualRow.index])"
-              class="mcje-version-list-item"
-              :class="{
-                selected: selectedVersions.has(versions[virtualRow.index]),
-                disabled: !selectedVersions.has(versions[virtualRow.index]) && selectedVersions.size >= 2
-              }"
-            >
-              <MCJEVersionDisplay
-                :version="versions[virtualRow.index]"
-                tooltip-side="right"
-                :style="{
-                  padding: '12px 12px 12px 16px',
-                  margin: '-12px -12px -12px -16px',
-                }"
-              />
-            </NListItem>
-          </template>
-        </NList>
+        <template #clear-icon>
+          <Tooltip>
+            <template #trigger="{ props }">
+              <NButton v-bind="props" class="icon" circle size="small">
+                <template #icon>
+                  <Eraser20Filled />
+                </template>
+              </NButton>
+            </template>
+            Clear
+          </Tooltip>
+        </template>
+      </NInput>
+      <NProgress
+        v-if="loadingProgress < 100"
+        type="circle"
+        processing
+        :percentage="loadingProgress"
+      ></NProgress>
+      <div v-else class="list-size-wrapper">
+        <div ref="parentRef" class="list-container" :key="String(showSnapshots) + debouncedFilter">
+          <div
+            :style="{
+              height: `${totalSize}px`,
+              width: '100%',
+              position: 'relative',
+            }"
+          >
+            <NList hoverable clickable>
+              <template v-for="virtualRow in virtualRows" :key="String(virtualRow.key)">
+                <NListItem
+                  v-if="showSnapshots || versions[virtualRow.index].type !== 'snapshot'"
+                  :style="{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: `${virtualRow.size}px`,
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }"
+                  @click="toggle(versions[virtualRow.index])"
+                  class="mcje-version-list-item"
+                  :class="{
+                    selected: selectedVersions.has(versions[virtualRow.index]),
+                    disabled: !selectedVersions.has(versions[virtualRow.index]) && selectedVersions.size >= 2
+                  }"
+                >
+                  <MCJEVersionDisplay
+                    :version="versions[virtualRow.index]"
+                    tooltip-side="right"
+                    :style="{
+                      padding: '12px 12px 12px 16px',
+                      margin: '-12px -12px -12px -16px',
+                    }"
+                  />
+                </NListItem>
+              </template>
+            </NList>
+          </div>
+        </div>
       </div>
-    </div>
+    </Col>
   </NCard>
 </template>
 
@@ -128,19 +189,25 @@ onMounted(async () => {
   flex-direction: column;
   align-items: stretch;
   max-height: 100dvh;
-  container-type: size;
   height: 100%;
   max-height: 100%;
+  container-type: size;
 }
 
 .card :deep(.n-card-content) {
   padding: 0 !important;
 }
 
+.list-size-wrapper {
+  flex: 1;
+  container-type: size;
+}
+
 .list-container {
-  flex: 1 1 auto;
-  max-height: calc(100cqh - 30px);
+  max-height: 100cqh;
   overflow-y: auto;
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
 }
 
 .disabled {
