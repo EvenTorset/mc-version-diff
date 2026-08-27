@@ -1,6 +1,6 @@
 import type { ProgressList } from '@/components/progressList'
 import type { DeltaTrackState } from './states'
-import type { Renderable, StaticOrAsync } from '@/types'
+import type { Renderable, StaticOrSync } from '@/types'
 
 export type DeltaTrack = {
   id: string
@@ -68,7 +68,7 @@ export interface DeltaProvider<T> {
     }>
   }
   /** A list of categories to show in the delta sidebar */
-  categories: StaticOrAsync<DeltaProviderCategory[]>
+  categories: StaticOrSync<DeltaProviderCategory[]>
   /** The version selector on the home page. Shown when the provider's tab is selected. */
   selector(): Promise<Renderable> | Renderable
   /** The header at the top of the delta page */

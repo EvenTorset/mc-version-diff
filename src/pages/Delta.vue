@@ -20,7 +20,7 @@ import { asyncRenderable } from '@/util/asyncRenderable'
 import CategoryTab from '@/components/CategoryTab.vue'
 import TransitionList from '@/components/TransitionList.vue'
 import Notify from '@/notify'
-import { resolveStaticOrAsync } from '@/util/resolveStaticOrAsync'
+import { resolveStaticOrAsync } from '@/util/resolveToStatic'
 
 const route = useRoute()
 const router = useRouter()

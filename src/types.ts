@@ -1,5 +1,8 @@
 import type { Component, VNode } from 'vue'
 
+export type StaticOrSync<T> = T extends (...args: any[]) => any
+  ? never
+  : T | (() => T)
 export type StaticOrAsync<T> = T extends (...args: any[]) => any
   ? never
   : T | (() => Promise<T> | T)

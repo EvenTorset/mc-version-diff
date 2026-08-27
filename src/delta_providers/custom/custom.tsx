@@ -1,22 +1,21 @@
-import { defineAsyncComponent, ref } from 'vue'
+import { defineAsyncComponent } from 'vue'
 import { getDeltaProvider, registerDeltaProvider } from '../registry.ts'
-import { resolveStaticOrAsync } from '@/util/resolveStaticOrAsync.ts'
+import { resolveStaticOrSync } from '@/util/resolveToStatic.ts'
 import { readUserFile } from '@/util/userFiles.ts'
-
-export const selectedComparator = ref<string>('mcje')
+import { selectedComparator } from './selectedComparator.ts'
 
 registerDeltaProvider('custom', {
   name: 'Custom',
   selector: () => defineAsyncComponent(() => import('./CustomSelector.vue')),
-  header(a, b) {
+  header(_a, _b) {
     return '[[ WORK IN PROGRESS ]]'
   },
   categories() {
     const provider = getDeltaProvider(selectedComparator.value)
     if (!provider) return []
-    return resolveStaticOrAsync(provider.categories)
+    return resolveStaticOrSync(provider.categories)
   },
-  async fetch(comparatorName, b, progressDisplay) {
+  async fetch(comparatorName, _b, progressDisplay) {
     const provider = getDeltaProvider(comparatorName)
     if (!provider?.custom) {
       throw new Error(`Invalid delta provider name: '${comparatorName}'`)

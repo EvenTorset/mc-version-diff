@@ -5,7 +5,6 @@ import { ArrowRight16Filled, ArrowSwap24Regular, ArrowUpload24Regular, Attach24R
 import { NButton, NCard, NIcon, NSelect, NSwitch, NUpload, NUploadDragger, type UploadFileInfo } from 'naive-ui'
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { getDeltaProvider, listDeltaProviders } from '../registry'
-import { selectedComparator } from './custom'
 import Spacer from '@/components/Spacer.vue'
 import Content from '@/components/Content.vue'
 import Tooltip from '@/components/Tooltip.vue'
@@ -13,6 +12,7 @@ import { RouterLink, type RouteLocationAsPathGeneric, type RouteLocationAsRelati
 import { deleteUserFile, readUserFile, writeUserFile } from '@/util/userFiles'
 import Notify from '@/notify'
 import { errorMessage } from '@/util/errorMessage'
+import { selectedComparator } from './selectedComparator'
 
 let restoring = true
 
