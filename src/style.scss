@@ -553,6 +553,18 @@ body {
   padding-left: 12px;
 }
 
+.image-display .n-card-content {
+  padding-left: 12px;
+}
+
+.panel-heading {
+  margin-bottom: 2px;
+  padding-left: 8px;
+  color: var(--color-4);
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .animation-sides {
   display: flex;
   flex-wrap: wrap;
