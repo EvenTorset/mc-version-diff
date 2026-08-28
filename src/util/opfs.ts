@@ -54,5 +54,7 @@ export async function clearDirectory(name: string): Promise<void> {
     await root.removeEntry(name, { recursive: true })
   } catch {
     // Directory didn't exist or failed to remove
+  } finally {
+    dirHandleCache.delete(name)
   }
 }

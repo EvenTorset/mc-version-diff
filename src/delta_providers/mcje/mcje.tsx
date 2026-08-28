@@ -136,7 +136,6 @@ async function getJAR(
       progressBar.progHandler.setMessage('Downloading JAR file...')
       const file = await getCachedFile(id, details.downloads.client.url, {
         extension: '.jar',
-        dirName: 'mcje_cache',
         progHandler: progressBar.progHandler,
       })
 

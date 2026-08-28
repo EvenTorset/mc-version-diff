@@ -5,17 +5,9 @@ import Spacer from '@/components/Spacer.vue'
 import Tooltip from '@/components/Tooltip.vue'
 import { Settings } from '@/settings'
 import { formatBytes } from '@/util/bytes'
-import { getCacheSize } from '@/util/download'
+import { getCacheSize, clearCache } from '@/util/download'
 import { NButton, NCard, NInputNumber, NSelect, NSpin, NSwitch } from 'naive-ui'
 import { computed, onMounted, ref } from 'vue'
-
-async function clearOPFS(): Promise<void> {
-  const root = await navigator.storage.getDirectory();
-  for await (const name of root.keys()) {
-    await root.removeEntry(name, { recursive: true });
-  }
-  cacheTotal.value = await getCacheSize()
-}
 
 const cacheTotal = ref<{ size: number, count: number }>({
   size: -1,
@@ -33,6 +25,11 @@ const cacheSizeMaxDV = computed({
     Settings.cacheSizeMax = (v ?? 0) * BYTE_UNITS[cacheSizeMaxUnit.value]
   }
 })
+
+async function clearVersionCache(): Promise<void> {
+  await clearCache()
+  cacheTotal.value = await getCacheSize()
+}
 
 onMounted(async () => {
   cacheTotal.value = await getCacheSize()
@@ -92,7 +89,7 @@ onMounted(async () => {
         </Row>
         <Tooltip>
           <template #trigger="{ props }">
-            <NButton v-bind="props" @click="clearOPFS" class="danger" style="align-self: flex-start;">Clear</NButton>
+            <NButton v-bind="props" @click="clearVersionCache" class="danger" style="align-self: flex-start;">Clear</NButton>
           </template>
           <h3>Clear Cache</h3>
           <p>Clearing the version cache will free up some space on your system, but you will need to download the versions again if you want to compare them later.</p>

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { darkTheme, NConfigProvider, NNotificationProvider, type GlobalThemeOverrides } from 'naive-ui'
 import { RouterView, useRoute } from 'vue-router'
-import { getCSSVar } from './util/getCSSVar'
-import { computed, nextTick, onMounted, ref, watchEffect } from 'vue'
-import { loadSettings, Settings, SETTINGS_STORAGE_KEY } from './settings'
-import { NotifyProvider } from './notify'
+import { getCSSVar } from '@/util/getCSSVar'
+import { computed, nextTick, onMounted, ref, watch, watchEffect } from 'vue'
+import { loadSettings, Settings, SETTINGS_STORAGE_KEY } from '@/settings'
+import { NotifyProvider } from '@/notify'
 
 const route = useRoute()
 
@@ -74,8 +74,10 @@ function genNaiveTheme(): GlobalThemeOverrides {
 
 const naiveThemeOverrides = ref<GlobalThemeOverrides>(genNaiveTheme())
 
-onMounted(() => {
+let loadedSettings = false
+onMounted(async () => {
   loadSettings()
+  loadedSettings = true
 })
 
 watchEffect(async () => {
@@ -88,8 +90,10 @@ watchEffect(async () => {
   naiveThemeOverrides.value = genNaiveTheme()
 })
 
-watchEffect(() => {
-  localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(Settings))
+watch(Settings, () => {
+  if (loadedSettings) {
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(Settings))
+  }
 })
 </script>
 

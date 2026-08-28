@@ -11,7 +11,6 @@ export interface CacheManifestEntry {
 
 export interface GetFileOptions {
   progHandler?: ProgressHandler
-  dirName?: string
   extension?: string
 }
 
@@ -19,7 +18,7 @@ type Manifest = Record<string, CacheManifestEntry>
 
 export const CORS = import.meta.env.PROD ? 'https://cors.dokucraft.co.uk:2096/' : ''
 
-const DEFAULT_DIR_NAME = 'opfs_file_cache'
+const CACHE_DIR = 'download_cache'
 
 export async function download(
   url: string,
@@ -64,7 +63,6 @@ export async function getCachedFile(
   options: GetFileOptions = {}
 ): Promise<File> {
   const {
-    dirName = DEFAULT_DIR_NAME,
     extension = '',
     progHandler,
   } = options
@@ -76,7 +74,7 @@ export async function getCachedFile(
   }
 
   try {
-    const dir = await getDirectory(dirName)
+    const dir = await getDirectory(CACHE_DIR)
     const manifest = await readManifest(dir)
 
     if (manifest[id]) {
@@ -115,19 +113,18 @@ export async function getCachedFile(
     await writeManifest(dir, manifest)
 
     return file
-  } catch {
+  } catch (err) {
+    console.warn(`Fetching file without cache: ${url}\n${err}`)
     return fetchFileWithoutCache(url, filename, progHandler)
   }
 }
 
-export async function clearCache(dirName = DEFAULT_DIR_NAME): Promise<void> {
-  await clearDirectory(dirName)
+export async function clearCache(): Promise<void> {
+  await clearDirectory(CACHE_DIR)
 }
 
-export async function getCacheSize(
-  dirName = DEFAULT_DIR_NAME
-): Promise<{ size: number, count: number }> {
-  const dir = await getDirectory(dirName)
+export async function getCacheSize(): Promise<{ size: number, count: number }> {
+  const dir = await getDirectory(CACHE_DIR)
   return await getDirectorySize(dir)
 }
 
