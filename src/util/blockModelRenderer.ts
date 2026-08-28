@@ -12,7 +12,7 @@ renderer.configure({
 })
 
 export const {
-  createAnimator, getThree, loadModel, prepareAssets, readFile, renderItem, resolveModelData,
+  createAnimator, getThree, loadModel, prepareAssets, readFile, renderItem, renderTexture, resolveModelData,
 } = renderer
 
 const prepared = new WeakMap<DeltaResult, Map<string, Promise<any>>>()
