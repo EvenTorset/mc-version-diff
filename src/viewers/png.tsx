@@ -10,6 +10,8 @@ import { DeltaTrackState } from '@/delta_providers/states'
 import { popupable } from '@/util/popupable'
 import type { DeltaResult, DeltaTrack } from '@/delta_providers'
 import MediaColumn from '@/components/MediaColumn.vue'
+import TextureAnimation from '@/components/TextureAnimation.vue'
+import { readAnimation } from '@/util/animation'
 import NativeTemplate from '@/components/NativeTemplate.vue'
 import { imageFromBytes } from '@/util/imageFromBytes'
 import RawImage from '@/components/RawImage.vue'
@@ -215,12 +217,14 @@ function diffImage(imgA: ImageBitmap, imgB: ImageBitmap): Promise<ImageBitmap> {
 }
 
 export const imageViewMode = ref<ImageViewMode>('rgba')
+export const animateTextures = ref(false)
 function versionImage(
   dr: DeltaResult,
   track: DeltaTrack,
   version: 'a' | 'b',
   img: ImageBitmap,
   bytes: Uint8Array<ArrayBuffer>,
+  mcmeta: string | null,
   changedDims?: boolean,
   changedSize?: boolean,
   changedClass?: string,
@@ -233,6 +237,19 @@ function versionImage(
 
   // only an edited track shows more than one image, so only it has a group to page through
   const group = track.state === DeltaTrackState.Edited ? track.id : undefined
+
+  if (animateTextures.value && mcmeta) {
+    return <TextureAnimation
+      dr={dr}
+      version={dr[version]}
+      mcmeta={mcmeta}
+      texture={version === 'a' ? track.a : track.b}
+      mode={imageViewMode.value}
+      label={dr[version]}
+      group={group}
+      v-slots={{ caption }}
+    />
+  }
 
   return <MediaColumn title={dr[version]} v-slots={{ caption }}>
     <FitBox
@@ -314,11 +331,15 @@ registerViewer('png', {
   async render(dr, track) {
     if (track.state === DeltaTrackState.Added || track.state === DeltaTrackState.Moved) {
       const content = await dr.getEntry(dr.b, track.b)
-      return <Row class='image-sides'>{versionImage(dr, track, 'b', await imageFromBytes(content), content)}</Row>
+      const img = await imageFromBytes(content)
+      const mcmeta = await readAnimation(dr, dr.b, track.b)
+      return () => <Row class='image-sides'>{versionImage(dr, track, 'b', img, content, mcmeta)}</Row>
     }
     if (track.state === DeltaTrackState.Removed) {
       const content = await dr.getEntry(dr.a, track.a)
-      return <Row class='image-sides'>{versionImage(dr, track, 'a', await imageFromBytes(content), content)}</Row>
+      const img = await imageFromBytes(content)
+      const mcmeta = await readAnimation(dr, dr.a, track.a)
+      return () => <Row class='image-sides'>{versionImage(dr, track, 'a', img, content, mcmeta)}</Row>
     }
     const [
       [ contentA, imgA ],
@@ -326,6 +347,10 @@ registerViewer('png', {
     ] = await Promise.all([
       dr.getEntry(dr.a, track.a).then(async c => [c, await imageFromBytes(c)] as const),
       dr.getEntry(dr.b, track.b).then(async c => [c, await imageFromBytes(c)] as const),
+    ])
+    const [ mcmetaA, mcmetaB ] = await Promise.all([
+      readAnimation(dr, dr.a, track.a),
+      readAnimation(dr, dr.b, track.b),
     ])
     const diff = await diffImage(imgA, imgB)
     const diffTooltipDisable = ref<boolean>(false)
@@ -350,6 +375,7 @@ registerViewer('png', {
         'a',
         imgA,
         contentA,
+        mcmetaA,
         imgA.width !== imgB.width || imgA.height !== imgB.height,
         contentA.byteLength !== contentB.byteLength,
         'old'
@@ -360,6 +386,7 @@ registerViewer('png', {
         'b',
         imgB,
         contentB,
+        mcmetaB,
         imgA.width !== imgB.width || imgA.height !== imgB.height,
         contentA.byteLength !== contentB.byteLength,
         'new'

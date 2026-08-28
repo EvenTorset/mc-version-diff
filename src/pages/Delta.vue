@@ -14,7 +14,7 @@ import { Eraser20Filled, TextPeriodAsterisk20Filled } from '@vicons/fluent'
 import '@/viewers'
 import Col from '@/components/Col.vue'
 import Tooltip from '@/components/Tooltip.vue'
-import { imageViewMode } from '@/viewers/png'
+import { animateTextures, imageViewMode } from '@/viewers/png'
 import { hasAnimations, mcmetaTexture } from '@/viewers/mcje_mcmeta'
 import { DeltaTrackState } from '@/delta_providers/states'
 import { asyncRenderable } from '@/util/asyncRenderable'
@@ -147,7 +147,10 @@ watch(categories, async list => {
 const categoryHasAnimations = computed(() => animationCategories.value.has(selectedCategory.value))
 
 const imageDisplayOptions = computed(() => [
-  ...isImageCategory.value ? [ { id: 'modes', heading: 'Channels' } ] : [],
+  ...isImageCategory.value ? [
+    { id: 'modes', heading: 'Channels' },
+    { id: 'animate', heading: 'Animation' },
+  ] : [],
   ...categoryHasAnimations.value ? [ { id: 'preview', heading: 'Animation' } ] : [],
 ])
 
@@ -367,6 +370,11 @@ onMounted(async () => {
                         <NRadio value="b" label="Blue" />
                       </div>
                     </NRadioGroup>
+                    <NCheckbox
+                      v-else-if="item.id === 'animate'"
+                      v-model:checked="animateTextures"
+                      label="Animate textures"
+                    />
                     <NCheckbox v-else v-model:checked="mcmetaTexture" label="Show animation texture" />
                   </template>
                 </TransitionList>
