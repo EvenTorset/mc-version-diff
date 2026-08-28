@@ -42,8 +42,18 @@ function computeMarks(a: NormalizedRecipe, b: NormalizedRecipe): { a: RecipeMark
   const slotsB = slotIngredients(b)
   if (slotsA.length !== slotsB.length) return null
 
-  const marksA: RecipeMarks = { slots: [], result: null }
-  const marksB: RecipeMarks = { slots: [], result: null }
+  const textA = new Map(a.meta.map(m => [ m.key, m.text ]))
+  const textB = new Map(b.meta.map(m => [ m.key, m.text ]))
+  const marksA: RecipeMarks = {
+    slots: [],
+    result: null,
+    meta: a.meta.map(m => !textB.has(m.key) ? 'removed' : textB.get(m.key) !== m.text ? 'changed' : null),
+  }
+  const marksB: RecipeMarks = {
+    slots: [],
+    result: null,
+    meta: b.meta.map(m => !textA.has(m.key) ? 'added' : textA.get(m.key) !== m.text ? 'changed' : null),
+  }
   for (let i = 0; i < slotsA.length; i++) {
     const ia = slotsA[i]
     const ib = slotsB[i]

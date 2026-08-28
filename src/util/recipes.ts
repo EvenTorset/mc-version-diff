@@ -28,7 +28,12 @@ export interface NormalizedRecipe {
   label: string
   layout: RecipeLayout
   result: RecipeResult | null
-  meta: string[]
+  meta: RecipeMeta[]
+}
+
+export interface RecipeMeta {
+  key: string
+  text: string
 }
 
 export type TagResolver = (tag: string) => Promise<string[]>
@@ -117,7 +122,7 @@ const COOKING_LABELS: Record<string, string> = {
 export async function normalizeRecipe(recipe: any, resolveTag: TagResolver): Promise<NormalizedRecipe> {
   const type = strip(recipe.type ?? '')
   const ing = (value: any) => parseIngredient(value, resolveTag)
-  const meta: string[] = []
+  const meta: RecipeMeta[] = []
 
   if (type === 'crafting_shaped') {
     const pattern: string[] = recipe.pattern ?? []
@@ -144,8 +149,8 @@ export async function normalizeRecipe(recipe: any, resolveTag: TagResolver): Pro
   }
 
   if (type in COOKING_LABELS) {
-    if (recipe.experience) meta.push(`${recipe.experience} XP`)
-    if (recipe.cookingtime) meta.push(`${recipe.cookingtime / 20}s`)
+    if (recipe.experience) meta.push({ key: 'experience', text: `${recipe.experience} XP` })
+    if (recipe.cookingtime) meta.push({ key: 'cookingtime', text: `${recipe.cookingtime / 20}s` })
     return {
       type, label: COOKING_LABELS[type],
       layout: { kind: 'labeled', slots: [ { label: '', ingredient: await ing(recipe.ingredient) } ] },
@@ -167,7 +172,7 @@ export async function normalizeRecipe(recipe: any, resolveTag: TagResolver): Pro
     slots.push({ label: 'Base', ingredient: await ing(recipe.base) })
     slots.push({ label: 'Material', ingredient: await ing(recipe.addition) })
     if (type === 'smithing_trim' && typeof recipe.pattern === 'string') {
-      meta.push(`Pattern: ${strip(recipe.pattern)}`)
+      meta.push({ key: 'pattern', text: `Pattern: ${strip(recipe.pattern)}` })
     }
     return {
       type, label: type === 'smithing_trim' ? 'Smithing trim' : 'Smithing',
@@ -184,7 +189,7 @@ export async function normalizeRecipe(recipe: any, resolveTag: TagResolver): Pro
         { label: 'Input', ingredient: await ing(recipe.input) },
         { label: 'Material', ingredient: await ing(recipe.material) },
       ] },
-      result, meta: result ? meta : [ ...meta, 'Keeps the input item' ],
+      result, meta: result ? meta : [ ...meta, { key: 'keeps_input', text: 'Keeps the input item' } ],
     }
   }
 
