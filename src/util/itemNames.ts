@@ -1,8 +1,12 @@
 import type { DeltaResult } from '@/delta_providers'
-import { prettyName } from '@/util/loot'
 import { shallowRef } from 'vue'
 
 const LANG = 'assets/minecraft/lang/en_us.json'
+
+const prettyName = (id: string) => id
+  .replace(/^minecraft:/, '')
+  .replace(/_/g, ' ')
+  .replace(/(^|\s)[a-z]/g, c => c.toUpperCase())
 
 const langs = new WeakMap<DeltaResult, Map<string, Record<string, string> | null>>()
 const loaded = shallowRef(0)
