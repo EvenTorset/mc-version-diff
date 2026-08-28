@@ -3,13 +3,13 @@ import Bitmap from '@/components/Bitmap.vue'
 import { formatBytes } from '@/util/bytes'
 import Row from '@/components/Row.vue'
 import FitBox from '@/components/FitBox.vue'
-import Col from '@/components/Col.vue'
 import Tooltip from '@/components/Tooltip.vue'
 import type { ImageViewMode, TooltipTriggerProps } from '@/types'
 import { ref, type CSSProperties } from 'vue'
 import { DeltaTrackState } from '@/delta_providers/states'
 import { popupable } from '@/util/popupable'
 import type { DeltaResult, DeltaTrack } from '@/delta_providers'
+import MediaColumn from '@/components/MediaColumn.vue'
 import NativeTemplate from '@/components/NativeTemplate.vue'
 import { imageFromBytes } from '@/util/imageFromBytes'
 import RawImage from '@/components/RawImage.vue'
@@ -225,11 +225,16 @@ function versionImage(
   changedSize?: boolean,
   changedClass?: string,
 ) {
-  return <Col gap='0'>
-    <div style={{
-      fontSize: '12px',
-      fontWeight: 700,
-    }}>{dr[version]}</div>
+  const caption = () => <><span style={{
+    color: changedDims ? changedClass === 'new' ? 'var(--color-success)' : 'var(--color-danger)' : undefined
+  }}>{img.width}x{img.height}</span>, <span style={{
+    color: changedSize ? changedClass === 'new' ? 'var(--color-success)' : 'var(--color-danger)' : undefined
+  }}>{formatBytes(bytes.byteLength)}</span></>
+
+  // only an edited track shows more than one image, so only it has a group to page through
+  const group = track.state === DeltaTrackState.Edited ? track.id : undefined
+
+  return <MediaColumn title={dr[version]} v-slots={{ caption }}>
     <FitBox
       width={img.width}
       height={img.height}
@@ -242,21 +247,13 @@ function versionImage(
         {...popupable({
           title: dr[version],
           description: `${img.width}x${img.height}, ${formatBytes(bytes.byteLength)}`,
-          group: track.id,
+          group,
           thumbnails: true,
           zoom: true,
         })}
       />
     </FitBox>
-    <div style={{
-      fontSize: '12px',
-      fontWeight: 700,
-    }}><span style={{
-      color: changedDims ? changedClass === 'new' ? 'var(--color-success)' : 'var(--color-danger)' : undefined
-    }}>{img.width}x{img.height}</span>, <span style={{
-      color: changedSize ? changedClass === 'new' ? 'var(--color-success)' : 'var(--color-danger)' : undefined
-    }}>{formatBytes(bytes.byteLength)}</span></div>
-  </Col>
+  </MediaColumn>
 }
 
 const commonLegendBoxStyle: CSSProperties = {
@@ -317,11 +314,11 @@ registerViewer('png', {
   async render(dr, track) {
     if (track.state === DeltaTrackState.Added || track.state === DeltaTrackState.Moved) {
       const content = await dr.getEntry(dr.b, track.b)
-      return <Row>{versionImage(dr, track, 'b', await imageFromBytes(content), content)}</Row>
+      return <Row class='image-sides'>{versionImage(dr, track, 'b', await imageFromBytes(content), content)}</Row>
     }
     if (track.state === DeltaTrackState.Removed) {
       const content = await dr.getEntry(dr.a, track.a)
-      return <Row>{versionImage(dr, track, 'a', await imageFromBytes(content), content)}</Row>
+      return <Row class='image-sides'>{versionImage(dr, track, 'a', await imageFromBytes(content), content)}</Row>
     }
     const [
       [ contentA, imgA ],
@@ -346,7 +343,7 @@ registerViewer('png', {
     } else if (imgA.width > imgB.width && imgA.height >= imgB.height) {
       legendIgnore.push(2, 4) // Added, Out of bounds
     }
-    return () => <Row align='flex-start' wrap>
+    return () => <Row align='flex-start' wrap class='image-sides'>
       {versionImage(
         dr,
         track,
@@ -367,11 +364,7 @@ registerViewer('png', {
         contentA.byteLength !== contentB.byteLength,
         'new'
       )}
-      <Col gap='0'>
-        <div style={{
-          fontSize: '12px',
-          fontWeight: 700,
-        }}>Difference</div>
+      <MediaColumn title='Difference'>
         <Tooltip
           distance={20}
           side='right'
@@ -424,7 +417,7 @@ registerViewer('png', {
             <p>{l.desc}</p>
           </>)}
         </Tooltip>
-      </Col>
+      </MediaColumn>
     </Row>
   },
 })
