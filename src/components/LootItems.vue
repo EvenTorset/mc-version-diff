@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DeltaResult } from '@/delta_providers'
-import { deltaTableReader, sameOdds, sampleTableCached, prettyName, stackKey, type LootOdds } from '@/util/loot'
+import { deltaTableReader, sameOdds, sampleTableCached, stackKey, type LootOdds } from '@/util/loot'
+import { itemName as translate } from '@/util/itemNames'
 import ItemIcon from './ItemIcon.vue'
 import Meter from './Meter.vue'
 import Tooltip from './Tooltip.vue'
@@ -139,9 +140,7 @@ const headings: Record<RowState, string> = {
 
 function itemName(row: ItemRow) {
   const odds = row.after ?? row.before!
-  const name = prettyName(odds.id)
-  const potion = odds.components?.['minecraft:potion_contents']?.potion
-  return potion ? `${name} of ${prettyName(potion)}` : name
+  return translate(props.dr, iconVersion(row), odds.id, odds.components)
 }
 
 function fmtPct(chance: number) {

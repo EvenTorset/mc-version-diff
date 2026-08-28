@@ -56,9 +56,6 @@ async function readTable(dr: DeltaResult, version: string, id: string) {
 
 const strip = (s: any) => typeof s === 'string' ? s.replace(/^minecraft:/, '') : s
 
-export const prettyName = (n: string) =>
-  strip(n).replace(/_/g, ' ').replace(/(^|\s)[a-z]/g, (c: string) => c.toUpperCase())
-
 export const stackKey = (s: LootStack | LootOdds) =>
   s.id + '|' + JSON.stringify(s.components ?? null)
 

@@ -553,6 +553,36 @@ body {
   padding-left: 12px;
 }
 
+.recipe-diff {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 20px 48px;
+  padding: 16px 12px;
+}
+
+.recipe-single {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 12px;
+}
+
+.recipe-note {
+  font-size: 13px;
+}
+
+.recipe-side {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.recipe-version {
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .tab-toggles {
   padding-right: 12px;
   user-select: none;
