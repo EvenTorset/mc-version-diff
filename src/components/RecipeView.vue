@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { DeltaResult } from '@/delta_providers'
+import { prettyName } from '@/util/loot'
 import type { NormalizedRecipe, RecipeIngredient } from '@/util/recipes'
 import { ArrowRight24Regular } from '@vicons/fluent'
 import { NIcon } from 'naive-ui'
@@ -55,6 +56,17 @@ function currentOption(ingredient: RecipeIngredient) {
   return ingredient.options[tick.value % ingredient.options.length]
 }
 
+function itemLabel(id: string, components?: Record<string, any>) {
+  const name = prettyName(id)
+  const potion = components?.['minecraft:potion_contents']?.potion
+  return potion ? `${name} of ${prettyName(potion)}` : name
+}
+
+function optionName(ingredient: RecipeIngredient) {
+  const id = currentOption(ingredient)
+  return id ? itemLabel(id, ingredient.components) : 'Unknown'
+}
+
 const header = computed(() => [ props.recipe.label, ...props.recipe.meta ].join(' · '))
 
 const hasLabels = computed(() =>
@@ -94,11 +106,14 @@ const hasLabels = computed(() =>
                   <span v-else class="slot-tag">#</span>
                 </span>
               </template>
-              <span>
-                <NamespacedPath v-if="currentOption(ingredientOf(i)!)" :value="currentOption(ingredientOf(i)!)!" />
-                <template v-else>unknown</template>
-                <Dim v-if="ingredientOf(i)!.tag"> · #{{ ingredientOf(i)!.tag }} · {{ ingredientOf(i)!.options.length }} options</Dim>
-              </span>
+              <div>{{ optionName(ingredientOf(i)!) }}</div>
+              <Dim v-if="currentOption(ingredientOf(i)!)" tag="div">
+                <NamespacedPath :value="currentOption(ingredientOf(i)!)!" />
+              </Dim>
+              <template v-if="ingredientOf(i)!.tag">
+                <div class="tip-tag"><Dim>#</Dim><NamespacedPath :value="ingredientOf(i)!.tag!" /></div>
+                <Dim tag="div">Tag group · {{ ingredientOf(i)!.options.length }} options</Dim>
+              </template>
             </Tooltip>
           </template>
         </div>
@@ -120,11 +135,14 @@ const hasLabels = computed(() =>
                     <span v-else class="slot-tag">#</span>
                   </span>
                 </template>
-                <span>
-                  <NamespacedPath v-if="currentOption(ingredientOf(i)!)" :value="currentOption(ingredientOf(i)!)!" />
-                  <template v-else>unknown</template>
-                  <Dim v-if="ingredientOf(i)!.tag"> · #{{ ingredientOf(i)!.tag }} · {{ ingredientOf(i)!.options.length }} options</Dim>
-                </span>
+                <div>{{ optionName(ingredientOf(i)!) }}</div>
+                <Dim v-if="currentOption(ingredientOf(i)!)" tag="div">
+                  <NamespacedPath :value="currentOption(ingredientOf(i)!)!" />
+                </Dim>
+                <template v-if="ingredientOf(i)!.tag">
+                  <div class="tip-tag"><Dim>#</Dim><NamespacedPath :value="ingredientOf(i)!.tag!" /></div>
+                  <Dim tag="div">Tag group · {{ ingredientOf(i)!.options.length }} options</Dim>
+                </template>
               </Tooltip>
             </template>
           </div>
@@ -140,7 +158,8 @@ const hasLabels = computed(() =>
                 <ItemIcon :dr="dr" :version="version" :id="recipe.result.id" :components="recipe.result.components" :size="32" />
               </span>
             </template>
-            <NamespacedPath :value="recipe.result.id" />
+            <div>{{ itemLabel(recipe.result.id, recipe.result.components) }}</div>
+            <Dim tag="div"><NamespacedPath :value="recipe.result.id" /></Dim>
           </Tooltip>
           <span v-if="recipe.result.count > 1" class="slot-count">{{ recipe.result.count }}</span>
         </div>
@@ -203,16 +222,25 @@ const hasLabels = computed(() =>
   width: 44px;
   height: 44px;
   box-sizing: border-box;
-  border: 1px solid var(--color-2);
+  border: 2px solid var(--color-6);
   border-radius: 6px;
-  background-color: var(--color-1);
+  background: var(--color-4);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px solid var(--color-3);
+    border-radius: 4px;
+    pointer-events: none;
+  }
 
   &.added {
     border-color: var(--color-success);
   }
 
   &.changed {
-    border-color: var(--color-accent-suppl);
+    border-color: var(--color-accent);
   }
 
   &.removed {
@@ -224,6 +252,10 @@ const hasLabels = computed(() =>
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.tip-tag {
+  margin-top: 6px;
 }
 
 .slot-tag {

@@ -34,6 +34,7 @@ export interface NormalizedRecipe {
 export type TagResolver = (tag: string) => Promise<string[]>
 
 const strip = (s: string) => s.replace(/^minecraft:/, '')
+const namespaced = (s: string) => s.includes(':') ? s : `minecraft:${s}`
 
 export function deltaTagResolver(dr: DeltaResult, version: string): TagResolver {
   const cache = new Map<string, Promise<string[]>>()
@@ -69,7 +70,7 @@ async function parseIngredient(value: any, resolveTag: TagResolver): Promise<Rec
   if (value == null) return null
   if (typeof value === 'string') {
     if (!value) return null
-    if (value.startsWith('#')) return { options: await resolveTag(value), tag: strip(value.slice(1)) }
+    if (value.startsWith('#')) return { options: await resolveTag(value), tag: namespaced(value.slice(1)) }
     return { options: [ strip(value) ] }
   }
   if (Array.isArray(value)) {
@@ -78,7 +79,7 @@ async function parseIngredient(value: any, resolveTag: TagResolver): Promise<Rec
     return options.length ? { options: Array.from(new Set(options)) } : null
   }
   if (typeof value === 'object') {
-    if (typeof value.tag === 'string') return { options: await resolveTag(value.tag), tag: strip(value.tag) }
+    if (typeof value.tag === 'string') return { options: await resolveTag(value.tag), tag: namespaced(value.tag) }
     const id = value.item ?? value.id
     if (typeof id !== 'string') return null
     const ingredient: RecipeIngredient = { options: [ legacyVariant(strip(id), value.data) ] }
