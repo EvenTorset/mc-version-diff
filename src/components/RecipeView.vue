@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { DeltaResult } from '@/delta_providers'
-import { prettyName } from '@/util/loot'
+import { itemName } from '@/util/itemNames'
 import type { NormalizedRecipe, RecipeIngredient } from '@/util/recipes'
 import { ArrowRight24Regular } from '@vicons/fluent'
 import { NIcon } from 'naive-ui'
@@ -57,15 +57,9 @@ function currentOption(ingredient: RecipeIngredient) {
   return ingredient.options[tick.value % ingredient.options.length]
 }
 
-function itemLabel(id: string, components?: Record<string, any>) {
-  const name = prettyName(id)
-  const potion = components?.['minecraft:potion_contents']?.potion
-  return potion ? `${name} of ${prettyName(potion)}` : name
-}
-
 function optionName(ingredient: RecipeIngredient) {
   const id = currentOption(ingredient)
-  return id ? itemLabel(id, ingredient.components) : 'Unknown'
+  return id ? itemName(props.dr, props.version, id, ingredient.components) : 'Unknown'
 }
 
 const hasLabels = computed(() =>
@@ -155,7 +149,7 @@ const hasLabels = computed(() =>
               <span v-if="recipe.result.count > 1" class="slot-count">{{ recipe.result.count }}</span>
             </div>
           </template>
-          <div>{{ itemLabel(recipe.result.id, recipe.result.components) }}</div>
+          <div>{{ itemName(dr, version, recipe.result.id, recipe.result.components) }}</div>
           <Dim tag="div"><NamespacedPath :value="recipe.result.id" /></Dim>
         </Tooltip>
       </template>
