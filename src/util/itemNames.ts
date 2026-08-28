@@ -4,7 +4,7 @@ import { shallowRef } from 'vue'
 const LANG = 'assets/minecraft/lang/en_us.json'
 
 const prettyName = (id: string) => id
-  .replace(/^minecraft:/, '')
+  .replace(/^.+?:/, '')
   .replace(/_/g, ' ')
   .replace(/(^|\s)[a-z]/g, c => c.toUpperCase())
 
