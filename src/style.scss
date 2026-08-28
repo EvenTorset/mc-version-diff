@@ -362,6 +362,22 @@ body {
   font-weight: 500 !important;
 }
 
+.n-radio__dot-wrapper,
+.n-checkbox-box-wrapper {
+  padding: 0 8px;
+}
+
+.n-radio__dot,
+.n-checkbox-box {
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+.n-radio__dot-wrapper + .n-radio__label,
+.n-checkbox-box-wrapper + .n-checkbox__label {
+  padding-left: 0;
+}
+
 .n-tabs-tab {
   user-select: none !important;
 
