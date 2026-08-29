@@ -111,8 +111,11 @@ function toBytes(input: NbtInput): Uint8Array {
 }
 
 async function inflate(bytes: Uint8Array, format: CompressionFormat): Promise<Uint8Array> {
-  const stream = new Blob([bytes as BlobPart]).stream().pipeThrough(new DecompressionStream(format))
-  return new Uint8Array(await new Response(stream).arrayBuffer())
+  const ds = new DecompressionStream(format)
+  const writer = ds.writable.getWriter()
+  writer.write(bytes as BufferSource).catch(() => {})
+  writer.close().catch(() => {})
+  return new Uint8Array(await new Response(ds.readable).arrayBuffer())
 }
 
 /**
