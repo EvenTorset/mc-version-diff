@@ -71,22 +71,20 @@ export async function getCachedFile(
 
   try {
     const dir = await getDirectory(CACHE_DIR)
-    const manifest = await readManifest(dir)
+    const manifest = await getManifest(dir)
 
-    if (manifest[id]) {
-      try {
-        const fileHandle = await dir.getFileHandle(filename)
-        const file = await fileHandle.getFile()
+    try {
+      const fileHandle = await dir.getFileHandle(filename)
+      const file = await fileHandle.getFile()
 
-        manifest[id].lastAccessed = Date.now()
-        await writeManifest(dir, manifest)
+      manifest[id] = { id, filename, lastAccessed: Date.now(), size: file.size }
+      queueManifestWrite(dir, manifest)
 
-        progHandler?.setUnit('byte')
-        progHandler?.update(1, file.size, file.size)
-        return file
-      } catch {
-        delete manifest[id]
-      }
+      progHandler?.setUnit('byte')
+      progHandler?.update(1, file.size, file.size)
+      return file
+    } catch {
+      delete manifest[id]
     }
 
     const response = await download(url, progHandler)
@@ -106,7 +104,7 @@ export async function getCachedFile(
     }
 
     await evictUntilUnderSize(dir, manifest, Settings.cacheSizeMax)
-    await writeManifest(dir, manifest)
+    await queueManifestWrite(dir, manifest)
 
     return file
   } catch (err) {
@@ -116,6 +114,7 @@ export async function getCachedFile(
 }
 
 export async function clearCache(): Promise<void> {
+  manifestPromise = null
   await clearDirectory(CACHE_DIR)
 }
 
@@ -132,6 +131,24 @@ async function fetchFileWithoutCache(
   const response = await download(url, progHandler)
   const blob = await response.blob()
   return new File([blob], filename, { type: blob.type })
+}
+
+let manifestPromise: Promise<Manifest> | null = null
+let writeChain: Promise<void> = Promise.resolve()
+let writeQueued = false
+
+function getManifest(dir: FileSystemDirectoryHandle): Promise<Manifest> {
+  return manifestPromise ??= readManifest(dir)
+}
+
+function queueManifestWrite(dir: FileSystemDirectoryHandle, manifest: Manifest): Promise<void> {
+  if (writeQueued) return writeChain
+  writeQueued = true
+  writeChain = writeChain.catch(() => {}).then(() => {
+    writeQueued = false
+    return writeManifest(dir, manifest)
+  })
+  return writeChain
 }
 
 async function readManifest(dir: FileSystemDirectoryHandle): Promise<Manifest> {
