@@ -13,21 +13,37 @@ export type CompareTask =
   | { kind: 'png'; a: CompareItem; b: CompareItem }
   | { kind: 'nbt'; a: CompareItem; b: CompareItem; littleEndian?: boolean }
 
-export type WorkerComparePayload = { id: number } & CompareTask
-
-export type WorkerCompareMessage = {
+export type BatchTask = {
   id: number
-  type: 'result'
+  kind: 'png' | 'nbt'
+  littleEndian?: boolean
+  aOffset: number
+  aLength: number
+  aMethod: number
+  bOffset: number
+  bLength: number
+  bMethod: number
+}
+
+export type WorkerComparePayload = {
+  tasks: BatchTask[]
+  data: ArrayBuffer
+}
+
+export type WorkerCompareResult = {
+  id: number
   same: boolean
   error?: string
 }
 
-async function decompressZipEntry(entry: CompareItem): Promise<Uint8Array> {
-  if (entry.compressionMethod === 0) {
-    return entry.compressedContent
-  }
-  const buffer = await decompressBuffer(entry.compressedContent)
-  return new Uint8Array(buffer)
+export type WorkerCompareMessage = {
+  type: 'results'
+  results: WorkerCompareResult[]
+}
+
+async function decompressZipEntry(bytes: Uint8Array, compressionMethod: number): Promise<Uint8Array> {
+  if (compressionMethod === 0) return bytes
+  return new Uint8Array(await decompressBuffer(bytes as BufferSource))
 }
 
 function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
@@ -38,42 +54,41 @@ function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
   return true
 }
 
-self.onmessage = async (event: MessageEvent<WorkerComparePayload>) => {
-  const payload = event.data
-  const { id, kind, a, b } = payload
-
+async function runTask(task: BatchTask, data: Uint8Array): Promise<WorkerCompareResult> {
   try {
     const [rawA, rawB] = await Promise.all([
-      decompressZipEntry(a),
-      decompressZipEntry(b)
+      decompressZipEntry(data.subarray(task.aOffset, task.aOffset + task.aLength), task.aMethod),
+      decompressZipEntry(data.subarray(task.bOffset, task.bOffset + task.bLength), task.bMethod)
     ])
 
     let same = false
 
-    if (kind === 'png') {
+    if (task.kind === 'png') {
       same = await comparePngPixels(rawA, rawB)
-    } else if (kind === 'nbt') {
+    } else {
       const [nbtA, nbtB] = await Promise.all([
         decompressNBT(rawA),
         decompressNBT(rawB)
       ])
 
-      const offsetA = findDataVersionOffset(nbtA, { littleEndian: payload.littleEndian })
+      const offsetA = findDataVersionOffset(nbtA, { littleEndian: task.littleEndian })
       if (offsetA !== -1) nbtA.fill(0, offsetA, offsetA + 4)
 
-      const offsetB = findDataVersionOffset(nbtB, { littleEndian: payload.littleEndian })
+      const offsetB = findDataVersionOffset(nbtB, { littleEndian: task.littleEndian })
       if (offsetB !== -1) nbtB.fill(0, offsetB, offsetB + 4)
 
       same = bytesEqual(nbtA, nbtB)
     }
 
-    self.postMessage({ id, type: 'result', same } as WorkerCompareMessage)
+    return { id: task.id, same }
   } catch (err) {
-    self.postMessage({
-      id,
-      type: 'result',
-      same: false,
-      error: String(err)
-    } as WorkerCompareMessage)
+    return { id: task.id, same: false, error: String(err) }
   }
+}
+
+self.onmessage = async (event: MessageEvent<WorkerComparePayload>) => {
+  const { tasks, data } = event.data
+  const bytes = new Uint8Array(data)
+  const results = await Promise.all(tasks.map(task => runTask(task, bytes)))
+  self.postMessage({ type: 'results', results } as WorkerCompareMessage)
 }
