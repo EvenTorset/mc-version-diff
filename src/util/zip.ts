@@ -273,6 +273,43 @@ export function* listFiles(zip: ArrayBuffer, prefix: string = ''): Generator<str
   }
 }
 
+class ZipEntry implements ParsedZIPFileEntry {
+  constructor(
+    readonly path: string,
+    readonly encodedPath: Uint8Array<ArrayBuffer>,
+    readonly compressedSize: number,
+    readonly size: number,
+    readonly crc32: number,
+    readonly compressionMethod: number,
+    readonly timeValue: number,
+    readonly dateValue: number,
+    private readonly headerOffset: number,
+    private readonly array: Uint8Array<ArrayBuffer>,
+    private readonly view: DataView,
+  ) {}
+
+  get compressedContent(): Uint8Array<ArrayBuffer> {
+    const nameLength = this.view.getUint16(this.headerOffset + 26, true)
+    const extraLength = this.view.getUint16(this.headerOffset + 28, true)
+    const start = this.headerOffset + 30 + nameLength + extraLength
+    const value = this.array.subarray(start, start + this.compressedSize)
+    Object.defineProperty(this, 'compressedContent', { value, configurable: true, enumerable: true })
+    return value
+  }
+
+  get content(): Promise<Uint8Array<ArrayBuffer>> {
+    const value = this.compressionMethod === 0
+      ? Promise.resolve(this.compressedContent)
+      : decompressBuffer(this.compressedContent).then(c => new Uint8Array(c))
+    Object.defineProperty(this, 'content', { value, configurable: true, enumerable: true })
+    return value
+  }
+
+  get textContent(): Promise<string> {
+    return Promise.resolve(this.content).then(c => td.decode(c))
+  }
+}
+
 /**
  * Parses a zip file for extracting multiple files or general archive metadata.
  */
@@ -304,56 +341,18 @@ export function parse(zip: ArrayBuffer, filter?: (filePath: string) => boolean):
     const filePath = td.decode(encodedPath)
 
     if (!filePath.endsWith('/') && (filter?.(filePath) ?? true)) {
-      const h = dv.getUint32(o + 42, true)   // Local header offset
-      const q = dv.getUint16(o + 10, true)   // Compression method (from Central Directory)
-      const t = dv.getUint16(o + 12, true)   // Time
-      const d = dv.getUint16(o + 14, true)   // Date
-      const crc = dv.getUint32(o + 16, true) // CRC32
-      const s = dv.getUint32(o + 20, true)   // Compressed size
-      const a = dv.getUint32(o + 24, true)   // Uncompressed size
+      const compressedSize = dv.getUint32(o + 20, true)
+      const size = dv.getUint32(o + 24, true)
+      const crc = dv.getUint32(o + 16, true)
+      const compressionMethod = dv.getUint16(o + 10, true)
+      const timeValue = dv.getUint16(o + 12, true)
+      const dateValue = dv.getUint16(o + 14, true)
+      const headerOffset = dv.getUint32(o + 42, true)
 
-      const hn = dv.getUint16(h + 26, true)  // Local header name length
-      const he = dv.getUint16(h + 28, true)  // Local header extra field length
-
-      const compressedContent = ua.subarray(h + 30 + hn + he, h + 30 + hn + he + s)
-
-      const entry: ParsedZIPFileEntry = {
-        path: filePath,
-        compressedSize: s,
-        size: a,
-        crc32: crc,
-        timeValue: t,
-        dateValue: d,
-        encodedPath,
-        compressionMethod: q,
-        compressedContent,
-        get textContent() {
-          return Promise.resolve(this.content).then(c => td.decode(c))
-        },
-        content: Promise.resolve(new Uint8Array(0)),
-      }
-
-      if (q === 0) {
-        entry.content = Promise.resolve(compressedContent)
-      } else {
-        Object.defineProperty(entry, 'content', {
-          configurable: true,
-          enumerable: true,
-          get() {
-            return decompressBuffer(this.compressedContent).then(c => {
-              const u8 = new Uint8Array(c)
-              Object.defineProperty(this, 'content', {
-                value: u8,
-                configurable: true,
-                enumerable: true,
-              })
-              return u8
-            })
-          },
-        })
-      }
-
-      parsedZip.files[filePath] = entry
+      parsedZip.files[filePath] = new ZipEntry(
+        filePath, encodedPath, compressedSize, size, crc,
+        compressionMethod, timeValue, dateValue, headerOffset, ua, dv,
+      )
     }
 
     o += 46 + n + m + k
