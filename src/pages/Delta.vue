@@ -4,7 +4,7 @@ import Content from '@/components/Content.vue'
 import VersionDiffLogo from '@/components/VersionDiffLogo.vue'
 import type { DeltaProvider, DeltaProviderCategory, DeltaResult, DeltaTrack } from '@/delta_providers'
 import { getDeltaProvider } from '@/delta_providers/registry'
-import { NButton, NCard, NInput, NRadio, NRadioGroup, NSpin, type InputInst } from 'naive-ui'
+import { NButton, NCard, NCheckbox, NInput, NRadio, NRadioGroup, NSpin, type InputInst } from 'naive-ui'
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Row from '@/components/Row.vue'
@@ -14,7 +14,8 @@ import { Eraser20Filled, TextPeriodAsterisk20Filled } from '@vicons/fluent'
 import '@/viewers'
 import Col from '@/components/Col.vue'
 import Tooltip from '@/components/Tooltip.vue'
-import { imageViewMode } from '@/viewers/png'
+import { animateTextures, imageViewMode } from '@/viewers/png'
+import { hasAnimations, mcmetaTexture } from '@/viewers/mcje_mcmeta'
 import { DeltaTrackState } from '@/delta_providers/states'
 import { asyncRenderable } from '@/util/asyncRenderable'
 import CategoryTab from '@/components/CategoryTab.vue'
@@ -128,6 +129,30 @@ watch(categories, newCategories => {
     }
   }
 })
+
+const isImageCategory = computed(() =>
+  !!provCategories.value.find(c => c.name === selectedCategory.value)?.isImages)
+
+const animationCategories = ref(new Set<string>())
+let animationScan = 0
+watch(categories, async list => {
+  const scan = ++animationScan
+  const dr = diff.value
+  const names = dr
+    ? await Promise.all(list.map(async ([ name, tracks ]) => await hasAnimations(dr, tracks) ? name : null))
+    : []
+  if (scan === animationScan) animationCategories.value = new Set(names.filter(n => n !== null))
+}, { immediate: true })
+
+const categoryHasAnimations = computed(() => animationCategories.value.has(selectedCategory.value))
+
+const imageDisplayOptions = computed(() => [
+  ...isImageCategory.value ? [
+    { id: 'modes', heading: 'Channels' },
+    { id: 'animate', heading: 'Animation' },
+  ] : [],
+  ...categoryHasAnimations.value ? [ { id: 'preview', heading: 'Animation' } ] : [],
+])
 
 const stateFilters = ref<Partial<Record<DeltaTrackState, boolean>>>({})
 watch(states, newStates => {
@@ -316,26 +341,44 @@ onMounted(async () => {
           </NCard>
           <Transition name="slide-fade">
             <NCard
-              v-if="provCategories.find(c => c.name === selectedCategory)?.isImages"
+              v-if="imageDisplayOptions.length > 0"
+              class="image-display"
               title="Image Display"
               :style="{
                 width: 'calc(100% - 24px)',
               }"
             >
-              <NRadioGroup v-model:value="imageViewMode">
-                <div :style="{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr 1fr',
+              <AnimatedHeight :duration="350">
+                <TransitionList :items="imageDisplayOptions" :style="{
+                  display: 'flex',
+                  flexFlow: 'column',
+                  gap: '12px',
                 }">
-                  <NRadio value="rgba" label="RGBA" />
-                  <NRadio value="rgb" label="RGB" />
-                  <NRadio value="a" label="Alpha" />
+                  <template #default="{ item }">
+                    <div v-if="imageDisplayOptions.length > 1" class="panel-heading">{{ item.heading }}</div>
+                    <NRadioGroup v-if="item.id === 'modes'" v-model:value="imageViewMode">
+                      <div :style="{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr 1fr',
+                      }">
+                        <NRadio value="rgba" label="RGBA" />
+                        <NRadio value="rgb" label="RGB" />
+                        <NRadio value="a" label="Alpha" />
 
-                  <NRadio value="r" label="Red" />
-                  <NRadio value="g" label="Green" />
-                  <NRadio value="b" label="Blue" />
-                </div>
-              </NRadioGroup>
+                        <NRadio value="r" label="Red" />
+                        <NRadio value="g" label="Green" />
+                        <NRadio value="b" label="Blue" />
+                      </div>
+                    </NRadioGroup>
+                    <NCheckbox
+                      v-else-if="item.id === 'animate'"
+                      v-model:checked="animateTextures"
+                      label="Animate textures"
+                    />
+                    <NCheckbox v-else v-model:checked="mcmetaTexture" label="Show animation texture" />
+                  </template>
+                </TransitionList>
+              </AnimatedHeight>
             </NCard>
           </Transition>
         </Col>

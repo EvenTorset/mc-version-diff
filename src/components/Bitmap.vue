@@ -92,7 +92,6 @@ onBeforeUnmount(() => {
     observer.unobserve(canvas.value)
     observer.disconnect()
   }
-  props.bitmap?.close()
 })
 </script>
 
