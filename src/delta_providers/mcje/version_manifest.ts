@@ -1,8 +1,10 @@
 import { ref } from 'vue'
 import { download } from '@/util/download'
 import { ProgressHandler } from '@/util/progress'
+import { clearDirectory, getDirectory } from '@/util/opfs'
 
 const mcjeManifestUrl = 'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json'
+const manifestCacheFile = 'mcje_version_manifest.json'
 
 export type MCJEManifestVersion = {
   id: string
@@ -78,6 +80,39 @@ const allProgHandlers = new ProgressHandler(p => {
   }
 })
 
+let refreshPromise: Promise<void> | null = null
+
+function applyManifest(manifest: MCJEManifest) {
+  mcjeManifest = manifest
+  mcjeVersions.value = manifest.versions.map(ver => ver.id)
+}
+
+function detailsCacheName(url: string): string | null {
+  const hash = url.match(/\/packages\/([0-9a-f]{8,})\//)?.[1]
+  return hash ? `details_${hash}.json` : null
+}
+
+async function readCachedJson<T>(name: string): Promise<T | null> {
+  try {
+    const dir = await getDirectory('meta')
+    const handle = await dir.getFileHandle(name)
+    return JSON.parse(await (await handle.getFile()).text())
+  } catch {
+    return null
+  }
+}
+
+async function writeCachedJson(name: string, value: unknown): Promise<void> {
+  try {
+    const dir = await getDirectory('meta')
+    const handle = await dir.getFileHandle(name, { create: true })
+    const writable = await handle.createWritable()
+    await writable.write(JSON.stringify(value))
+    await writable.close()
+  } catch {
+  }
+}
+
 export function loadMCJEManifest(progHandler?: ProgressHandler) {
   if (mcjeManifest !== null) {
     progHandler?.update(1, 1, 1)
@@ -87,11 +122,34 @@ export function loadMCJEManifest(progHandler?: ProgressHandler) {
   if (downloadPromise !== null) {
     return downloadPromise
   }
-  downloadPromise = download(mcjeManifestUrl, allProgHandlers).then(async res => {
-    mcjeManifest = await res.json()
-    mcjeVersions.value = mcjeManifest!.versions.map(ver => ver.id)
-  })
+  downloadPromise = (async () => {
+    refreshPromise = download(mcjeManifestUrl, allProgHandlers).then(async res => {
+      applyManifest(await res.json())
+      writeCachedJson(manifestCacheFile, mcjeManifest)
+    })
+    const cached = await readCachedJson<MCJEManifest>(manifestCacheFile)
+    if (cached && mcjeManifest === null) {
+      applyManifest(cached)
+      refreshPromise.catch(() => {})
+    } else {
+      await refreshPromise
+    }
+  })()
   return downloadPromise
+}
+
+async function findVersion(id: string): Promise<MCJEManifestVersion | null> {
+  await loadMCJEManifest()
+  let version = mcjeManifest?.versions.find(v => v.id === id) ?? null
+  if (!version && refreshPromise) {
+    await refreshPromise.catch(() => {})
+    version = mcjeManifest?.versions.find(v => v.id === id) ?? null
+  }
+  return version
+}
+
+export function clearMetaCache(): Promise<void> {
+  return clearDirectory('meta')
 }
 
 export function getVersionList() {
@@ -144,7 +202,7 @@ export function getDiffSuggestions(): {
 export async function getVersionDetails(version: MCJEManifestVersion | string, progHandler?: ProgressHandler): Promise<MCJEVersionDetails> {
   if (typeof version === 'string') {
     await loadMCJEManifest(progHandler)
-    const ver = mcjeManifest?.versions.find(v => v.id === version)
+    const ver = await findVersion(version)
     if (ver) {
       version = ver
     } else {
@@ -154,15 +212,20 @@ export async function getVersionDetails(version: MCJEManifestVersion | string, p
   if (version.url in detailsCache) {
     return detailsCache[version.url]
   }
-  return detailsCache[version.url] = await download(version.url, progHandler).then(e => e.json())
+
+  const cacheName = detailsCacheName(version.url)
+  if (cacheName) {
+    const cached = await readCachedJson<MCJEVersionDetails>(cacheName)
+    if (cached) return detailsCache[version.url] = cached
+  }
+
+  const details: MCJEVersionDetails = await download(version.url, progHandler).then(e => e.json())
+  if (cacheName) writeCachedJson(cacheName, details)
+  return detailsCache[version.url] = details
 }
 
 export async function getVersion(id: string): Promise<MCJEManifestVersion | null> {
-  await loadMCJEManifest()
-  for (const v of mcjeManifest?.versions!) {
-    if (v.id === id) return v
-  }
-  return null
+  return findVersion(id)
 }
 
 export async function getSurroundingDeltas(
