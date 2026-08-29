@@ -1,4 +1,4 @@
-import TextView from '@/components/TextView.vue'
+import { TextView } from '@/components/lazyText'
 import { registerViewer } from './registry'
 import MarkChanges from '@/components/MarkChanges.vue'
 import { DeltaTrackState } from '@/delta_providers/states'

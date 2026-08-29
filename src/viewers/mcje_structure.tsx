@@ -1,7 +1,6 @@
-import TextDiff from '@/components/TextDiff.vue'
+import { TextDiff, TextView } from '@/components/lazyText'
 import { registerViewer } from './registry'
 import { trackTab } from '@/util/trackFocus'
-import TextView from '@/components/TextView.vue'
 import { DeltaTrackState } from '@/delta_providers/states'
 import { readNbt } from '@/util/nbt'
 import stringify from 'fabulous-json'
