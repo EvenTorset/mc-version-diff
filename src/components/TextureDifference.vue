@@ -2,9 +2,10 @@
 import { createDiffer, type DiffFrame, type DiffSide } from '@/util/imageDiff'
 import { frameOffset, type Playhead } from '@/util/animation'
 import { popupable } from '@/util/popupable'
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref, useSlots } from 'vue'
 import FitBox from './FitBox.vue'
 import MediaColumn from './MediaColumn.vue'
+import NativeTemplate from './NativeTemplate.vue'
 
 const props = defineProps<{
   sideA: DiffSide
@@ -13,6 +14,7 @@ const props = defineProps<{
   group?: string
 }>()
 
+const slots = useSlots()
 const containerRef = ref<HTMLDivElement>()
 const size = ref({ width: 16, height: 16 })
 const ready = ref(false)
@@ -61,7 +63,8 @@ onMounted(() => {
   size.value = { width, height }
 
   for (const [ attr, value ] of Object.entries(popupable({
-    title: props.label,
+    title: slots.popup ? undefined : props.label,
+    content: slots.popup ? 'prev' : undefined,
     group: props.group,
     thumbnails: true,
     zoom: true,
@@ -88,7 +91,9 @@ onBeforeUnmount(() => {
       :max-width="512"
       :max-height="128"
     >
-      <div ref="containerRef" class="difference-canvas"></div>
+      <div ref="containerRef" class="difference-canvas">
+        <NativeTemplate v-if="$slots.popup"><slot name="popup" /></NativeTemplate>
+      </div>
     </FitBox>
   </MediaColumn>
 </template>

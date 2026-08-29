@@ -175,6 +175,19 @@ registerViewer('png', {
       <h3><Row><div style={l.style}></div>{l.title}</Row></h3>
       <p>{l.desc}</p>
     </>)
+    const popupLegend = () => <>
+      <div class='popupable-title'>Difference</div>
+      <Row gap='16px' class='popupable-description'>
+        {legend.map((l, i) => legendIgnore.includes(i) ? '' : <Tooltip v-slots={{
+          trigger: ({ props: ttp }: any) => (
+            <Row {...ttp}><div style={l.style}></div>{l.title}</Row>
+          )
+        }}>
+          <h3>{l.title}</h3>
+          <p>{l.desc}</p>
+        </Tooltip>)}
+      </Row>
+    </>
     if (imgA.width === imgB.width) {
       if (imgA.height === imgB.height) {
         legendIgnore.push(2, 3, 4) // Added, Removed, Out of bounds
@@ -224,6 +237,7 @@ registerViewer('png', {
             sideB={{ image: imgB, frame: statsB!.frame }}
             label='Difference'
             group={track.id}
+            v-slots={{ popup: popupLegend }}
           />,
         }}
       >
@@ -235,19 +249,7 @@ registerViewer('png', {
           disabled={diffTooltipDisable.value}
           v-slots={{
             trigger: ({ props }: TooltipTriggerProps) => <>
-              <NativeTemplate>
-                <div class='popupable-title'>Difference</div>
-                <Row gap='16px' class='popupable-description'>
-                  {legend.map((l, i) => legendIgnore.includes(i) ? '' : <Tooltip v-slots={{
-                    trigger: ({ props: ttp }: any) => (
-                      <Row {...ttp}><div style={l.style}></div>{l.title}</Row>
-                    )
-                  }}>
-                    <h3>{l.title}</h3>
-                    <p>{l.desc}</p>
-                  </Tooltip>)}
-                </Row>
-              </NativeTemplate>
+              <NativeTemplate>{popupLegend()}</NativeTemplate>
               <FitBox
                 {...props}
                 width={diff.width}
