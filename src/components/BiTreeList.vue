@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { provide, ref, onUnmounted, shallowRef, watch } from 'vue'
+import { provide, ref, onUnmounted, shallowRef, watch, h, computed, type VNode } from 'vue'
 import type { DeltaResult, DeltaTrack } from '@/delta_providers'
-import BiTreeBranch from './BiTreeBranch.vue'
+import BiTreeLeaf from './BiTreeLeaf.vue'
 import { useTrackFocus } from '@/util/trackFocus'
 
 const props = defineProps<{
@@ -44,16 +44,40 @@ const observer = new IntersectionObserver((entries) => {
 onUnmounted(() => {
   observer.disconnect()
 })
+
+const BRANCH_FACTOR = 8
+
+function buildBranch(dr: DeltaResult, tracks: DeltaTrack[], lo: number, hi: number): VNode {
+  if (hi - lo === 1) {
+    const track = tracks[lo]
+    return h(BiTreeLeaf, { key: track.id, dr, track, observer })
+  }
+
+  const children: VNode[] = []
+  let step = 1
+  while (step * BRANCH_FACTOR < hi - lo) step *= BRANCH_FACTOR
+  for (let start = lo; start < hi; start += step) {
+    children.push(buildBranch(dr, tracks, start, Math.min(start + step, hi)))
+  }
+
+  return h('div', {
+    class: 'bitree-branch',
+    key: `${tracks[lo].id}:${tracks[hi - 1].id}:${hi - lo}`,
+  }, children)
+}
+
+const tree = computed(() => {
+  const tracks = props.dr.tracks
+  if (tracks.length === 0) return null
+  return buildBranch(props.dr, tracks, 0, tracks.length)
+})
+
+const Tree = () => tree.value
 </script>
 
 <template>
   <div class="bitree-root" ref="root">
-    <BiTreeBranch
-      v-if="dr.tracks.length > 0"
-      :dr="dr"
-      :tracks="dr.tracks"
-      :observer="observer"
-    />
+    <Tree />
   </div>
 </template>
 
