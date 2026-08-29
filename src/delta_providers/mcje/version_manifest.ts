@@ -82,6 +82,13 @@ const allProgHandlers = new ProgressHandler(p => {
 
 let refreshPromise: Promise<void> | null = null
 
+function refreshManifest(progHandler?: ProgressHandler): Promise<void> {
+  return refreshPromise = download(mcjeManifestUrl, progHandler).then(async res => {
+    applyManifest(await res.json())
+    writeCachedJson(manifestCacheFile, mcjeManifest)
+  })
+}
+
 function applyManifest(manifest: MCJEManifest) {
   mcjeManifest = manifest
   mcjeVersions.value = manifest.versions.map(ver => ver.id)
@@ -123,14 +130,11 @@ export function loadMCJEManifest(progHandler?: ProgressHandler) {
     return downloadPromise
   }
   downloadPromise = (async () => {
-    refreshPromise = download(mcjeManifestUrl, allProgHandlers).then(async res => {
-      applyManifest(await res.json())
-      writeCachedJson(manifestCacheFile, mcjeManifest)
-    })
+    refreshManifest(allProgHandlers)
     const cached = await readCachedJson<MCJEManifest>(manifestCacheFile)
     if (cached && mcjeManifest === null) {
       applyManifest(cached)
-      refreshPromise.catch(() => {})
+      refreshPromise!.catch(() => {})
     } else {
       await refreshPromise
     }
@@ -140,12 +144,19 @@ export function loadMCJEManifest(progHandler?: ProgressHandler) {
 
 async function findVersion(id: string): Promise<MCJEManifestVersion | null> {
   await loadMCJEManifest()
-  let version = mcjeManifest?.versions.find(v => v.id === id) ?? null
-  if (!version && refreshPromise) {
-    await refreshPromise.catch(() => {})
-    version = mcjeManifest?.versions.find(v => v.id === id) ?? null
+  const lookup = () => mcjeManifest?.versions.find(v => v.id === id) ?? null
+
+  let version = lookup()
+  if (version) return version
+
+  if (refreshPromise) {
+    const failed = await refreshPromise.then(() => false, () => true)
+    version = lookup()
+    if (version || !failed) return version
   }
-  return version
+
+  await refreshManifest().catch(() => {})
+  return lookup()
 }
 
 export function clearMetaCache(): Promise<void> {
