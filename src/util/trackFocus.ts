@@ -1,6 +1,8 @@
 import { computed, onMounted, onUnmounted, ref, shallowReactive, type Ref, type ShallowRef } from 'vue'
 
 const FOCUS_LINE = 1 / 3
+const FOCUS_INTERVAL = 150
+const FOCUS_SETTLE = 120
 
 export const focusedTrack = ref('')
 
@@ -55,6 +57,8 @@ function focusLine() {
 
 export function useTrackFocus(root: Readonly<ShallowRef<HTMLElement | null>>) {
   let frame = 0
+  let settle: ReturnType<typeof setTimeout> | undefined
+  let last = 0
   let restoring = false
 
   function update() {
@@ -73,11 +77,18 @@ export function useTrackFocus(root: Readonly<ShallowRef<HTMLElement | null>>) {
     if (id) focusedTrack.value = id
   }
 
-  function onScroll() {
+  function schedule() {
     frame ||= requestAnimationFrame(() => {
       frame = 0
+      last = performance.now()
       update()
     })
+  }
+
+  function onScroll() {
+    clearTimeout(settle)
+    settle = setTimeout(schedule, FOCUS_SETTLE)
+    if (performance.now() - last >= FOCUS_INTERVAL) schedule()
   }
 
   async function restore(id: string) {
@@ -123,6 +134,7 @@ export function useTrackFocus(root: Readonly<ShallowRef<HTMLElement | null>>) {
 
   onUnmounted(() => {
     cancelAnimationFrame(frame)
+    clearTimeout(settle)
     window.removeEventListener('scroll', onScroll)
     window.removeEventListener('resize', onScroll)
   })
