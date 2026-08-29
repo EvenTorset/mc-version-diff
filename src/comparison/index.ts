@@ -10,6 +10,11 @@ export class HashEquivalence {
     return groupA ? groupA.has(hashB) : false
   }
 
+  /** Every hash equivalent to this one, including itself. */
+  group(hash: number): Iterable<number> {
+    return this.groups.get(hash) ?? [hash]
+  }
+
   markEquivalent(hashA: number, hashB: number): void {
     if (hashA === hashB) return;
 

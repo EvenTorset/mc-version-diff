@@ -447,27 +447,35 @@ const provider: DeltaProvider<MCJEVersionContent> = {
     const matchedFromA = new Set<string>()
     const matchedNewInB = new Set<string>()
 
+    type RemovedFile = { index: number, path: string, ext: string }
+    const removedByHash = new Map<number, RemovedFile[]>()
+    missingFromA.forEach(({ path, entry }, index) => {
+      let list = removedByHash.get(entry.crc32)
+      if (!list) removedByHash.set(entry.crc32, list = [])
+      list.push({ index, path, ext: getFileExt(path) })
+    })
+
     for (const newFile of unmatchedNewInB) {
       const newExt = getFileExt(newFile.path)
 
-      for (const oldFile of missingFromA) {
-        if (matchedFromA.has(oldFile.path)) continue
-        if (getFileExt(oldFile.path) !== newExt) continue
-
-        if (
-          oldFile.entry.crc32 === newFile.entry.crc32 ||
-          hashEquivalence.areEquivalent(oldFile.entry.crc32, newFile.entry.crc32)
-        ) {
-          tracks.push({
-            id: newFile.path,
-            state: DeltaTrackState.Moved,
-            a: oldFile.path,
-            b: newFile.path,
-          })
-          matchedFromA.add(oldFile.path)
-          matchedNewInB.add(newFile.path)
+      let match: RemovedFile | null = null
+      for (const hash of hashEquivalence.group(newFile.entry.crc32)) {
+        for (const oldFile of removedByHash.get(hash) ?? []) {
+          if (oldFile.ext !== newExt || matchedFromA.has(oldFile.path)) continue
+          if (!match || oldFile.index < match.index) match = oldFile
           break
         }
+      }
+
+      if (match) {
+        tracks.push({
+          id: newFile.path,
+          state: DeltaTrackState.Moved,
+          a: match.path,
+          b: newFile.path,
+        })
+        matchedFromA.add(match.path)
+        matchedNewInB.add(newFile.path)
       }
     }
 
