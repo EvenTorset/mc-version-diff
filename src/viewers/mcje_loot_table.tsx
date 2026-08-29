@@ -11,6 +11,7 @@ import stringify from 'fabulous-json'
 import { NCheckbox, NTab, NTabs } from 'naive-ui'
 import { ref } from 'vue'
 import { registerViewer } from './registry'
+import { trackTab } from '@/util/trackFocus'
 
 function getJSON(table: any, raw: string) {
   return Settings.formatJSON ? stringify(table) : raw
@@ -68,7 +69,7 @@ registerViewer('mcje_loot_table', {
     const beforeSide = before ? { version: dr.a, table: before.table } : undefined
     const afterSide = after ? { version: dr.b, table: after.table } : undefined
 
-    const tab = ref(await initialTab(dr, sides))
+    const tab = trackTab(track.id, [ 'items', 'rules', 'json' ], await initialTab(dr, sides))
     const showUnchanged = ref(false)
     const counts = ref<{ added: number, changed: number, removed: number, same: number } | null>(null)
 

@@ -1,11 +1,17 @@
 <script setup lang="ts">
-import { provide, ref, onUnmounted } from 'vue'
+import { provide, ref, onUnmounted, shallowRef, watch } from 'vue'
 import type { DeltaResult, DeltaTrack } from '@/delta_providers'
 import BiTreeBranch from './BiTreeBranch.vue'
+import { useTrackFocus } from '@/util/trackFocus'
 
 const props = defineProps<{
   dr: DeltaResult
 }>()
+
+const root = shallowRef<HTMLElement | null>(null)
+const { resync } = useTrackFocus(root)
+
+watch(() => props.dr.tracks, resync)
 
 const mountedTrackKeys = ref(new Set<string | DeltaTrack>())
 
@@ -41,7 +47,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="bitree-root">
+  <div class="bitree-root" ref="root">
     <BiTreeBranch
       v-if="dr.tracks.length > 0"
       :dr="dr"
