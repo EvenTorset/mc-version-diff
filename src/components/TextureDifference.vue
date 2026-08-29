@@ -92,7 +92,7 @@ onBeforeUnmount(() => {
       :max-height="128"
     >
       <div ref="containerRef" class="difference-canvas">
-        <NativeTemplate v-if="$slots.popup"><slot name="popup" /></NativeTemplate>
+        <NativeTemplate v-if="$slots.popup"><slot name="popup"></slot></NativeTemplate>
       </div>
     </FitBox>
   </MediaColumn>
