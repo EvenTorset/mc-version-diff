@@ -2,7 +2,7 @@
 import type { DeltaResult } from '@/delta_providers'
 import { deltaTableReader, sameOdds, sampleTableCached, stackKey, type LootOdds } from '@/util/loot'
 import { itemName as translate } from '@/util/itemNames'
-import ItemIcon from './ItemIcon.vue'
+import { ItemIcon } from './lazyRenderers'
 import Meter from './Meter.vue'
 import Tooltip from './Tooltip.vue'
 import { NSpin } from 'naive-ui'

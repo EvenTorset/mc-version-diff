@@ -6,7 +6,7 @@ import { ArrowRight24Regular } from '@vicons/fluent'
 import { NIcon } from 'naive-ui'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import Dim from './Dim.vue'
-import ItemIcon from './ItemIcon.vue'
+import { ItemIcon } from './lazyRenderers'
 import NamespacedPath from './NamespacedPath.vue'
 import Tooltip from './Tooltip.vue'
 

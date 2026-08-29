@@ -14,6 +14,7 @@ import { createProgressList } from '@/components/progressList'
 import { Eraser20Filled, TextPeriodAsterisk20Filled } from '@vicons/fluent'
 import '@/viewers'
 import { prefetchTextViews } from '@/components/lazyText'
+import { prefetchRenderers } from '@/components/lazyRenderers'
 import Col from '@/components/Col.vue'
 import Tooltip from '@/components/Tooltip.vue'
 import { animateTextures, imageViewMode } from '@/viewers/png'
@@ -279,6 +280,7 @@ onMounted(async () => {
     const { contentA, contentB } = await provider.value.fetch(a, b, progressDisplay)
     diff.value = await provider.value.compare(a, b, contentA, contentB, progressDisplay)
     prefetchTextViews()
+    prefetchRenderers()
   } catch (err: any) {
     Notify.error({
       content: err?.message ?? err?.toString() ?? 'Unknown error.'

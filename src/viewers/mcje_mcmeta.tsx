@@ -1,6 +1,6 @@
 import { TextDiff, TextView } from '@/components/lazyText'
 import Content from '@/components/Content.vue'
-import TextureAnimation from '@/components/TextureAnimation.vue'
+import { TextureAnimation } from '@/components/lazyRenderers'
 import type { DeltaResult, DeltaTrack } from '@/delta_providers'
 import { DeltaTrackState } from '@/delta_providers/states'
 import { NTab, NTabs } from 'naive-ui'
