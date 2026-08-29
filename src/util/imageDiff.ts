@@ -184,6 +184,13 @@ export function createDiffer(width: number, height: number) {
 
   return {
     canvas,
+    resize(newWidth: number, newHeight: number) {
+      if (canvas.width !== newWidth) canvas.width = newWidth
+      if (canvas.height !== newHeight) canvas.height = newHeight
+    },
+    lost() {
+      return gl.isContextLost()
+    },
     setSources(a: ImageBitmap, b: ImageBitmap) {
       gl.activeTexture(gl.TEXTURE0)
       gl.bindTexture(gl.TEXTURE_2D, textureA)
@@ -232,17 +239,28 @@ export function createDiffer(width: number, height: number) {
   }
 }
 
-export async function diffImage(imgA: ImageBitmap, imgB: ImageBitmap) {
-  const differ = createDiffer(
-    Math.max(imgA.width, imgB.width),
-    Math.max(imgA.height, imgB.height),
-  )
-  differ.setSources(imgA, imgB)
-  differ.draw()
-  const image = await createImageBitmap(differ.canvas, {
-    premultiplyAlpha: 'none',
-    colorSpaceConversion: 'none',
+let sharedDiffer: ReturnType<typeof createDiffer> | null = null
+let sharedQueue: Promise<unknown> = Promise.resolve()
+
+export function diffImage(imgA: ImageBitmap, imgB: ImageBitmap): Promise<ImageBitmap> {
+  const run = sharedQueue.then(async () => {
+    const width = Math.max(imgA.width, imgB.width)
+    const height = Math.max(imgA.height, imgB.height)
+
+    if (sharedDiffer?.lost()) {
+      sharedDiffer.dispose()
+      sharedDiffer = null
+    }
+    sharedDiffer ??= createDiffer(width, height)
+    sharedDiffer.resize(width, height)
+    sharedDiffer.setSources(imgA, imgB)
+    sharedDiffer.draw()
+
+    return createImageBitmap(sharedDiffer.canvas, {
+      premultiplyAlpha: 'none',
+      colorSpaceConversion: 'none',
+    })
   })
-  differ.dispose()
-  return image
+  sharedQueue = run.catch(() => {})
+  return run
 }
