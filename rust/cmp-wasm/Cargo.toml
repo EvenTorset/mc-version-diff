@@ -1,0 +1,17 @@
+[package]
+name = "cmp-wasm"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+zune-inflate = "0.2"
+png-pixel-cmp = { git = "https://github.com/EvenTorset/png-pixel-cmp.git" }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

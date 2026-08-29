@@ -1,8 +1,11 @@
-import { decompressBuffer } from '@/util/zip'
-import { comparePngPixels } from '@cccode/png-pixel-cmp'
-import { decompressNBT, findDataVersionOffset } from '@/util/nbt'
+import init, { compare_batch } from './wasm/cmp_wasm'
+import wasmUrl from './wasm/cmp_wasm_bg.wasm?url'
 
 self.addEventListener('unhandledrejection', e => console.error('unhandled rejection:', e.reason))
+
+const ready = init({ module_or_path: wasmUrl })
+
+const STRIDE = 8
 
 export type CompareItem = {
   compressedContent: Uint8Array<ArrayBuffer>
@@ -41,54 +44,26 @@ export type WorkerCompareMessage = {
   results: WorkerCompareResult[]
 }
 
-async function decompressZipEntry(bytes: Uint8Array, compressionMethod: number): Promise<Uint8Array> {
-  if (compressionMethod === 0) return bytes
-  return new Uint8Array(await decompressBuffer(bytes as BufferSource))
-}
-
-function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
-  if (a.length !== b.length) return false
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) return false
-  }
-  return true
-}
-
-async function runTask(task: BatchTask, data: Uint8Array): Promise<WorkerCompareResult> {
-  try {
-    const [rawA, rawB] = await Promise.all([
-      decompressZipEntry(data.subarray(task.aOffset, task.aOffset + task.aLength), task.aMethod),
-      decompressZipEntry(data.subarray(task.bOffset, task.bOffset + task.bLength), task.bMethod)
-    ])
-
-    let same = false
-
-    if (task.kind === 'png') {
-      same = await comparePngPixels(rawA, rawB)
-    } else {
-      const [nbtA, nbtB] = await Promise.all([
-        decompressNBT(rawA),
-        decompressNBT(rawB)
-      ])
-
-      const offsetA = findDataVersionOffset(nbtA, { littleEndian: task.littleEndian })
-      if (offsetA !== -1) nbtA.fill(0, offsetA, offsetA + 4)
-
-      const offsetB = findDataVersionOffset(nbtB, { littleEndian: task.littleEndian })
-      if (offsetB !== -1) nbtB.fill(0, offsetB, offsetB + 4)
-
-      same = bytesEqual(nbtA, nbtB)
-    }
-
-    return { id: task.id, same }
-  } catch (err) {
-    return { id: task.id, same: false, error: String(err) }
-  }
-}
-
 self.onmessage = async (event: MessageEvent<WorkerComparePayload>) => {
   const { tasks, data } = event.data
-  const bytes = new Uint8Array(data)
-  const results = await Promise.all(tasks.map(task => runTask(task, bytes)))
+  await ready
+
+  const flat = new Uint32Array(tasks.length * STRIDE)
+  for (let i = 0; i < tasks.length; i++) {
+    const task = tasks[i]
+    const o = i * STRIDE
+    flat[o] = task.kind === 'png' ? 0 : 1
+    flat[o + 1] = task.aOffset
+    flat[o + 2] = task.aLength
+    flat[o + 3] = task.aMethod
+    flat[o + 4] = task.bOffset
+    flat[o + 5] = task.bLength
+    flat[o + 6] = task.bMethod
+    flat[o + 7] = task.littleEndian ? 1 : 0
+  }
+
+  const same = compare_batch(new Uint8Array(data), flat)
+  const results: WorkerCompareResult[] = tasks.map((task, i) => ({ id: task.id, same: same[i] === 1 }))
+
   self.postMessage({ type: 'results', results } as WorkerCompareMessage)
 }
