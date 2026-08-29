@@ -14,7 +14,6 @@ import { DeltaTrackState } from '@/delta_providers/states.ts'
 import Spacer from './Spacer.vue'
 import Col from './Col.vue'
 import MarkFilePathChanges from './MarkFilePathChanges.vue'
-import { IS_FIREFOX } from '@/util/isFirefox.ts'
 import { basename } from '@/util/path.ts'
 import { saveAs } from 'file-saver'
 import Tooltip from './Tooltip.vue'
@@ -321,7 +320,7 @@ async function copy(version: 'a' | 'b') {
     >
       <AnimatedHeight
         :show="expanded"
-        :duration="isInitialRender || !IS_FIREFOX ? 0 : 200"
+        :duration="isInitialRender ? 0 : 200"
         @end="handleAnimationEnd"
       >
         <Content :content="view"/>
