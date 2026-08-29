@@ -113,6 +113,37 @@ export async function getCachedFile(
   }
 }
 
+export async function readCachedBuffer(name: string): Promise<ArrayBuffer | null> {
+  try {
+    const dir = await getDirectory(CACHE_DIR)
+    const handle = await dir.getFileHandle(name)
+    const file = await handle.getFile()
+    const manifest = await getManifest(dir)
+    manifest[name] = { id: name, filename: name, lastAccessed: Date.now(), size: file.size }
+    queueManifestWrite(dir, manifest)
+    return await file.arrayBuffer()
+  } catch {
+    return null
+  }
+}
+
+export async function writeCachedBuffer(name: string, bytes: Uint8Array): Promise<void> {
+  try {
+    const dir = await getDirectory(CACHE_DIR)
+    const handle = await dir.getFileHandle(name, { create: true })
+    const writable = await handle.createWritable()
+    await writable.write(bytes as BufferSource)
+    await writable.close()
+    const manifest = await getManifest(dir)
+    const file = await handle.getFile()
+    manifest[name] = { id: name, filename: name, lastAccessed: Date.now(), size: file.size }
+    await evictUntilUnderSize(dir, manifest, Settings.cacheSizeMax)
+    await queueManifestWrite(dir, manifest)
+  } catch {
+    return
+  }
+}
+
 export async function clearCache(): Promise<void> {
   manifestPromise = null
   await clearDirectory(CACHE_DIR)
