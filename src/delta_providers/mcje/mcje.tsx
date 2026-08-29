@@ -8,6 +8,7 @@ import zip, { type ParsedZIP, type ParsedZIPFileEntry } from '@/util/zip'
 import type { RehashPayloadItem, RehashWorkerMessage } from '@/util/rehash.worker'
 import RehashWorker from '@/util/rehash.worker?worker'
 import { compareNbt, comparePng, HashEquivalence, terminateCmpWorkers } from '@/comparison'
+import { loadVerdicts, saveVerdicts, verdictKey } from '@/comparison/verdictCache'
 import getFileExt from '@/util/getFileExt'
 import { ProgressHandler } from '@/util/progress'
 import { defineAsyncComponent, ref, type Ref } from 'vue'
@@ -383,13 +384,20 @@ const provider: DeltaProvider<MCJEVersionContent> = {
         }
       }
 
+      const verdicts = await loadVerdicts(a, b)
+      const misses = candidates.filter(candidate => {
+        const cached = verdicts.get(verdictKey(candidate.kind, candidate.entryA.crc32, candidate.entryB.crc32))
+        if (cached) hashEquivalence.markEquivalent(candidate.entryA.crc32, candidate.entryB.crc32)
+        return cached === undefined
+      })
+
       let count = 0
-      const total = candidates.length
+      const total = misses.length
       progressBar.progHandler.update(0, 0, total)
 
       if (total > 0) {
         await Promise.all(
-          candidates.map(async candidate => {
+          misses.map(async candidate => {
             let equal = false
             if (candidate.kind === 'nbt') {
               equal = await compareNbt(
@@ -403,6 +411,7 @@ const provider: DeltaProvider<MCJEVersionContent> = {
               )
             }
 
+            verdicts.set(verdictKey(candidate.kind, candidate.entryA.crc32, candidate.entryB.crc32), equal)
             if (equal) {
               hashEquivalence.markEquivalent(candidate.entryA.crc32, candidate.entryB.crc32)
             }
@@ -411,6 +420,7 @@ const provider: DeltaProvider<MCJEVersionContent> = {
             progressBar.progHandler.update(count / total, count, total)
           })
         )
+        saveVerdicts(a, b, verdicts)
       }
 
       terminateCmpWorkers()
