@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "devDependencies": {
-    "@cccode/png-pixel-cmp": "^0.2.0",
+    "@cccode/png-pixel-cmp": "^0.2.1",
     "@guolao/vue-monaco-editor": "^1.6.0",
     "@tanstack/vue-virtual": "^3.13.36",
     "@types/file-saver": "^2.0.7",
