@@ -10,7 +10,6 @@ const props = defineProps<{
   sideA: DiffSide
   sideB: DiffSide
   label?: string
-  caption?: string
   group?: string
 }>()
 
@@ -63,7 +62,6 @@ onMounted(() => {
 
   for (const [ attr, value ] of Object.entries(popupable({
     title: props.label,
-    description: props.caption,
     group: props.group,
     thumbnails: true,
     zoom: true,
@@ -92,7 +90,6 @@ onBeforeUnmount(() => {
     >
       <div ref="containerRef" class="difference-canvas"></div>
     </FitBox>
-    <template v-if="caption" #caption>{{ caption }}</template>
   </MediaColumn>
 </template>
 

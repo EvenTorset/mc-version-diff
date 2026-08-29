@@ -8,7 +8,7 @@ export function animationOf(mcmeta: string) {
   }
 }
 
-export function frameSize(animation: any, spriteWidth: number, spriteHeight: number) {
+function frameSize(animation: any, spriteWidth: number, spriteHeight: number) {
   if (animation?.width !== undefined) {
     return { width: animation.width, height: animation.height ?? spriteHeight }
   }

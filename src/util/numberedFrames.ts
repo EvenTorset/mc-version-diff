@@ -1,5 +1,3 @@
-import { pngBytes } from '@/util/pngBytes'
-
 export const DEFAULT_FRAMES = 9
 
 const DIGITS = [
@@ -21,13 +19,13 @@ const SPACING = 1
 const PADDING = 3
 
 export interface FrameStrip {
-  bytes: Uint8Array
+  canvas: HTMLCanvasElement
   width: number
   height: number
   frames: number
 }
 
-const strips = new Map<number, Promise<FrameStrip>>()
+const strips = new Map<number, FrameStrip>()
 
 export function numberedFrames(frames: number, exact: boolean) {
   if (!exact) {
@@ -39,7 +37,7 @@ export function numberedFrames(frames: number, exact: boolean) {
   return strips.get(frames)!
 }
 
-async function buildStrip(frames: number): Promise<FrameStrip> {
+function buildStrip(frames: number): FrameStrip {
   const digits = String(frames).length
   const widest = digits * (GLYPH_WIDTH + SPACING) - SPACING
   // the glyphs are an odd number of pixels wide and tall, so the frame has to be too to centre them
@@ -63,7 +61,7 @@ async function buildStrip(frames: number): Promise<FrameStrip> {
     }
   }
 
-  return { bytes: await pngBytes(strip), width: size, height: size, frames }
+  return { canvas: strip, width: size, height: size, frames }
 }
 
 function drawDigit(context: CanvasRenderingContext2D, digit: number, left: number, top: number) {

@@ -5,7 +5,6 @@ import { DEFAULT_FRAMES, numberedFrames } from '@/util/numberedFrames'
 import { renderImageWithMode } from '@/shared_renderer'
 import type { ImageViewMode } from '@/types'
 import { popupable } from '@/util/popupable'
-import { bitmapToPng } from '@/util/pngBytes'
 import { deltaVirtualHandler } from '@/util/virtualHandler'
 import { animationStats, arrayFrames, type Playhead } from '@/util/animation'
 import { formatBytes } from '@/util/bytes'
@@ -58,7 +57,7 @@ async function source(read: (path: string) => Promise<Uint8Array | null>) {
   if (!props.numbered) {
     if (!bytes || !image || !stats) throw new Error(`no texture at ${props.texture}`)
     return {
-      bytes,
+      texture: bytes,
       ...stats.frame,
       frames: stats.frames,
       sheet: { width: image.width, height: image.height, size: bytes.byteLength },
@@ -66,9 +65,9 @@ async function source(read: (path: string) => Promise<Uint8Array | null>) {
   }
 
   const declared = arrayFrames(animation)
-  const strip = await numberedFrames(declared?.span ?? stats?.frames ?? DEFAULT_FRAMES, declared === null)
+  const strip = numberedFrames(declared?.span ?? stats?.frames ?? DEFAULT_FRAMES, declared === null)
   return {
-    bytes: strip.bytes,
+    texture: strip.canvas,
     width: strip.width,
     height: strip.height,
     frames: declared?.count ?? stats?.frames ?? strip.frames,
@@ -92,12 +91,12 @@ async function build() {
   failed.value = false
   try {
     const handler = deltaVirtualHandler(props.dr, props.version)
-    const { bytes, width, height, frames, sheet } = await source(
+    const { texture, width, height, frames, sheet } = await source(
       async path => (await handler.read(path)) as Uint8Array | null,
     )
 
     const meta = new TextEncoder().encode(playedMeta())
-    const shown = await withMode(bytes)
+    const shown = await withMode(texture)
     const assets = {
       async read(path: string) {
         if (path === TEXTURE) return shown
@@ -147,13 +146,12 @@ async function build() {
 }
 
 // the player draws the texture as-is, so the channel view has to be baked into the sheet first
-async function withMode(bytes: Uint8Array) {
-  if (!props.mode || props.mode === 'rgba') return bytes
-  const sheet = await createImageBitmap(new Blob([ bytes as BlobPart ]))
-  const rendered = await renderImageWithMode(sheet, props.mode, sheet.width, sheet.height)
-  const encoded = await bitmapToPng(rendered)
-  rendered.close()
-  return encoded
+async function withMode(texture: Uint8Array | HTMLCanvasElement) {
+  if (!props.mode || props.mode === 'rgba') return texture
+  const sheet = await createImageBitmap(
+    texture instanceof Uint8Array ? new Blob([ texture as BlobPart ]) : texture,
+  )
+  return renderImageWithMode(sheet, props.mode, sheet.width, sheet.height)
 }
 
 onMounted(build)
