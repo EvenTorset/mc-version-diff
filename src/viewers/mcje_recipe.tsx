@@ -9,7 +9,7 @@ import {
   type NormalizedRecipe, type RecipeIngredient,
 } from '@/util/recipes'
 import stringify from 'fabulous-json'
-import { NTab, NTabs } from 'naive-ui'
+import { NTabPane, NTabs } from 'naive-ui'
 import { registerViewer } from './registry'
 import { trackTab } from '@/util/trackFocus'
 
@@ -154,16 +154,18 @@ registerViewer('mcje_recipe', {
     return () => <>
       <NTabs
         type='bar'
-        class='pad-tab-buttons'
+        class='no-tab-padding pad-tab-buttons'
         size='small'
         value={tab.value}
         onUpdateValue={(value: string) => tab.value = value}
       >
-        <NTab name='recipe' tab='Recipe' />
-        <NTab name='json' tab='JSON' />
+        <NTabPane name='recipe' tab='Recipe' displayDirective='show:lazy'>
+          <Content content={view_recipe} />
+        </NTabPane>
+        <NTabPane name='json' tab='JSON' displayDirective='show:lazy'>
+          <Content content={view_json} />
+        </NTabPane>
       </NTabs>
-      {tab.value === 'recipe' ? <Content content={view_recipe} /> : null}
-      {tab.value === 'json' ? <Content content={view_json} /> : null}
     </>
   },
 })

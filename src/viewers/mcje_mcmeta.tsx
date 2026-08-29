@@ -3,7 +3,7 @@ import Content from '@/components/Content.vue'
 import { TextureAnimation } from '@/components/lazyRenderers'
 import type { DeltaResult, DeltaTrack } from '@/delta_providers'
 import { DeltaTrackState } from '@/delta_providers/states'
-import { NTab, NTabs } from 'naive-ui'
+import { NTabPane, NTabs } from 'naive-ui'
 import { ref, type Ref } from 'vue'
 import { animationOf } from '@/util/animation'
 import { trackTab } from '@/util/trackFocus'
@@ -97,16 +97,18 @@ registerViewer('mcje_mcmeta', {
     return () => <>
       <NTabs
         type='bar'
-        class='pad-tab-buttons'
+        class='no-tab-padding pad-tab-buttons'
         size='small'
         value={tab.value}
         onUpdateValue={(value: string) => tab.value = value}
       >
-        <NTab name='animation' tab='Animation' />
-        <NTab name='json' tab='JSON' />
+        <NTabPane name='animation' tab='Animation' displayDirective='show:lazy'>
+          <Content content={view_animation} />
+        </NTabPane>
+        <NTabPane name='json' tab='JSON' displayDirective='show:lazy'>
+          <Content content={view_text} />
+        </NTabPane>
       </NTabs>
-      {tab.value === 'animation' ? <Content content={view_animation} /> : null}
-      {tab.value === 'json' ? <Content content={view_text} /> : null}
     </>
   },
 })

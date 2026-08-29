@@ -106,14 +106,14 @@ registerViewer('mcje_model', {
       onUpdateValue={(value: string) => tab.value = value}
       size='small'
     >
-      <NTabPane name='3d' tab='3D View'>
+      <NTabPane name='3d' tab='3D View' displayDirective='show:lazy'>
         <OverlayWrapper fit={!expanded.value}>
           <Content content={view_3d}/>
           {/* @ts-ignore */}
           <OverlayButton />
         </OverlayWrapper>
       </NTabPane>
-      <NTabPane name='json' tab='JSON'>
+      <NTabPane name='json' tab='JSON' displayDirective='show:lazy'>
         <Suspense>
           <Content content={asyncRenderable(view_json())}/>
         </Suspense>
