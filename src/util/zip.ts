@@ -98,8 +98,10 @@ export async function compressBuffer(input: BufferSource, method: CompressionFor
 
 export function decompressBuffer(input: BufferSource, method: CompressionFormat = 'deflate-raw'): Promise<ArrayBuffer> {
   const ds = new DecompressionStream(method)
-  const rs = new Blob([input]).stream()
-  return new Response(rs.pipeThrough(ds)).arrayBuffer()
+  const writer = ds.writable.getWriter()
+  writer.write(input).catch(() => {})
+  writer.close().catch(() => {})
+  return new Response(ds.readable).arrayBuffer()
 }
 
 export function compressText(text: string, method: CompressionFormat = 'deflate-raw'): Promise<Uint8Array> {
