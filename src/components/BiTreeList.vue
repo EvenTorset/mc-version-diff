@@ -19,12 +19,17 @@ function markTrackMounted(t: DeltaTrack) {
   mountedTrackKeys.value.add(t.id)
 }
 
+function retireTrack(t: DeltaTrack) {
+  mountedTrackKeys.value.delete(t.id)
+}
+
 function isTrackMounted(t: DeltaTrack): boolean {
   return mountedTrackKeys.value.has(t.id)
 }
 
 provide('bitree-mount', {
   markTrackMounted,
+  retireTrack,
   isTrackMounted,
 })
 
@@ -41,8 +46,22 @@ const observer = new IntersectionObserver((entries) => {
   threshold: 0,
 })
 
+const retireObserver = new IntersectionObserver((entries) => {
+  for (const entry of entries) {
+    if (!entry.isIntersecting) {
+      const el = entry.target as HTMLElement
+      el.dispatchEvent(new CustomEvent('lazy-retire', { detail: entry.boundingClientRect.height }))
+    }
+  }
+}, {
+  root: null,
+  rootMargin: '2400px 0px 2400px 0px',
+  threshold: 0,
+})
+
 onUnmounted(() => {
   observer.disconnect()
+  retireObserver.disconnect()
 })
 
 const BRANCH_FACTOR = 8
@@ -50,7 +69,7 @@ const BRANCH_FACTOR = 8
 function buildBranch(dr: DeltaResult, tracks: DeltaTrack[], lo: number, hi: number): VNode {
   if (hi - lo === 1) {
     const track = tracks[lo]
-    return h(BiTreeLeaf, { key: track.id, dr, track, observer })
+    return h(BiTreeLeaf, { key: track.id, dr, track, observer, retireObserver })
   }
 
   const children: VNode[] = []
