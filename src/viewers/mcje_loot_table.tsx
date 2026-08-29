@@ -7,7 +7,7 @@ import { DeltaTrackState } from '@/delta_providers/states'
 import { Settings } from '@/settings'
 import { deltaTableReader, describeTable, oddsChanged, sampleTableCached } from '@/util/loot'
 import stringify from 'fabulous-json'
-import { NCheckbox, NTab, NTabs } from 'naive-ui'
+import { NCheckbox, NTabPane, NTabs } from 'naive-ui'
 import { ref } from 'vue'
 import { registerViewer } from './registry'
 import { trackTab } from '@/util/trackFocus'
@@ -99,16 +99,22 @@ registerViewer('mcje_loot_table', {
     return () => <>
       <NTabs
         type='bar'
-        class='pad-tab-buttons'
+        class='no-tab-padding pad-tab-buttons'
         size='small'
         value={tab.value}
         onUpdateValue={(value: string) => tab.value = value}
       >
         {{
           default: () => [
-            <NTab name='items' tab='Items' />,
-            <NTab name='rules' tab='Rules' />,
-            <NTab name='json' tab='JSON' />,
+            <NTabPane name='items' tab='Items' displayDirective='show:lazy'>
+              <Content content={view_items} />
+            </NTabPane>,
+            <NTabPane name='rules' tab='Rules' displayDirective='show:lazy'>
+              <Content content={view_rules} />
+            </NTabPane>,
+            <NTabPane name='json' tab='JSON' displayDirective='show:lazy'>
+              <Content content={view_json} />
+            </NTabPane>,
           ],
           suffix: () => tab.value === 'items' && counts.value?.same ? <div class='tab-toggles'>
             <NCheckbox
@@ -122,11 +128,6 @@ registerViewer('mcje_loot_table', {
           </div> : null,
         }}
       </NTabs>
-      <div style={{ display: tab.value === 'items' ? undefined : 'none' }}>
-        <Content content={view_items} />
-      </div>
-      {tab.value === 'rules' ? <Content content={view_rules} /> : null}
-      {tab.value === 'json' ? <Content content={view_json} /> : null}
     </>
   },
 })

@@ -6,7 +6,7 @@ import { readNbt } from '@/util/nbt'
 import stringify from 'fabulous-json'
 import type { DeltaResult } from '@/delta_providers'
 import StructureViewer from '@/components/StructureViewer.vue'
-import { reactive, ref, Suspense, type Component } from 'vue'
+import { reactive, ref, Suspense, watch, type Component } from 'vue'
 import { NCheckbox, NTab, NTabs } from 'naive-ui'
 import Row from '@/components/Row.vue'
 import type { CompareResult, CompareView } from '@/util/structureViewer'
@@ -107,6 +107,8 @@ registerViewer('mcje_structure', {
     }
 
     let jsonView: Component | undefined
+    const jsonSeen = ref(false)
+    watch(tab, value => { if (value === 'json') jsonSeen.value = true }, { immediate: true })
 
     return () => <>
       <NTabs
@@ -135,9 +137,11 @@ registerViewer('mcje_structure', {
       <div style={{ display: tab.value === 'json' ? 'none' : undefined }}>
         <Content content={view_3d}/>
       </div>
-      {tab.value === 'json' ? <Suspense>
-        <Content content={jsonView ??= asyncRenderable(view_json())}/>
-      </Suspense> : null}
+      {jsonSeen.value ? <div style={{ display: tab.value === 'json' ? undefined : 'none' }}>
+        <Suspense>
+          <Content content={jsonView ??= asyncRenderable(view_json())}/>
+        </Suspense>
+      </div> : null}
     </>
   },
 })
