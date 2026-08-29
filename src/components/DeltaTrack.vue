@@ -19,6 +19,7 @@ import { basename } from '@/util/path.ts'
 import { saveAs } from 'file-saver'
 import Tooltip from './Tooltip.vue'
 import { copyToClipboard } from '@/util/clipboard.ts'
+import { holdFocus, isInitialFocus } from '@/util/trackFocus.ts'
 import { computed } from 'vue'
 import Notify from '@/notify.tsx'
 
@@ -29,7 +30,9 @@ const props = defineProps<{
 
 const category = computed(() => props.dr.getCategory(props.track))
 
-const initExpanded = (
+let restoredFocus = isInitialFocus(props.track.id)
+
+const initExpanded = restoredFocus || (
   (
     props.track.state === DeltaTrackState.Added
     || props.track.state === DeltaTrackState.Edited
@@ -71,8 +74,10 @@ watch(() => props.track, () => {
 
 watch(expanded, async (isExpanded) => {
   isInitialAutoExpanded.value = false
+  restoredFocus = false
 
   if (!isExpanded) return;
+  holdFocus(props.track.id)
   shouldRenderContent.value = true
   view.value = await renderView()
 })
@@ -81,7 +86,7 @@ function handleAnimationEnd() {
   if (!expanded.value) {
     shouldRenderContent.value = false
   } else {
-    if (!isInitialAutoExpanded.value) {
+    if (!isInitialAutoExpanded.value && !restoredFocus) {
       scrollExpandedIntoView()
     }
     isInitialAutoExpanded.value = false

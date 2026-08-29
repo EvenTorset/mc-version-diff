@@ -12,8 +12,8 @@ import {
 } from '@/util/recipes'
 import stringify from 'fabulous-json'
 import { NTab, NTabs } from 'naive-ui'
-import { ref } from 'vue'
 import { registerViewer } from './registry'
+import { trackTab } from '@/util/trackFocus'
 
 function getJSON(recipe: any, raw: string) {
   return Settings.formatJSON ? stringify(recipe) : raw
@@ -98,7 +98,7 @@ registerViewer('mcje_recipe', {
     const unchanged = !!before && !!after
       && JSON.stringify(before.recipe) === JSON.stringify(after.recipe)
 
-    const tab = ref(unchanged ? 'json' : 'recipe')
+    const tab = trackTab(track.id, [ 'recipe', 'json' ], unchanged ? 'json' : 'recipe')
 
     function view_recipe() {
       if (before && after && !unchanged) {

@@ -2,6 +2,7 @@ import { asyncRenderable } from '@/util/asyncRenderable'
 import { DeltaTrackState } from '@/delta_providers/states'
 import { NButton, NTabPane, NTabs } from 'naive-ui'
 import { registerViewer } from './registry'
+import { trackTab } from '@/util/trackFocus'
 import { Settings } from '@/settings'
 import { inject, ref, Suspense, watchEffect } from 'vue'
 import Content from '@/components/Content.vue'
@@ -31,6 +32,7 @@ registerViewer('mcje_model', {
   },
   async render(dr, track) {
     const expanded = ref(false)
+    const tab = trackTab(track.id, [ '3d', 'json' ])
     const OverlayButton = {
       setup() {
         const setOverlayButtons = inject<(buttons: Renderable[]) => void>('setOverlayButtons')
@@ -101,7 +103,8 @@ registerViewer('mcje_model', {
     return () => <NTabs
       type='bar'
       class='no-tab-padding pad-tab-buttons'
-      default-value='3d'
+      value={tab.value}
+      onUpdateValue={(value: string) => tab.value = value}
       size='small'
     >
       <NTabPane name='3d' tab='3D View'>

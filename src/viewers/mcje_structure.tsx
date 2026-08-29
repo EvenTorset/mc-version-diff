@@ -1,5 +1,6 @@
 import TextDiff from '@/components/TextDiff.vue'
 import { registerViewer } from './registry'
+import { trackTab } from '@/util/trackFocus'
 import TextView from '@/components/TextView.vue'
 import { DeltaTrackState } from '@/delta_providers/states'
 import { readNbt } from '@/util/nbt'
@@ -45,7 +46,7 @@ registerViewer('mcje_structure', {
         { name: 'after', tab: 'After', view: 'after' },
       ]
 
-    const tab = ref(viewTabs[0].name)
+    const tab = trackTab(track.id, [ ...viewTabs.map(entry => entry.name), 'json' ], viewTabs[0].name)
     const view = ref<CompareView>('slide')
     const show = reactive({ added: true, changed: true, removed: true })
     const counts = ref<CompareResult['counts'] | null>(null)

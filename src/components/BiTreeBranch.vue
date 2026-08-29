@@ -85,6 +85,7 @@ onUnmounted(() => {
     v-if="isLeaf"
     ref="leafRef"
     class="bitree-leaf"
+    :data-track="track.id"
     :style="{ containIntrinsicSize: `auto ${trackHeight}` }"
     @lazy-mount="triggerMount"
   >

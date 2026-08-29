@@ -22,9 +22,30 @@ import CategoryTab from '@/components/CategoryTab.vue'
 import TransitionList from '@/components/TransitionList.vue'
 import Notify from '@/notify'
 import { resolveStaticOrAsync } from '@/util/resolveToStatic'
+import { focusedTab, focusedTrack, initTrackFocus } from '@/util/trackFocus'
+import type { ImageViewMode } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
+
+function param(key: string) {
+  const value = route.query[key]
+  return typeof value === 'string' ? value : undefined
+}
+
+const stateParams = {
+  added: DeltaTrackState.Added,
+  edited: DeltaTrackState.Edited,
+  moved: DeltaTrackState.Moved,
+  removed: DeltaTrackState.Removed,
+}
+
+initTrackFocus(param('file'), param('tab'))
+
+const imageModes: ImageViewMode[] = [ 'rgba', 'rgb', 'r', 'g', 'b', 'a' ]
+imageViewMode.value = imageModes.find(mode => mode === param('mode')) ?? 'rgba'
+animateTextures.value = param('animate') === '1'
+mcmetaTexture.value = param('animtexture') === '1'
 
 const progressDisplay = createProgressList()
 
@@ -116,9 +137,12 @@ const states = computed<[string, DeltaTrackState, DeltaTrack[]][]>(() => {
   return out
 })
 
-const selectedCategory = ref<string>('')
+const selectedCategory = ref<string>(param('category') ?? '')
 watch(categories, newCategories => {
-  if (newCategories.some(([k, v]) => k === selectedCategory.value && v.length > 0)) {
+  const match = newCategories.find(([k, v]) =>
+    v.length > 0 && k.toLowerCase() === selectedCategory.value.toLowerCase())
+  if (match) {
+    selectedCategory.value = match[0]
     return;
   }
   let first = true
@@ -155,19 +179,23 @@ const imageDisplayOptions = computed(() => [
 ])
 
 const stateFilters = ref<Partial<Record<DeltaTrackState, boolean>>>({})
+let initialStates = param('states')?.split(',')
 watch(states, newStates => {
+  const enabled = initialStates
+    && new Set(initialStates.map(name => stateParams[name as keyof typeof stateParams]))
+  initialStates = undefined
   stateFilters.value = {}
   for (const [ , state, tracks ] of newStates) {
     if (tracks.length > 0) {
-      stateFilters.value[state] = true
+      stateFilters.value[state] = enabled?.has(state) ?? true
     }
   }
 })
 
 const findInput = ref<InputInst | null>(null)
-const findRegex = ref(false)
-const pathFilter = ref<string>('')
-const debouncedPathFilter = ref<string>('')
+const findRegex = ref(param('regex') === '1')
+const pathFilter = ref<string>(param('search') ?? '')
+const debouncedPathFilter = ref<string>(pathFilter.value)
 let debounceTimer: ReturnType<typeof setTimeout> | undefined
 
 watch(pathFilter, (newVal) => {
@@ -208,6 +236,31 @@ const filteredDiff = computed<DeltaResult | undefined>(() => {
     tracks: activeCategory ? [...activeCategory[1]] : [],
   }
 })
+
+const urlState = computed(() => {
+  const query: Record<string, string> = {}
+
+  if (selectedCategory.value) query.category = selectedCategory.value.toLowerCase()
+  if (debouncedPathFilter.value) query.search = debouncedPathFilter.value
+  if (findRegex.value) query.regex = '1'
+
+  const enabled = Object.entries(stateParams).filter(([ , state ]) => stateFilters.value[state])
+  if (enabled.length < Object.keys(stateFilters.value).length) {
+    query.states = enabled.map(([ name ]) => name).join(',')
+  }
+
+  const shown = new Set(imageDisplayOptions.value.map(option => option.id))
+  if (shown.has('modes') && imageViewMode.value !== 'rgba') query.mode = imageViewMode.value
+  if (shown.has('animate') && animateTextures.value) query.animate = '1'
+  if (shown.has('preview') && mcmetaTexture.value) query.animtexture = '1'
+
+  if (focusedTrack.value) query.file = focusedTrack.value
+  if (focusedTab.value) query.tab = focusedTab.value
+
+  return query
+})
+
+watch(urlState, query => router.replace({ query }))
 
 onMounted(async () => {
   provider.value = getDeltaProvider(route.params.provider as string)

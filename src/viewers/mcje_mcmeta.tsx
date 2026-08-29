@@ -7,6 +7,7 @@ import { DeltaTrackState } from '@/delta_providers/states'
 import { NTab, NTabs } from 'naive-ui'
 import { ref, type Ref } from 'vue'
 import { animationOf } from '@/util/animation'
+import { trackTab } from '@/util/trackFocus'
 import { registerViewer } from './registry'
 
 export const mcmetaTexture = ref(false)
@@ -55,7 +56,7 @@ registerViewer('mcje_mcmeta', {
 
     if (!animated) return view_text
 
-    const tab = ref('animation')
+    const tab = trackTab(track.id, [ 'animation', 'json' ])
 
     type Stats = { frames: number, duration: number }
     const stats: Record<string, Ref<Stats | null>> = {}
