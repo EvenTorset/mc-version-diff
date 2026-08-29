@@ -228,7 +228,7 @@ export async function normalizeRecipe(recipe: any, resolveTag: TagResolver): Pro
 
   return {
     type, label: 'Special recipe',
-    layout: { kind: 'special', description: `Dynamic recipe (${type || 'unknown type'}), the ingredients are determined in code.` },
+    layout: { kind: 'special', description: 'The game decides the ingredients in code.' },
     result: parseResult(recipe), meta,
   }
 }

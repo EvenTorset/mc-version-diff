@@ -16,6 +16,7 @@ export interface RecipeMarks {
   slots: (SlotMark | null)[]
   result: SlotMark | null
   meta: (SlotMark | null)[]
+  label: SlotMark | null
 }
 
 const props = defineProps<{
@@ -23,6 +24,7 @@ const props = defineProps<{
   version: string
   recipe: NormalizedRecipe
   marks?: RecipeMarks
+  dimUnmarked?: boolean
 }>()
 
 const tick = ref(0)
@@ -67,18 +69,31 @@ const hasLabels = computed(() =>
 </script>
 
 <template>
-  <div class="recipe">
+  <div class="recipe" :class="{ 'dim-unmarked': dimUnmarked }">
     <div class="recipe-header">
-      {{ recipe.label }}<template v-for="(part, i) of recipe.meta" :key="part.key"> · <span :class="marks?.meta[i]">{{ part.text }}</span></template>
+      <span :class="marks?.label">{{ recipe.label }}</span><template v-for="(part, i) of recipe.meta" :key="part.key"> · <span :class="marks?.meta[i]">{{ part.text }}</span></template>
     </div>
     <div v-if="recipe.layout.kind === 'special'" class="recipe-special">
-      {{ recipe.layout.description }}
-      <div v-if="recipe.result" class="recipe-io">
-        <div class="slot" :class="marks?.result">
-          <ItemIcon :dr="dr" :version="version" :id="recipe.result.id" :components="recipe.result.components" :size="32" />
-          <span v-if="recipe.result.count > 1" class="slot-count">{{ recipe.result.count }}</span>
+      <div class="special-card">
+        <div class="special-type">
+          <NamespacedPath v-if="recipe.type" :value="recipe.type" />
+          <template v-else>unknown type</template>
         </div>
+        <div class="special-note">{{ recipe.layout.description }}</div>
       </div>
+      <template v-if="recipe.result">
+        <NIcon :size="24" :component="ArrowRight24Regular" class="recipe-arrow" :class="marks?.result" />
+        <Tooltip>
+          <template #trigger="{ props: tt }">
+            <div v-bind="tt" class="slot result" :class="marks?.result">
+              <ItemIcon :dr="dr" :version="version" :id="recipe.result.id" :components="recipe.result.components" :size="32" />
+              <span v-if="recipe.result.count > 1" class="slot-count">{{ recipe.result.count }}</span>
+            </div>
+          </template>
+          <div>{{ itemName(dr, version, recipe.result.id, recipe.result.components) }}</div>
+          <Dim tag="div"><NamespacedPath :value="recipe.result.id" /></Dim>
+        </Tooltip>
+      </template>
     </div>
     <div v-else class="recipe-io" :class="{ 'has-labels': hasLabels }">
       <div
@@ -109,7 +124,7 @@ const hasLabels = computed(() =>
               <Dim tag="div">Tag group · {{ ingredientOf(i)!.options.length }} options</Dim>
             </template>
           </Tooltip>
-          <div v-else class="slot" :class="marks?.slots[i]"></div>
+          <div v-else class="slot empty" :class="marks?.slots[i]"></div>
         </template>
       </div>
       <div v-else class="labeled-slots">
@@ -136,12 +151,12 @@ const hasLabels = computed(() =>
               <Dim tag="div">Tag group · {{ ingredientOf(i)!.options.length }} options</Dim>
             </template>
           </Tooltip>
-          <div v-else class="slot" :class="marks?.slots[i]"></div>
+          <div v-else class="slot empty" :class="marks?.slots[i]"></div>
           <div v-if="labelOf(i)" class="slot-label">{{ labelOf(i) }}</div>
         </div>
       </div>
       <template v-if="recipe.result">
-        <NIcon :size="24" :component="ArrowRight24Regular" class="recipe-arrow" />
+        <NIcon :size="24" :component="ArrowRight24Regular" class="recipe-arrow" :class="marks?.result" />
         <Tooltip>
           <template #trigger="{ props: tt }">
             <div v-bind="tt" class="slot result" :class="marks?.result">
@@ -163,6 +178,17 @@ const hasLabels = computed(() =>
   display: flex;
   flex-direction: column;
   gap: 10px;
+
+  .slot.empty {
+    opacity: 0.5;
+  }
+
+  &.dim-unmarked {
+    .slot:not(.added):not(.changed):not(.removed),
+    .recipe-arrow:not(.added):not(.changed):not(.removed) {
+      opacity: 0.5;
+    }
+  }
 }
 
 .recipe-header {
@@ -183,12 +209,32 @@ const hasLabels = computed(() =>
 }
 
 .recipe-special {
-  max-width: 300px;
-  color: var(--color-4);
-  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.special-card {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 4px;
+  max-width: 360px;
+  padding: 9px 12px;
+  border: 1px solid var(--color-2);
+  border-radius: 6px;
+  background: var(--color-1);
+}
+
+.special-type {
+  font-family: var(--monospace-font-family);
+  font-size: 13px;
+  color: var(--color-5);
+  overflow-wrap: anywhere;
+}
+
+.special-note {
+  font-size: 12px;
+  color: var(--color-4);
 }
 
 .recipe-io {
