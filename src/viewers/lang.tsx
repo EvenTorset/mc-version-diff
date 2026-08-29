@@ -26,31 +26,29 @@ registerViewer('lang', {
       const text = td.decode(bytes)
       return track.id.endsWith('.lang') ? parseLang(text) : JSON.parse(text)
     }
-    if (track.state === DeltaTrackState.Edited) {
-      const [ orig, mod ]: [
-        Record<string, string>,
-        Record<string, string>,
-      ] = await Promise.all([
-        dr.getEntry(dr.a, track.a).then(parse),
-        dr.getEntry(dr.b, track.b).then(parse),
-      ])
-      return <LangDiff original={orig} modified={mod}/>
-    }
-    if (track.state === DeltaTrackState.Added) {
-      return <LangDiff
+    switch (track.state) {
+      case DeltaTrackState.Edited: {
+        const [ orig, mod ]: [
+          Record<string, string>,
+          Record<string, string>,
+        ] = await Promise.all([
+          dr.getEntry(dr.a, track.a).then(parse),
+          dr.getEntry(dr.b, track.b).then(parse),
+        ])
+        return <LangDiff original={orig} modified={mod}/>
+      }
+      case DeltaTrackState.Added: return <LangDiff
         original={{}}
         modified={await dr.getEntry(dr.b, track.b).then(parse)}
       />
-    }
-    if (track.state === DeltaTrackState.Moved) {
-      return <TextView
+      case DeltaTrackState.Removed: return <LangDiff
+        original={await dr.getEntry(dr.a, track.a).then(parse)}
+        modified={{}}
+      />
+      case DeltaTrackState.Moved: return <TextView
         text={td.decode(await dr.getEntry(dr.b, track.b))}
         path={track.id}
       ></TextView>
     }
-    return <LangDiff
-      original={await dr.getEntry(dr.a, track.a).then(parse)}
-      modified={{}}
-    />
   },
 })

@@ -12,6 +12,16 @@ export const router = createRouter({
   routes,
 })
 
+const DEFAULT_TITLE = 'Version Diff - Asset Comparison for Minecraft'
+
+router.afterEach(to => {
+  document.title = to.name === 'delta'
+    ? `Minecraft ${to.params.a} vs ${to.params.b} | Version Diff`
+    : DEFAULT_TITLE
+  document.querySelector('link[rel="canonical"]')
+    ?.setAttribute('href', `https://cccode.pages.dev/version-diff${to.path}`)
+})
+
 router.beforeEach(async to => {
   if (to.path !== '/') {
     return;

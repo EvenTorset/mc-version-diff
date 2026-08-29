@@ -3,31 +3,25 @@ import { registerViewer } from './registry'
 import MarkChanges from '@/components/MarkChanges.vue'
 import { DeltaTrackState } from '@/delta_providers/states'
 
+type DeprecatedLang = { removed?: string[], renamed?: Record<string, string> }
+
 registerViewer('deprecated_lang', {
   test(_dr, track) {
     return /assets\/[^\/]+\/lang\/deprecated.json$/.test(track.id)
   },
   async render(dr, track) {
-    if (track.state === DeltaTrackState.Edited) {
-      const td = new TextDecoder()
-      const [ orig, mod ]: [
-        { removed: string[], renamed: Record<string, string> },
-        { removed: string[], renamed: Record<string, string> },
-      ] = await Promise.all([
-        dr.getEntry(dr.a, track.a).then(bytes => JSON.parse(td.decode(bytes))),
-        dr.getEntry(dr.b, track.b).then(bytes => JSON.parse(td.decode(bytes))),
-      ])
+    function viewer(orig: DeprecatedLang, mod: DeprecatedLang) {
       const removed_changes = {
         added: [] as string[],
         removed: [] as string[],
       }
-      for (const s of orig.removed) {
-        if (!mod.removed.includes(s)) {
+      for (const s of orig.removed ?? []) {
+        if (!mod.removed?.includes(s)) {
           removed_changes.removed.push(s)
         }
       }
-      for (const s of mod.removed) {
-        if (!orig.removed.includes(s)) {
+      for (const s of mod.removed ?? []) {
+        if (!orig.removed?.includes(s)) {
           removed_changes.added.push(s)
         }
       }
@@ -36,15 +30,15 @@ registerViewer('deprecated_lang', {
         edited: [] as [string, string, string][],
         removed: [] as [string, string][],
       }
-      for (const [ k, v ] of Object.entries(orig.renamed)) {
-        if (!(k in mod.renamed)) {
+      for (const [ k, v ] of Object.entries(orig.renamed ?? {})) {
+        if (!mod.renamed || !(k in mod.renamed)) {
           renamed_changes.removed.push([k, v])
         } else if (v !== mod.renamed[k]) {
           renamed_changes.edited.push([k, v, mod.renamed[k]])
         }
       }
-      for (const [ k, v ] of Object.entries(mod.renamed)) {
-        if (!(k in orig.renamed)) {
+      for (const [ k, v ] of Object.entries(mod.renamed ?? {})) {
+        if (!orig.renamed || !(k in orig.renamed)) {
           renamed_changes.added.push([k, v])
         }
       }
@@ -112,15 +106,24 @@ registerViewer('deprecated_lang', {
         </> : ''}
       </>
     }
-    if (track.state === DeltaTrackState.Added || track.state === DeltaTrackState.Moved) {
-      return <TextView
-        text={new TextDecoder().decode(await dr.getEntry(dr.b, track.b))}
+    const td = new TextDecoder()
+    switch (track.state) {
+      case DeltaTrackState.Edited: {
+        const [ orig, mod ]: [
+          DeprecatedLang,
+          DeprecatedLang,
+        ] = await Promise.all([
+          dr.getEntry(dr.a, track.a).then(bytes => JSON.parse(td.decode(bytes))),
+          dr.getEntry(dr.b, track.b).then(bytes => JSON.parse(td.decode(bytes))),
+        ])
+        return viewer(orig, mod)
+      }
+      case DeltaTrackState.Added: return viewer({}, await dr.getEntry(dr.b, track.b).then(bytes => JSON.parse(td.decode(bytes))))
+      case DeltaTrackState.Removed: return viewer(await dr.getEntry(dr.a, track.a).then(bytes => JSON.parse(td.decode(bytes))), {})
+      case DeltaTrackState.Moved: return <TextView
+        text={td.decode(await dr.getEntry(dr.b, track.b))}
         path={track.id}
       ></TextView>
     }
-    return <TextView
-      text={new TextDecoder().decode(await dr.getEntry(dr.a, track.a))}
-      path={track.id}
-    ></TextView>
   },
 })

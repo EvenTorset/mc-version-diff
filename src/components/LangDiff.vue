@@ -39,6 +39,7 @@ for (const [ k, v ] of Object.entries(props.modified)) {
         <div class="key" style='padding-left: 12px;'><code>{{ k }}</code></div>
         <div :style="{
           paddingRight: '12px',
+          whiteSpace: 'pre-wrap',
           fontFamily: Settings.pixelFont ? 'var(--pixel-font-family)' : undefined,
           fontSize: Settings.pixelFont ? '20px' : undefined
         }">{{ v }}</div>
@@ -58,6 +59,7 @@ for (const [ k, v ] of Object.entries(props.modified)) {
           paddingRight: '12px',
           paddingTop: '4px',
           paddingBottom: '4px',
+          whiteSpace: 'pre-wrap',
           fontFamily: Settings.pixelFont ? 'var(--pixel-font-family)' : undefined,
           fontSize: Settings.pixelFont ? '20px' : undefined
         }"><MarkChanges :original="o" :modified="m"/></div>
@@ -75,6 +77,7 @@ for (const [ k, v ] of Object.entries(props.modified)) {
         <div class="key" style='padding-left: 12px;'><code>{{ k }}</code></div>
         <div :style="{
           paddingRight: '12px',
+          whiteSpace: 'pre-wrap',
           fontFamily: Settings.pixelFont ? 'var(--pixel-font-family)' : undefined,
           fontSize: Settings.pixelFont ? '20px' : undefined
         }">{{ v }}</div>

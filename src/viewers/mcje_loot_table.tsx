@@ -116,7 +116,8 @@ registerViewer('mcje_loot_table', {
               checked={showUnchanged.value}
               onUpdateChecked={value => showUnchanged.value = value}
             >
-              {`Show unchanged (${counts.value.same})`}
+              <span class='toggle-count'>{counts.value.same}</span>
+              Unchanged
             </NCheckbox>
           </div> : null,
         }}

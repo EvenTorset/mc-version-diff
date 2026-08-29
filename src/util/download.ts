@@ -1,6 +1,6 @@
 import type { ProgressHandler } from '@/util/progress'
 import { Settings } from '@/settings'
-import { getDirectorySize, getDirectory, clearDirectory, isOpfsAvailable } from '@/util/opfs'
+import { getDirectorySize, getDirectory, clearDirectory } from '@/util/opfs'
 
 export interface CacheManifestEntry {
   id: string
@@ -68,10 +68,6 @@ export async function getCachedFile(
   } = options
 
   const filename = buildFilename(id, extension)
-
-  if (!(await isOpfsAvailable())) {
-    return fetchFileWithoutCache(url, filename, progHandler)
-  }
 
   try {
     const dir = await getDirectory(CACHE_DIR)

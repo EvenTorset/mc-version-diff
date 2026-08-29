@@ -68,7 +68,10 @@ function genNaiveTheme(): GlobalThemeOverrides {
     Upload: {
       draggerColor: getCSSVar('--color-2'),
       draggerBorder: '1px dashed var(--color-3)',
-    }
+    },
+    Checkbox: {
+      labelFontWeight: 500,
+    },
   }
 }
 
