@@ -9,19 +9,30 @@ const props = defineProps<{
   dr: DeltaResult
   track: DeltaTrackType
   observer: IntersectionObserver
+  retireObserver: IntersectionObserver
 }>()
 
-const { markTrackMounted, isTrackMounted } = inject<{
+const { markTrackMounted, retireTrack, isTrackMounted } = inject<{
   markTrackMounted: (t: DeltaTrackType) => void
+  retireTrack: (t: DeltaTrackType) => void
   isTrackMounted: (t: DeltaTrackType) => boolean
 }>('bitree-mount')!
 
 const leafRef = ref<HTMLElement | null>(null)
+const retiredHeight = ref<string | null>(null)
 
 const isMounted = computed(() => isTrackMounted(props.track))
 
 function triggerMount() {
   markTrackMounted(props.track)
+}
+
+function triggerRetire(event: Event) {
+  const el = leafRef.value
+  const height = (event as CustomEvent<number>).detail
+  if (!el || !height || el.querySelector('.delta-track.expanded')) return
+  retiredHeight.value = `${height}px`
+  retireTrack(props.track)
 }
 
 const trackHeight = computed(() => {
@@ -41,18 +52,24 @@ const trackHeight = computed(() => {
     }
   }
 
-  return `${h}px`
+  return retiredHeight.value ?? `${h}px`
 })
 
 watch([leafRef, isMounted], ([newEl, mountedState], [oldEl]) => {
-  if (oldEl) props.observer.unobserve(oldEl)
-  else if (newEl) props.observer.unobserve(newEl)
-  if (newEl && !mountedState) props.observer.observe(newEl)
+  const previous = oldEl ?? newEl
+  if (previous) {
+    props.observer.unobserve(previous)
+    props.retireObserver.unobserve(previous)
+  }
+  if (!newEl) return
+  if (mountedState) props.retireObserver.observe(newEl)
+  else props.observer.observe(newEl)
 }, { immediate: true })
 
 onUnmounted(() => {
   if (leafRef.value) {
     props.observer.unobserve(leafRef.value)
+    props.retireObserver.unobserve(leafRef.value)
   }
 })
 </script>
@@ -68,6 +85,7 @@ onUnmounted(() => {
       height: isMounted ? undefined : trackHeight,
     }"
     @lazy-mount="triggerMount"
+    @lazy-retire="triggerRetire"
   >
     <DeltaTrack v-if="isMounted" :dr="dr" :track="track" />
   </div>
