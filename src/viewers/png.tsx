@@ -11,7 +11,7 @@ import { popupable } from '@/util/popupable'
 import type { DeltaResult, DeltaTrack } from '@/delta_providers'
 import MediaColumn from '@/components/MediaColumn.vue'
 import TextureAnimation from '@/components/TextureAnimation.vue'
-import { readAnimation } from '@/util/animation'
+import { animationOf, animationStats, readAnimation } from '@/util/animation'
 import TextureDifference from '@/components/TextureDifference.vue'
 import { diffImage } from '@/util/imageDiff'
 import NativeTemplate from '@/components/NativeTemplate.vue'
@@ -34,12 +34,19 @@ function versionImage(
 ) {
   const caption = () => <><span style={{
     color: changedDims ? changedClass === 'new' ? 'var(--color-success)' : 'var(--color-danger)' : undefined
-  }}>{img.width}x{img.height}</span>, <span style={{
+  }}>{img.width}x{img.height}</span> · <span style={{
     color: changedSize ? changedClass === 'new' ? 'var(--color-success)' : 'var(--color-danger)' : undefined
   }}>{formatBytes(bytes.byteLength)}</span></>
 
   // only an edited track shows more than one image, so only it has a group to page through
   const group = track.state === DeltaTrackState.Edited ? track.id : undefined
+
+  const animation = mcmeta ? animationOf(mcmeta) : null
+  const stats = animation ? animationStats(animation, img.width, img.height) : null
+  const details = `${img.width}x${img.height} · ${formatBytes(bytes.byteLength)}`
+  const description = stats
+    ? `${details} · ${stats.frames} frames of ${stats.frame.width}x${stats.frame.height} · ${Math.round(stats.duration) / 1000}s`
+    : details
 
   if (animateTextures.value && mcmeta) {
     return <TextureAnimation
@@ -68,7 +75,7 @@ function versionImage(
         mode={imageViewMode.value}
         {...popupable({
           title: dr[version],
-          description: `${img.width}x${img.height}, ${formatBytes(bytes.byteLength)}`,
+          description,
           group,
           thumbnails: true,
           zoom: true,

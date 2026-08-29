@@ -7,6 +7,8 @@ import type { ImageViewMode } from '@/types'
 import { popupable } from '@/util/popupable'
 import { bitmapToPng } from '@/util/pngBytes'
 import { deltaVirtualHandler } from '@/util/virtualHandler'
+import { animationStats, arrayFrames } from '@/util/animation'
+import { formatBytes } from '@/util/bytes'
 import { NSpin } from 'naive-ui'
 import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import FitBox from './FitBox.vue'
@@ -44,16 +46,6 @@ let player: {
   dispose(): void
 } | null = null
 
-// a frames array defines the animation, so its length is the frame count; the
-// strip still has to span the highest index it references
-function arrayFrames(animation: any) {
-  const frames = animation?.frames
-  if (!Array.isArray(frames) || !frames.length) return null
-  const highest = Math.max(...frames.map((frame: any) =>
-    typeof frame === 'number' ? frame : frame?.index ?? 0))
-  return { count: frames.length, span: Math.max(1, highest + 1) }
-}
-
 async function source(read: (path: string) => Promise<Uint8Array | null>) {
   const animation = JSON.parse(props.mcmeta).animation
 
@@ -61,20 +53,27 @@ async function source(read: (path: string) => Promise<Uint8Array | null>) {
   const image = bytes
     ? await createImageBitmap(new Blob([ bytes as BlobPart ])).catch(() => null)
     : null
-  const size = image ? frameSize(animation, image.width, image.height) : null
-  const sheetFrames = image && size
-    ? Math.max(1, Math.round((image.width / size.width) * (image.height / size.height)))
-    : null
-  const declared = arrayFrames(animation)
-  const frames = declared?.count ?? sheetFrames
+  const stats = image ? animationStats(animation, image.width, image.height) : null
 
   if (!props.numbered) {
-    if (!bytes || !size || !frames) throw new Error(`no texture at ${props.texture}`)
-    return { bytes, ...size, frames }
+    if (!bytes || !image || !stats) throw new Error(`no texture at ${props.texture}`)
+    return {
+      bytes,
+      ...stats.frame,
+      frames: stats.frames,
+      sheet: { width: image.width, height: image.height, size: bytes.byteLength },
+    }
   }
 
-  const strip = await numberedFrames(declared?.span ?? sheetFrames ?? DEFAULT_FRAMES, declared === null)
-  return { bytes: strip.bytes, width: strip.width, height: strip.height, frames: frames ?? strip.frames }
+  const declared = arrayFrames(animation)
+  const strip = await numberedFrames(declared?.span ?? stats?.frames ?? DEFAULT_FRAMES, declared === null)
+  return {
+    bytes: strip.bytes,
+    width: strip.width,
+    height: strip.height,
+    frames: declared?.count ?? stats?.frames ?? strip.frames,
+    sheet: null,
+  }
 }
 
 function playedMeta() {
@@ -85,15 +84,6 @@ function playedMeta() {
   return JSON.stringify(meta)
 }
 
-function frameSize(animation: any, spriteWidth: number, spriteHeight: number) {
-  if (animation?.width !== undefined) {
-    return { width: animation.width, height: animation.height ?? spriteHeight }
-  }
-  if (animation?.height !== undefined) return { width: spriteWidth, height: animation.height }
-  const min = Math.min(spriteWidth, spriteHeight)
-  return { width: min, height: min }
-}
-
 let buildRun = 0
 
 async function build() {
@@ -102,7 +92,7 @@ async function build() {
   failed.value = false
   try {
     const handler = deltaVirtualHandler(props.dr, props.version)
-    const { bytes, width, height, frames } = await source(
+    const { bytes, width, height, frames, sheet } = await source(
       async path => (await handler.read(path)) as Uint8Array | null,
     )
 
@@ -130,13 +120,16 @@ async function build() {
     player?.dispose()
     player = animation
     animation.onUpdate = () => emit('update')
+    const seconds = Math.round(animation.duration) / 1000
     size.value = { width, height }
-    info.value = `${frames} frames · ${Math.round(animation.duration) / 1000}s`
+    info.value = `${frames} frames · ${seconds}s`
     emit('stats', { frames: frames!, duration: animation.duration })
     // popupable mirrors a live canvas, so the attributes have to sit on the canvas itself
     for (const [ attr, value ] of Object.entries(popupable({
       title: props.label ?? props.version,
-      description: info.value,
+      description: sheet
+        ? `${sheet.width}x${sheet.height} · ${formatBytes(sheet.size)} · ${frames} frames of ${width}x${height} · ${seconds}s`
+        : info.value,
       group: props.group,
       thumbnails: true,
       zoom: true,
