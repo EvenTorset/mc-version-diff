@@ -25,6 +25,20 @@ export function arrayFrames(animation: any) {
   return { count: frames.length, span: Math.max(1, highest + 1) }
 }
 
+export type Playhead = { frame: number, next?: number, progress?: number }
+
+export function frameOffset(
+  spriteWidth: number,
+  frame: { width: number, height: number },
+  index: number,
+) {
+  const columns = Math.max(1, Math.floor(spriteWidth / frame.width))
+  return {
+    x: (index % columns) * frame.width,
+    y: Math.floor(index / columns) * frame.height,
+  }
+}
+
 export function animationStats(animation: any, spriteWidth: number, spriteHeight: number) {
   const frame = frameSize(animation, spriteWidth, spriteHeight)
   const sheetFrames = Math.max(1, Math.round(

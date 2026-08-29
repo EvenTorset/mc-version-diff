@@ -14,10 +14,14 @@ const fragmentShaderSource = /*glsl*/`
   precision highp float;
   uniform sampler2D u_imageA;
   uniform sampler2D u_imageB;
-  uniform float u_iaw;
-  uniform float u_iah;
-  uniform float u_ibw;
-  uniform float u_ibh;
+  uniform vec2 u_sizeA;
+  uniform vec2 u_sizeB;
+  uniform vec2 u_frameA;
+  uniform vec2 u_frameB;
+  uniform vec4 u_offsetA;
+  uniform vec4 u_offsetB;
+  uniform float u_blendA;
+  uniform float u_blendB;
   uniform float u_w;
   uniform float u_h;
   in vec2 v_texCoord;
@@ -36,25 +40,31 @@ const fragmentShaderSource = /*glsl*/`
            roughlyEqual(a.w, b.w);
   }
 
+  vec4 frameColor(sampler2D image, vec2 size, vec4 offset, float blend, vec2 pixel) {
+    vec4 color = texture(image, (offset.xy + pixel) / size);
+    if (blend > 0.0) {
+      color = mix(color, texture(image, (offset.zw + pixel) / size), blend);
+    }
+    return color;
+  }
+
   void main() {
     float x = v_texCoord.x * u_w;
     float y = v_texCoord.y * u_h;
+    vec2 pixel = vec2(x, y);
 
-    vec2 texCoordA = vec2(v_texCoord.x * (u_w / u_iaw), v_texCoord.y * (u_h / u_iah));
-    vec2 texCoordB = vec2(v_texCoord.x * (u_w / u_ibw), v_texCoord.y * (u_h / u_ibh));
+    vec4 colorA = frameColor(u_imageA, u_sizeA, u_offsetA, u_blendA, pixel);
+    vec4 colorB = frameColor(u_imageB, u_sizeB, u_offsetB, u_blendB, pixel);
 
-    vec4 colorA = texture(u_imageA, texCoordA);
-    vec4 colorB = texture(u_imageB, texCoordB);
-
-    if ((x >= u_iaw || y >= u_iah) && (x >= u_ibw || y >= u_ibh)) {
+    if ((x >= u_frameA.x || y >= u_frameA.y) && (x >= u_frameB.x || y >= u_frameB.y)) {
       // Out of bounds for both
       float a = floor(mod(x + y, 8.0) / 4.0);
       outColor = vec4(0.5 * mix(0.8, 1.0, a), 0.5 * mix(0.8, 1.0, a), 0.5 * mix(0.8, 1.0, a), 1.0);
-    } else if (x >= u_iaw || y >= u_iah) {
+    } else if (x >= u_frameA.x || y >= u_frameA.y) {
       // Out of bounds for A (Added)
       float a = floor(mod(x + y, 8.0) / 4.0);
       outColor = vec4(0.33 * mix(0.8, 1.0, a), 1.0 * mix(0.8, 1.0, a), 0.53 * mix(0.8, 1.0, a), 1.0);
-    } else if (x >= u_ibw || y >= u_ibh) {
+    } else if (x >= u_frameB.x || y >= u_frameB.y) {
       // Out of bounds for B (Removed)
       float a = floor(mod(x + y, 8.0) / 4.0);
       outColor = vec4(1.0 * mix(0.7, 1.0, a), 0.2 * mix(0.7, 1.0, a), 0.27 * mix(0.7, 1.0, a), 1.0);
@@ -89,7 +99,20 @@ function compileShader(gl: WebGL2RenderingContext, source: string, type: number)
   return shader
 }
 
-export type DiffSource = ImageBitmap | HTMLCanvasElement | OffscreenCanvas
+export type DiffFrame = {
+  width: number
+  height: number
+  x?: number
+  y?: number
+  nextX?: number
+  nextY?: number
+  progress?: number
+}
+
+export type DiffSide = {
+  image: ImageBitmap
+  frame: { width: number, height: number }
+}
 
 export function createDiffer(width: number, height: number) {
   const canvas = document.createElement('canvas')
@@ -129,10 +152,14 @@ export function createDiffer(width: number, height: number) {
   const textureB = createTexture()
 
   const uniform = (name: string) => gl.getUniformLocation(program, name)
-  const uIaw = uniform('u_iaw')
-  const uIah = uniform('u_iah')
-  const uIbw = uniform('u_ibw')
-  const uIbh = uniform('u_ibh')
+  const uSizeA = uniform('u_sizeA')
+  const uSizeB = uniform('u_sizeB')
+  const uFrameA = uniform('u_frameA')
+  const uFrameB = uniform('u_frameB')
+  const uOffsetA = uniform('u_offsetA')
+  const uOffsetB = uniform('u_offsetB')
+  const uBlendA = uniform('u_blendA')
+  const uBlendB = uniform('u_blendB')
   const uW = uniform('u_w')
   const uH = uniform('u_h')
 
@@ -152,9 +179,12 @@ export function createDiffer(width: number, height: number) {
   gl.enableVertexAttribArray(positionLocation)
   gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0)
 
+  let sizeA: DiffFrame | null = null
+  let sizeB: DiffFrame | null = null
+
   return {
     canvas,
-    draw(a: DiffSource, b: DiffSource) {
+    setSources(a: ImageBitmap, b: ImageBitmap) {
       gl.activeTexture(gl.TEXTURE0)
       gl.bindTexture(gl.TEXTURE_2D, textureA)
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, a)
@@ -163,10 +193,22 @@ export function createDiffer(width: number, height: number) {
       gl.bindTexture(gl.TEXTURE_2D, textureB)
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, b)
 
-      gl.uniform1f(uIaw, a.width)
-      gl.uniform1f(uIah, a.height)
-      gl.uniform1f(uIbw, b.width)
-      gl.uniform1f(uIbh, b.height)
+      sizeA = { width: a.width, height: a.height }
+      sizeB = { width: b.width, height: b.height }
+    },
+    draw(frameA: DiffFrame | null = null, frameB: DiffFrame | null = null) {
+      if (!sizeA || !sizeB) return;
+      const a = frameA ?? sizeA
+      const b = frameB ?? sizeB
+
+      gl.uniform2f(uSizeA, sizeA.width, sizeA.height)
+      gl.uniform2f(uSizeB, sizeB.width, sizeB.height)
+      gl.uniform2f(uFrameA, a.width, a.height)
+      gl.uniform2f(uFrameB, b.width, b.height)
+      gl.uniform4f(uOffsetA, a.x ?? 0, a.y ?? 0, a.nextX ?? 0, a.nextY ?? 0)
+      gl.uniform4f(uOffsetB, b.x ?? 0, b.y ?? 0, b.nextX ?? 0, b.nextY ?? 0)
+      gl.uniform1f(uBlendA, a.progress ?? 0)
+      gl.uniform1f(uBlendB, b.progress ?? 0)
       gl.uniform1f(uW, canvas.width)
       gl.uniform1f(uH, canvas.height)
 
@@ -195,7 +237,8 @@ export async function diffImage(imgA: ImageBitmap, imgB: ImageBitmap) {
     Math.max(imgA.width, imgB.width),
     Math.max(imgA.height, imgB.height),
   )
-  differ.draw(imgA, imgB)
+  differ.setSources(imgA, imgB)
+  differ.draw()
   const image = await createImageBitmap(differ.canvas, {
     premultiplyAlpha: 'none',
     colorSpaceConversion: 'none',

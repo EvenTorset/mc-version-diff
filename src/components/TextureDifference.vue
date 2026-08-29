@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { createDiffer } from '@/util/imageDiff'
+import { createDiffer, type DiffFrame, type DiffSide } from '@/util/imageDiff'
+import { frameOffset, type Playhead } from '@/util/animation'
 import { popupable } from '@/util/popupable'
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import FitBox from './FitBox.vue'
 import MediaColumn from './MediaColumn.vue'
 
 const props = defineProps<{
-  sourceA: () => HTMLCanvasElement | null | undefined
-  sourceB: () => HTMLCanvasElement | null | undefined
+  sideA: DiffSide
+  sideB: DiffSide
   label?: string
   caption?: string
   group?: string
@@ -17,14 +18,49 @@ const containerRef = ref<HTMLDivElement>()
 const size = ref({ width: 16, height: 16 })
 const ready = ref(false)
 
+const playheads: Record<'a' | 'b', Playhead | null> = { a: null, b: null }
+
 let differ: ReturnType<typeof createDiffer> | null = null
 let frame = 0
 
-function rebuild(width: number, height: number) {
-  differ?.canvas.remove()
-  differ?.dispose()
+function diffFrame(side: DiffSide, playhead: Playhead | null): DiffFrame {
+  const { width, height } = side.frame
+  const current = frameOffset(side.image.width, side.frame, playhead?.frame ?? 0)
+  if (playhead?.next === undefined || !playhead.progress) {
+    return { width, height, ...current }
+  }
+  const next = frameOffset(side.image.width, side.frame, playhead.next)
+  return { width, height, ...current, nextX: next.x, nextY: next.y, progress: playhead.progress }
+}
+
+function draw() {
+  frame = 0
+  differ?.draw(
+    diffFrame(props.sideA, playheads.a),
+    diffFrame(props.sideB, playheads.b),
+  )
+}
+
+// both sides repaint in the same tick, so coalesce their updates into one draw
+function requestDraw() {
+  frame ||= requestAnimationFrame(draw)
+}
+
+function setPlayhead(side: 'a' | 'b', playhead: Playhead) {
+  playheads[side] = playhead
+  requestDraw()
+}
+
+defineExpose({ setPlayhead })
+
+onMounted(() => {
+  const width = Math.max(props.sideA.frame.width, props.sideB.frame.width)
+  const height = Math.max(props.sideA.frame.height, props.sideB.frame.height)
+
   differ = createDiffer(width, height)
+  differ.setSources(props.sideA.image, props.sideB.image)
   size.value = { width, height }
+
   for (const [ attr, value ] of Object.entries(popupable({
     title: props.label,
     description: props.caption,
@@ -36,31 +72,8 @@ function rebuild(width: number, height: number) {
   }
   containerRef.value?.append(differ.canvas)
   ready.value = true
-}
-
-function draw() {
-  frame = 0
-
-  const a = props.sourceA()
-  const b = props.sourceB()
-  if (!a?.width || !b?.width) return
-
-  const width = Math.max(a.width, b.width)
-  const height = Math.max(a.height, b.height)
-  if (!differ || differ.canvas.width !== width || differ.canvas.height !== height) {
-    rebuild(width, height)
-  }
-  differ!.draw(a, b)
-}
-
-// both sides repaint in the same tick, so coalesce their updates into one draw
-function requestDraw() {
-  frame ||= requestAnimationFrame(draw)
-}
-
-defineExpose({ requestDraw })
-
-onMounted(requestDraw)
+  requestDraw()
+})
 
 onBeforeUnmount(() => {
   cancelAnimationFrame(frame)

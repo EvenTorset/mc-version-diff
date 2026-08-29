@@ -5,13 +5,13 @@ import Row from '@/components/Row.vue'
 import FitBox from '@/components/FitBox.vue'
 import Tooltip from '@/components/Tooltip.vue'
 import type { ImageViewMode, TooltipTriggerProps } from '@/types'
-import { ref, type CSSProperties, type Ref } from 'vue'
+import { ref, type CSSProperties } from 'vue'
 import { DeltaTrackState } from '@/delta_providers/states'
 import { popupable } from '@/util/popupable'
 import type { DeltaResult, DeltaTrack } from '@/delta_providers'
 import MediaColumn from '@/components/MediaColumn.vue'
 import TextureAnimation from '@/components/TextureAnimation.vue'
-import { animationOf, animationStats, readAnimation } from '@/util/animation'
+import { animationOf, animationStats, readAnimation, type Playhead } from '@/util/animation'
 import TextureDifference from '@/components/TextureDifference.vue'
 import { diffImage } from '@/util/imageDiff'
 import NativeTemplate from '@/components/NativeTemplate.vue'
@@ -27,7 +27,7 @@ function versionImage(
   img: ImageBitmap,
   bytes: Uint8Array<ArrayBuffer>,
   mcmeta: string | null,
-  anim?: { ref: Ref<any>, onUpdate: () => void },
+  onUpdate?: (playhead: Playhead) => void,
   changedDims?: boolean,
   changedSize?: boolean,
   changedClass?: string,
@@ -50,8 +50,7 @@ function versionImage(
 
   if (animateTextures.value && mcmeta) {
     return <TextureAnimation
-      ref={anim?.ref}
-      onUpdate={anim?.onUpdate}
+      onUpdate={onUpdate}
       dr={dr}
       version={dr[version]}
       mcmeta={mcmeta}
@@ -165,15 +164,11 @@ registerViewer('png', {
       readAnimation(dr, dr.b, track.b),
     ])
     const diff = await diffImage(imgA, imgB)
-    // both sides animate independently, so the live difference has to be redrawn
-    // from whichever frames are on screen rather than from a diff of the sheets
-    const animA = ref<any>(null)
-    const animB = ref<any>(null)
+    const statsA = mcmetaA ? animationStats(animationOf(mcmetaA), imgA.width, imgA.height) : null
+    const statsB = mcmetaB ? animationStats(animationOf(mcmetaB), imgB.width, imgB.height) : null
     const diffView = ref<any>(null)
-    const onUpdate = () => diffView.value?.requestDraw()
-    const sideA = { ref: animA, onUpdate }
-    const sideB = { ref: animB, onUpdate }
-    const liveDiff = !!mcmetaA && !!mcmetaB
+    const playhead = (side: 'a' | 'b') => (head: Playhead) => diffView.value?.setPlayhead(side, head)
+    const liveDiff = !!statsA && !!statsB
     const diffTooltipDisable = ref<boolean>(false)
     const legendIgnore: number[] = []
     const legendEntries = () => legend.map((l, i) => legendIgnore.includes(i) ? '' : <>
@@ -201,7 +196,7 @@ registerViewer('png', {
         imgA,
         contentA,
         mcmetaA,
-        sideA,
+        playhead('a'),
         imgA.width !== imgB.width || imgA.height !== imgB.height,
         contentA.byteLength !== contentB.byteLength,
         'old'
@@ -213,7 +208,7 @@ registerViewer('png', {
         imgB,
         contentB,
         mcmetaB,
-        sideB,
+        playhead('b'),
         imgA.width !== imgB.width || imgA.height !== imgB.height,
         contentA.byteLength !== contentB.byteLength,
         'new'
@@ -225,8 +220,8 @@ registerViewer('png', {
           trigger: ({ props }: TooltipTriggerProps) => <TextureDifference
             {...props}
             ref={diffView}
-            sourceA={() => animA.value?.playerCanvas}
-            sourceB={() => animB.value?.playerCanvas}
+            sideA={{ image: imgA, frame: statsA!.frame }}
+            sideB={{ image: imgB, frame: statsB!.frame }}
             label='Difference'
             group={track.id}
           />,

@@ -7,7 +7,7 @@ import type { ImageViewMode } from '@/types'
 import { popupable } from '@/util/popupable'
 import { bitmapToPng } from '@/util/pngBytes'
 import { deltaVirtualHandler } from '@/util/virtualHandler'
-import { animationStats, arrayFrames } from '@/util/animation'
+import { animationStats, arrayFrames, type Playhead } from '@/util/animation'
 import { formatBytes } from '@/util/bytes'
 import { NSpin } from 'naive-ui'
 import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
@@ -28,7 +28,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  update: []
+  update: [ playhead: Playhead ]
   stats: [{ frames: number, duration: number }]
 }>()
 
@@ -42,7 +42,7 @@ const playerCanvas = shallowRef<HTMLCanvasElement>()
 let player: {
   canvas: HTMLCanvasElement
   duration: number
-  onUpdate?: () => void
+  onUpdate?: (playhead: Playhead) => void
   dispose(): void
 } | null = null
 
@@ -119,7 +119,7 @@ async function build() {
     player?.canvas.remove()
     player?.dispose()
     player = animation
-    animation.onUpdate = () => emit('update')
+    animation.onUpdate = (playhead: Playhead) => emit('update', playhead)
     const seconds = Math.round(animation.duration) / 1000
     size.value = { width, height }
     info.value = `${frames} frames · ${seconds}s`
@@ -138,7 +138,7 @@ async function build() {
     }
     containerRef.value?.append(animation.canvas)
     playerCanvas.value = animation.canvas
-    emit('update')
+    emit('update', { frame: 0 })
   } catch {
     // a failed rebuild keeps the old animation on screen, so only report when there is nothing
     if (run === buildRun) failed.value = !player
@@ -155,8 +155,6 @@ async function withMode(bytes: Uint8Array) {
   rendered.close()
   return encoded
 }
-
-defineExpose({ playerCanvas })
 
 onMounted(build)
 watch(() => [ props.numbered, props.mode ], build)
