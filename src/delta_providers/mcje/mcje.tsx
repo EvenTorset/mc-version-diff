@@ -511,8 +511,7 @@ const provider: DeltaProvider<MCJEVersionContent> = {
       }
     }
 
-    const sortKey = (t: DeltaTrack) => `${t.state}|${t.id}`
-    tracks.sort((x, y) => naturalCompare(sortKey(x), sortKey(y)))
+    tracks.sort((x, y) => x.state - y.state || naturalCompare(x.id, y.id))
 
     return {
       a,
