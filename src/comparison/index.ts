@@ -1,4 +1,4 @@
-import type { WorkerCompareMessage, CompareTask, CompareItem } from './cmp.worker'
+import type { WorkerCompareMessage, CompareTask, CompareItem, BatchTask } from './cmp.worker'
 import CmpWorker from './cmp.worker?worker'
 
 export class HashEquivalence {
@@ -40,6 +40,8 @@ export class HashEquivalence {
   }
 }
 
+const MAX_BATCH = 32
+
 class WorkerPool {
   private workers: Worker[] = []
   private idleWorkers: Worker[] = []
@@ -55,14 +57,15 @@ class WorkerPool {
     for (let i = 0; i < maxWorkers; i++) {
       const worker = new CmpWorker()
       worker.onmessage = (event: MessageEvent<WorkerCompareMessage>) => {
-        const { id, same, error } = event.data
-        const task = this.pendingTasks.get(id)
-        if (task) {
-          this.pendingTasks.delete(id)
-          if (error) {
-            task.reject(new Error(error))
-          } else {
-            task.resolve(same)
+        for (const { id, same, error } of event.data.results) {
+          const task = this.pendingTasks.get(id)
+          if (task) {
+            this.pendingTasks.delete(id)
+            if (error) {
+              task.reject(new Error(error))
+            } else {
+              task.resolve(same)
+            }
           }
         }
         this.idleWorkers.push(worker)
@@ -83,22 +86,46 @@ class WorkerPool {
   private drainQueue() {
     while (this.queue.length > 0 && this.idleWorkers.length > 0) {
       const worker = this.idleWorkers.pop()!
-      const { task, resolve, reject } = this.queue.shift()!
-      const id = ++this.nextId
+      const batch = this.queue.splice(0, Math.min(
+        MAX_BATCH,
+        Math.max(1, Math.ceil(this.queue.length / this.workers.length))
+      ))
 
-      this.pendingTasks.set(id, { resolve, reject })
-
-      const bufA = task.a.compressedContent.slice().buffer
-      const bufB = task.b.compressedContent.slice().buffer
-
-      const message = {
-        id,
-        ...task,
-        a: { ...task.a, compressedContent: new Uint8Array(bufA) },
-        b: { ...task.b, compressedContent: new Uint8Array(bufB) },
+      let total = 0
+      for (const { task } of batch) {
+        total += task.a.compressedContent.byteLength + task.b.compressedContent.byteLength
       }
 
-      worker.postMessage(message, [bufA, bufB])
+      const data = new Uint8Array(total)
+      const tasks: BatchTask[] = []
+      let offset = 0
+
+      for (const { task, resolve, reject } of batch) {
+        const id = ++this.nextId
+        this.pendingTasks.set(id, { resolve, reject })
+
+        const aOffset = offset
+        data.set(task.a.compressedContent, offset)
+        offset += task.a.compressedContent.byteLength
+
+        const bOffset = offset
+        data.set(task.b.compressedContent, offset)
+        offset += task.b.compressedContent.byteLength
+
+        tasks.push({
+          id,
+          kind: task.kind,
+          littleEndian: task.kind === 'nbt' ? task.littleEndian : undefined,
+          aOffset,
+          aLength: task.a.compressedContent.byteLength,
+          aMethod: task.a.compressionMethod,
+          bOffset,
+          bLength: task.b.compressedContent.byteLength,
+          bMethod: task.b.compressionMethod,
+        })
+      }
+
+      worker.postMessage({ tasks, data: data.buffer }, [data.buffer])
     }
   }
 
