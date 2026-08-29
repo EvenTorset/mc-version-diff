@@ -9,19 +9,23 @@ const tabs = shallowReactive(new Map<string, Ref<string>>())
 export const focusedTab = computed(() => tabs.get(focusedTrack.value)?.value)
 
 let initial: { track: string, tab?: string } | undefined
+let initialOpened = false
 let pendingRestore: string | undefined
 let held: string | undefined
 
 export function initTrackFocus(track?: string, tab?: string) {
   tabs.clear()
   initial = track ? { track, tab } : undefined
+  initialOpened = false
   pendingRestore = track
   focusedTrack.value = track ?? ''
   held = track
 }
 
 export function isInitialFocus(id: string) {
-  return initial?.track === id
+  if (initialOpened || initial?.track !== id) return false
+  initialOpened = true
+  return true
 }
 
 export function holdFocus(id: string) {
