@@ -7,9 +7,22 @@ export function registerViewer(id: string, viewer: Viewer) {
   VIEWERS.set(id, viewer)
 }
 
+const cache = new WeakMap<DeltaResult, Map<string, Viewer | null>>()
+
 export function getViewer(dr: DeltaResult, track: DeltaTrack): Viewer | null {
+  let results = cache.get(dr)
+  if (!results) cache.set(dr, results = new Map())
+
+  const cached = results.get(track.id)
+  if (cached !== undefined) return cached
+
+  let found: Viewer | null = null
   for (const [ , viewer ] of VIEWERS) {
-    if (viewer.test(dr, track)) return viewer
+    if (viewer.test(dr, track)) {
+      found = viewer
+      break
+    }
   }
-  return null
+  results.set(track.id, found)
+  return found
 }

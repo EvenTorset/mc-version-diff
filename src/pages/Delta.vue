@@ -4,6 +4,7 @@ import Content from '@/components/Content.vue'
 import VersionDiffLogo from '@/components/VersionDiffLogo.vue'
 import type { DeltaProvider, DeltaProviderCategory, DeltaResult, DeltaTrack } from '@/delta_providers'
 import { getDeltaProvider } from '@/delta_providers/registry'
+import { getTrackCategory } from '@/delta_providers/category'
 import { NButton, NCard, NCheckbox, NInput, NRadio, NRadioGroup, NSpin, type InputInst } from 'naive-ui'
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -100,7 +101,7 @@ const categoriesUnordered = computed<Map<DeltaProviderCategory | typeof symUncat
   if (!dr || !prov) return new Map()
   return Map.groupBy(
     tracksFilteredByStateAndPath.value,
-    track => provCategories.value.find(c => c.test(dr, track)) ?? symUncategorized
+    track => getTrackCategory(prov, dr, track) ?? symUncategorized
   )
 })
 const categories = computed(() => (

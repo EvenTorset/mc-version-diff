@@ -1,9 +1,9 @@
 <script setup lang="tsx">
 import type { DeltaResult, DeltaTrack } from '@/delta_providers'
 import FilePath from '@/components/FilePath.vue'
-import Row from '@/components/Row.vue'
-import { NButton, NIcon, NTag } from 'naive-ui'
 import { ArrowDownload24Regular, ArrowTurnRight20Filled, ChevronDown20Filled, Copy24Regular } from '@vicons/fluent'
+import IconButton from './IconButton.vue'
+import TrackTag from './TrackTag.vue'
 import { onMounted, ref, shallowRef, watch } from 'vue'
 import AnimatedHeight from './AnimatedHeight.vue'
 import Content from '@/components/Content.vue'
@@ -11,7 +11,6 @@ import { getViewer } from '@/viewers/registry.ts'
 import Dim from './Dim.vue'
 import type { Renderable } from '@/types.ts'
 import { DeltaTrackState } from '@/delta_providers/states.ts'
-import Spacer from './Spacer.vue'
 import Col from './Col.vue'
 import MarkFilePathChanges from './MarkFilePathChanges.vue'
 import { basename } from '@/util/path.ts'
@@ -40,6 +39,7 @@ const initExpanded = restoredFocus || (
 )
 
 const deltaTrack = ref<HTMLDivElement>()
+const interacted = ref(false)
 const expanded = ref(initExpanded)
 const isInitialAutoExpanded = ref(initExpanded)
 const isInitialRender = ref(initExpanded)
@@ -158,63 +158,39 @@ async function copy(version: 'a' | 'b') {
 </script>
 
 <template>
-  <div ref="deltaTrack" class="delta-track" :class="{ expanded }" :key="track.id">
-    <Row class="delta-track-bar" gap="8px">
-      <NButton class="icon" circle size="small" @click="expanded = !expanded" style="align-self: flex-start;">
-        <template #icon>
-          <ChevronDown20Filled :style="{
-            transition: 'rotate .2s',
-            rotate: expanded ? '180deg' : '0deg'
-          }" />
-        </template>
-      </NButton>
+  <div
+    ref="deltaTrack"
+    class="delta-track"
+    :class="{ expanded }"
+    :key="track.id"
+    @pointerenter="interacted = true"
+    @focusin="interacted = true"
+  >
+    <div class="delta-track-bar">
+      <IconButton @click="expanded = !expanded" style="align-self: flex-start;">
+        <ChevronDown20Filled :style="{
+          transition: 'rotate .2s',
+          rotate: expanded ? '180deg' : '0deg'
+        }" />
+      </IconButton>
 
-      <NTag
+      <TrackTag
         v-if="track.state === DeltaTrackState.Added"
-        round
-        size="small"
-        :style="{ minWidth: '80px', maxWidth: '80px' }"
-        :color="{
-          color: 'rgb(from var(--color-success) r g b / 0.25)',
-          textColor: 'oklch(from var(--color-success) calc(l * 1.3) calc(c * 0.7) h)',
-          borderColor: 'rgb(from var(--color-success) r g b / 0.4)',
-        }"
-      >Added</NTag>
-      <NTag
+        color="var(--color-success)"
+      >Added</TrackTag>
+      <TrackTag
         v-else-if="track.state === DeltaTrackState.Removed"
-        round
-        size="small"
-        :style="{ minWidth: '80px', maxWidth: '80px' }"
-        :color="{
-          color: 'rgb(from var(--color-danger) r g b / 0.25)',
-          textColor: 'oklch(from var(--color-danger) calc(l * 1.3) calc(c * 0.7) h)',
-          borderColor: 'rgb(from var(--color-danger) r g b / 0.4)',
-        }"
-      >Removed</NTag>
+        color="var(--color-danger)"
+      >Removed</TrackTag>
       <Col v-else-if="track.state === DeltaTrackState.Moved" align="flex-end">
-        <NTag
-          round
-          size="small"
-          :style="{ minWidth: '80px', maxWidth: '80px' }"
-          :color="{
-            color: 'rgb(from var(--color-5) r g b / 0.25)',
-            textColor: 'oklch(from var(--color-5) calc(l * 1.3) calc(c * 0.7) h)',
-            borderColor: 'rgb(from var(--color-5) r g b / 0.4)',
-          }"
-        >Moved</NTag>
-        <NIcon :component="ArrowTurnRight20Filled" style="transform: scaleY(-1);" :size="20"/>
+        <TrackTag color="var(--color-5)">Moved</TrackTag>
+        <ArrowTurnRight20Filled style="transform: scaleY(-1); width: 20px; height: 20px;" />
       </Col>
-      <NTag
+      <TrackTag
         v-else
-        round
-        size="small"
-        :style="{ minWidth: '80px', maxWidth: '80px' }"
-        :color="{
-          color: 'rgb(from var(--color-accent) r g b / 0.25)',
-          textColor: 'oklch(from var(--color-accent) calc(l * 1.3) calc(c * 0.7) h)',
-          borderColor: 'rgb(from var(--color-accent) r g b / 0.7)',
-        }"
-      >Edited</NTag>
+        color="var(--color-accent)"
+        :border-alpha="0.7"
+      >Edited</TrackTag>
       <Col v-if="track.state === DeltaTrackState.Moved" align="stretch" style="overflow: hidden;">
         <MarkFilePathChanges
           :original="track.a"
@@ -223,8 +199,8 @@ async function copy(version: 'a' | 'b') {
       </Col>
       <FilePath v-else :path="track.id"/>
       <div style="width: 16px;"></div>
-      <Spacer style="align-self: stretch; cursor: pointer; user-select: none;" @click="expanded = !expanded"/>
-      <Row gap="2px" style="align-self: flex-start;" class="delta-track-action-buttons">
+      <div class="delta-track-spacer" @click="expanded = !expanded"></div>
+      <div v-if="interacted" class="delta-track-action-buttons">
         <Tooltip v-if="
           category?.mimeType && (
             track.state === DeltaTrackState.Removed ||
@@ -232,34 +208,18 @@ async function copy(version: 'a' | 'b') {
           )
         ">
           <template #trigger="{ props }">
-            <NButton
-              v-bind="props"
-              class="icon accent"
-              circle
-              size="small"
-              @click="copy('a')"
-            >
-              <template #icon>
-                <Copy24Regular />
-              </template>
-            </NButton>
+            <IconButton v-bind="props" class="accent" @click="copy('a')">
+              <Copy24Regular />
+            </IconButton>
           </template>
           <h3>Copy to clipboard</h3>
           <p><b>{{ basename(track.a) }}</b> from <b>{{ dr.a }}</b></p>
         </Tooltip>
         <Tooltip v-if="track.state === DeltaTrackState.Removed || track.state === DeltaTrackState.Edited">
           <template #trigger="{ props }">
-            <NButton
-              v-bind="props"
-              class="icon accent"
-              circle
-              size="small"
-              @click="download('a')"
-            >
-              <template #icon>
-                <ArrowDownload24Regular />
-              </template>
-            </NButton>
+            <IconButton v-bind="props" class="accent" @click="download('a')">
+              <ArrowDownload24Regular />
+            </IconButton>
           </template>
           <h3>Download</h3>
           <p><b>{{ basename(track.a) }}</b> from <b>{{ dr.a }}</b></p>
@@ -272,17 +232,9 @@ async function copy(version: 'a' | 'b') {
           )
         ">
           <template #trigger="{ props }">
-            <NButton
-              v-bind="props"
-              class="icon accent"
-              circle
-              size="small"
-              @click="copy('b')"
-            >
-              <template #icon>
-                <Copy24Regular />
-              </template>
-            </NButton>
+            <IconButton v-bind="props" class="accent" @click="copy('b')">
+              <Copy24Regular />
+            </IconButton>
           </template>
           <h3>Copy to clipboard</h3>
           <p><b>{{ basename(track.b) }}</b> from <b>{{ dr.b }}</b></p>
@@ -293,23 +245,15 @@ async function copy(version: 'a' | 'b') {
           track.state === DeltaTrackState.Moved
         ">
           <template #trigger="{ props }">
-            <NButton
-              v-bind="props"
-              class="icon accent"
-              circle
-              size="small"
-              @click="download('b')"
-            >
-              <template #icon>
-                <ArrowDownload24Regular />
-              </template>
-            </NButton>
+            <IconButton v-bind="props" class="accent" @click="download('b')">
+              <ArrowDownload24Regular />
+            </IconButton>
           </template>
           <h3>Download</h3>
           <p><b>{{ basename(track.b) }}</b> from <b>{{ dr.b }}</b></p>
         </Tooltip>
-      </Row>
-    </Row>
+      </div>
+    </div>
 
     <div
       v-if="shouldRenderContent"
@@ -384,7 +328,18 @@ async function copy(version: 'a' | 'b') {
     --border-bottom-radius: 6px;
   }
 
+  .delta-track-spacer {
+    flex: 1;
+    align-self: stretch;
+    cursor: pointer;
+    user-select: none;
+  }
+
   .delta-track-action-buttons {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    align-self: flex-start;
     position: static;
     right: 1px;
     transition: opacity .2s ease-out;
@@ -397,6 +352,9 @@ async function copy(version: 'a' | 'b') {
 }
 
 .delta-track-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   position: sticky;
   top: 0;
   z-index: 3;
