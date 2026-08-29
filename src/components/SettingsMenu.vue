@@ -6,6 +6,7 @@ import Tooltip from '@/components/Tooltip.vue'
 import { Settings } from '@/settings'
 import { formatBytes } from '@/util/bytes'
 import { getCacheSize, clearCache } from '@/util/download'
+import { clearVerdictCache } from '@/comparison/verdictCache'
 import { clearMetaCache } from '@/delta_providers/mcje/version_manifest'
 import { NButton, NCard, NInputNumber, NSelect, NSpin, NSwitch } from 'naive-ui'
 import { computed, onMounted, ref } from 'vue'
@@ -29,6 +30,7 @@ const cacheSizeMaxDV = computed({
 
 async function clearVersionCache(): Promise<void> {
   await clearCache()
+  await clearVerdictCache()
   await clearMetaCache()
   cacheTotal.value = await getCacheSize()
 }
