@@ -34,7 +34,7 @@ function versionImage(
 ) {
   const caption = () => <><span style={{
     color: changedDims ? changedClass === 'new' ? 'var(--color-success)' : 'var(--color-danger)' : undefined
-  }}>{img.width}x{img.height}</span> · <span style={{
+  }}>{img.width}×{img.height}</span> · <span style={{
     color: changedSize ? changedClass === 'new' ? 'var(--color-success)' : 'var(--color-danger)' : undefined
   }}>{formatBytes(bytes.byteLength)}</span></>
 
@@ -43,9 +43,9 @@ function versionImage(
 
   const animation = mcmeta ? animationOf(mcmeta) : null
   const stats = animation ? animationStats(animation, img.width, img.height) : null
-  const details = `${img.width}x${img.height} · ${formatBytes(bytes.byteLength)}`
+  const details = `${img.width}×${img.height} · ${formatBytes(bytes.byteLength)}`
   const description = stats
-    ? `${details} · ${stats.frames} frames of ${stats.frame.width}x${stats.frame.height} · ${Math.round(stats.duration) / 1000}s`
+    ? `${details} · ${stats.frames} frames of ${stats.frame.width}×${stats.frame.height} · ${Math.round(stats.duration) / 1000}s`
     : details
 
   if (animateTextures.value && mcmeta) {

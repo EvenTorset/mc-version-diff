@@ -128,7 +128,7 @@ async function build() {
     for (const [ attr, value ] of Object.entries(popupable({
       title: props.label ?? props.version,
       description: sheet
-        ? `${sheet.width}x${sheet.height} · ${formatBytes(sheet.size)} · ${frames} frames of ${width}x${height} · ${seconds}s`
+        ? `${sheet.width}×${sheet.height} · ${formatBytes(sheet.size)} · ${frames} frames of ${width}×${height} · ${seconds}s`
         : info.value,
       group: props.group,
       thumbnails: true,
