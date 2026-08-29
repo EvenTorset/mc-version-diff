@@ -82,12 +82,17 @@ export function useTrackFocus(root: Readonly<ShallowRef<HTMLElement | null>>) {
     const listeners = ['wheel', 'touchmove', 'keydown'] as const
     for (const name of listeners) window.addEventListener(name, cancel, { once: true, passive: true })
 
-    for (let i = 0; i < 20 && restoring; i++) {
+    let stable = 0
+    for (let i = 0; i < 200 && restoring && stable < 10; i++) {
       const el = root.value && trackElement(root.value, id)
       if (el) {
         const top = Math.max(0, window.scrollY + el.getBoundingClientRect().top - focusLine())
-        if (Math.abs(top - window.scrollY) < 1) break;
-        window.scrollTo({ top })
+        if (Math.abs(top - window.scrollY) < 1) {
+          stable++
+        } else {
+          stable = 0
+          window.scrollTo({ top })
+        }
       }
       await new Promise(resolve => setTimeout(resolve, 50))
     }
