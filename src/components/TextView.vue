@@ -11,12 +11,25 @@ const props = defineProps<{
 }>()
 
 let editorInstance: monaco.editor.IStandaloneCodeEditor | undefined
+let observer: ResizeObserver | undefined
+
 function onMonacoMount(editor: monaco.editor.IStandaloneCodeEditor) {
   editorInstance = editor
-  editor.layout({ height: editor.getContentHeight(), width: 0 })
+  const fit = () => {
+    editor.layout()
+    editor.layout({ height: editor.getContentHeight(), width: editor.getLayoutInfo().width })
+  }
+  fit()
+
+  const node = editor.getContainerDomNode()
+  observer = new ResizeObserver(([ entry ]) => {
+    if (entry.contentRect.width > 0) fit()
+  })
+  observer.observe(node.parentElement ?? node)
 }
 
 onBeforeUnmount(() => {
+  observer?.disconnect()
   editorInstance?.dispose()
 })
 </script>
