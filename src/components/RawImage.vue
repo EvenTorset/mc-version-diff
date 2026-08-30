@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { renderImageWithMode } from '@/shared_renderer'
 import type { ImageViewMode } from '@/types'
-import { imageFromBytes } from '@/util/imageFromBytes'
+import { imageFromBytes, imageFromBytesOwned } from '@/util/imageFromBytes'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 const props = withDefaults(defineProps<{
@@ -28,7 +28,6 @@ let decodedForBytes: Uint8Array<ArrayBuffer> | null = null
 
 async function ensureDecoded() {
   if (!props.bytes) {
-    decodedBitmap?.close()
     decodedBitmap = null
     decodedForBytes = null
     return
@@ -40,12 +39,8 @@ async function ensureDecoded() {
   const bitmap = await imageFromBytes(bytes)
 
   // Bail out if bytes changed again while we were decoding
-  if (props.bytes !== bytes) {
-    bitmap.close()
-    return
-  }
+  if (props.bytes !== bytes) return
 
-  decodedBitmap?.close()
   decodedBitmap = bitmap
   decodedForBytes = bytes
 }
@@ -92,7 +87,7 @@ async function render() {
       // The worker transfers (consumes) whatever bitmap it's given, so
       // decode a dedicated one from the source bytes rather than reusing
       // decodedBitmap, which is still needed for future rgba redraws.
-      const workerBitmap = await imageFromBytes(props.bytes!)
+      const workerBitmap = await imageFromBytesOwned(props.bytes!)
 
       if (requestId !== currentRequestId || !canvas.value) {
         workerBitmap.close()
@@ -171,7 +166,6 @@ onBeforeUnmount(() => {
     observer.unobserve(canvas.value)
     observer.disconnect()
   }
-  decodedBitmap?.close()
   decodedBitmap = null
 })
 </script>
