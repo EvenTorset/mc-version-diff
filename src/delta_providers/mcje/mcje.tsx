@@ -21,6 +21,7 @@ import { getCSSVar } from '@/util/getCSSVar'
 import { NProgress } from 'naive-ui'
 import type { Renderable } from '@/types'
 import { naturalCompare } from '@/util/sort'
+import { parseTag, TAG_PATH, tagsEquivalent } from '@/util/tag'
 import type { ProgressList } from '@/components/progressList.tsx'
 import { DeltaTrackState } from '@/delta_providers/states'
 import { header } from './header.tsx'
@@ -459,6 +460,25 @@ const provider: DeltaProvider<MCJEVersionContent> = {
 
       terminateCmpWorkers()
       progressDisplay.removeItem(progressBarId)
+    }
+
+    {
+      const tags: Array<[ ParsedZIPFileEntry, ParsedZIPFileEntry ]> = []
+      for (const [ path, entryB ] of jarB.entries) {
+        if (!TAG_PATH.test(path)) continue
+        const entryA = jarA.entries.get(path)
+        if (entryA && entryA.crc32 !== entryB.crc32) tags.push([ entryA, entryB ])
+      }
+
+      await Promise.all(tags.map(async ([ entryA, entryB ]) => {
+        try {
+          const [ tagA, tagB ] = await Promise.all([
+            entryA.textContent.then(parseTag),
+            entryB.textContent.then(parseTag),
+          ])
+          if (tagsEquivalent(tagA, tagB)) hashEquivalence.markEquivalent(entryA.crc32, entryB.crc32)
+        } catch {}
+      }))
     }
 
     const tracks: DeltaTrack[] = []
