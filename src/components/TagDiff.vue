@@ -1,12 +1,19 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import Dim from './Dim.vue'
 import NamespacedPath from './NamespacedPath.vue'
 import { tagEntryKey, type Tag, type TagEntry } from '@/util/tag'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   original: Tag | null
   modified: Tag | null
+  showUnchanged?: boolean
+}>(), {
+  showUnchanged: false,
+})
+
+const emit = defineEmits<{
+  counts: [counts: { unchanged: number }]
 }>()
 
 function counted(entries: TagEntry[]) {
@@ -50,6 +57,7 @@ const numbered = computed(() => {
     const rows = single.value.values.map((entry, i) => ({ entry, number: i + 1 }))
     return {
       total: rows.length,
+      unchanged: 0,
       sections: rows.length > 0
         ? [ { title: replace.value === null ? '' : 'Tag Entries', state: '', rows } ]
         : [],
@@ -70,13 +78,16 @@ const numbered = computed(() => {
 
   return {
     total: Math.max(current.length, props.original!.values.length),
+    unchanged: unchanged.length,
     sections: [
       { title: 'New Tag Entries', state: 'added', rows: added },
       { title: 'Removed Tag Entries', state: 'removed', rows: removed },
-      { title: 'Unchanged Tag Entries', state: '', rows: unchanged },
+      ...props.showUnchanged ? [ { title: 'Unchanged Tag Entries', state: '', rows: unchanged } ] : [],
     ].filter(section => section.rows.length > 0),
   }
 })
+
+watch(() => numbered.value.unchanged, count => emit('counts', { unchanged: count }), { immediate: true })
 
 const indexWidth = computed(() => `${String(numbered.value.total).length}ch`)
 

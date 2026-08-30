@@ -7,7 +7,8 @@ import { Settings } from '@/settings'
 import { parseTag, TAG_PATH } from '@/util/tag'
 import { trackTab } from '@/util/trackFocus'
 import stringify from 'fabulous-json'
-import { NTabPane, NTabs } from 'naive-ui'
+import { NCheckbox, NTabPane, NTabs } from 'naive-ui'
+import { ref } from 'vue'
 import { registerViewer } from '../registry'
 
 async function readSide(dr: DeltaResult, version: string, path: string) {
@@ -50,8 +51,16 @@ registerViewer('mcje_tag', {
 
     if (before?.tag === null || after?.tag === null) return view_json
 
+    const showUnchanged = ref(false)
+    const counts = ref<{ unchanged: number } | null>(null)
+
     function view_tag() {
-      return <TagDiff original={before?.tag ?? null} modified={after?.tag ?? null} />
+      return <TagDiff
+        original={before?.tag ?? null}
+        modified={after?.tag ?? null}
+        showUnchanged={showUnchanged.value}
+        onCounts={value => counts.value = value}
+      />
     }
 
     const tab = trackTab(track.id, [ 'tag', 'json' ])
@@ -64,12 +73,26 @@ registerViewer('mcje_tag', {
         value={tab.value}
         onUpdateValue={(value: string) => tab.value = value}
       >
-        <NTabPane name='tag' tab='Tag' displayDirective='show:lazy'>
-          <Content content={view_tag} />
-        </NTabPane>
-        <NTabPane name='json' tab='JSON' displayDirective='show:lazy'>
-          <Content content={view_json} />
-        </NTabPane>
+        {{
+          default: () => [
+            <NTabPane name='tag' tab='Tag' displayDirective='show:lazy'>
+              <Content content={view_tag} />
+            </NTabPane>,
+            <NTabPane name='json' tab='JSON' displayDirective='show:lazy'>
+              <Content content={view_json} />
+            </NTabPane>,
+          ],
+          suffix: () => tab.value === 'tag' && counts.value?.unchanged ? <div class='tab-toggles'>
+            <NCheckbox
+              size='small'
+              checked={showUnchanged.value}
+              onUpdateChecked={value => showUnchanged.value = value}
+            >
+              <span class='toggle-count'>{counts.value.unchanged}</span>
+              Unchanged
+            </NCheckbox>
+          </div> : null,
+        }}
       </NTabs>
     </>
   },
