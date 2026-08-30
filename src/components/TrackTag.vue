@@ -31,6 +31,7 @@ defineProps<{
   background-color: rgb(from var(--tag-color) r g b / 0.25);
   border: 1px solid rgb(from var(--tag-color) r g b / var(--tag-border-alpha));
   color: oklch(from var(--tag-color) calc(l * 1.3) calc(c * 0.7) h);
+  cursor: pointer;
 }
 
 </style>

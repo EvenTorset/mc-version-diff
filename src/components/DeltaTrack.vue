@@ -177,18 +177,26 @@ async function copy(version: 'a' | 'b') {
       <TrackTag
         v-if="track.state === DeltaTrackState.Added"
         color="var(--color-success)"
+        @click="expanded = !expanded"
       >Added</TrackTag>
       <TrackTag
         v-else-if="track.state === DeltaTrackState.Removed"
         color="var(--color-danger)"
+        @click="expanded = !expanded"
       >Removed</TrackTag>
-      <Col v-else-if="track.state === DeltaTrackState.Moved" align="flex-end">
+      <Col
+        v-else-if="track.state === DeltaTrackState.Moved"
+        align="flex-end"
+        @click="expanded = !expanded"
+        style="cursor: pointer;"
+      >
         <TrackTag color="var(--color-5)">Moved</TrackTag>
         <ArrowTurnRight20Filled style="transform: scaleY(-1); width: 20px; height: 20px;" />
       </Col>
       <TrackTag
         v-else
         color="var(--color-accent)"
+        @click="expanded = !expanded"
         :border-alpha="0.7"
       >Edited</TrackTag>
       <Col v-if="track.state === DeltaTrackState.Moved" align="stretch" style="overflow: hidden;">
