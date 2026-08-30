@@ -8,6 +8,7 @@ import Col from '@/components/Col.vue'
 import Spacer from '@/components/Spacer.vue'
 import { ArrowLeft16Filled, ArrowRight16Filled, ArrowRight24Regular } from '@vicons/fluent'
 import { RouterLink } from 'vue-router'
+import { getPackFormats } from './pack_formats'
 
 export async function singleHeader(id: string, deselect?: (id: string) => void) {
   const version = await getVersion(id)
@@ -15,6 +16,7 @@ export async function singleHeader(id: string, deselect?: (id: string) => void) 
     return 'n/a'
   }
   const details = await getVersionDetails(id)
+  const packs = getPackFormats(id)
   return <div>
     <h2>{version.id}</h2>
     <div>
@@ -39,6 +41,16 @@ export async function singleHeader(id: string, deselect?: (id: string) => void) 
         <Dim>Asset index:</Dim>
         <div>{details.assetIndex.id}</div>
       </Row>
+
+      {packs?.resource ? <Row>
+        <Dim>Resource format:</Dim>
+        <div>{packs.resource}</div>
+      </Row> : ''}
+
+      {packs?.data ? <Row>
+        <Dim>Data format:</Dim>
+        <div>{packs.data}</div>
+      </Row> : ''}
 
       <Row>
         <Dim>Type:</Dim>

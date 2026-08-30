@@ -24,6 +24,7 @@ import { naturalCompare } from '@/util/sort'
 import type { ProgressList } from '@/components/progressList.tsx'
 import { DeltaTrackState } from '@/delta_providers/states'
 import { header } from './header.tsx'
+import { readPackFormats } from './pack_formats'
 
 function runRehashWorker(
   items: RehashPayloadItem[],
@@ -133,7 +134,7 @@ async function getJAR(
   const filter = (legacy: boolean) => (filePath: string) => !filePath.endsWith('.class') && (
     legacy
       ? !filePath.startsWith('META-INF/')
-      : /(assets|data)\//.test(filePath)
+      : !filePath.includes('/') || /(assets|data)\//.test(filePath)
   )
 
   const [ details, archive ] = await (async () => {
@@ -179,6 +180,8 @@ async function getJAR(
       )]
     }
   })()
+  await readPackFormats(id, archive)
+
   const entries = Object.entries(archive.files)
 
   if (rehash) {
