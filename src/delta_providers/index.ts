@@ -71,8 +71,8 @@ export interface DeltaProvider<T> {
   categories: StaticOrSync<DeltaProviderCategory[]>
   /** The version selector on the home page. Shown when the provider's tab is selected. */
   selector(): Promise<Renderable> | Renderable
-  /** The header at the top of the delta page */
-  header(a: string, b: string): Promise<Renderable> | Renderable
+  /** The content of the overview category */
+  overview(dr: DeltaResult): Promise<Renderable> | Renderable
   /** Fetches the content of two versions from their IDs */
   fetch(a: string, b: string, progressDisplay: ProgressList): Promise<{
     contentA: T

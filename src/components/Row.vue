@@ -8,7 +8,7 @@ withDefaults(defineProps<{
   wrap?: boolean
 }>(), {
   justify: 'flex-start',
-  align: 'center',
+  align: 'safe center',
   gap: '4px'
 })
 </script>

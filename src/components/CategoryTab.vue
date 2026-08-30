@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { NIcon } from 'naive-ui'
 import Row from './Row.vue'
+import { Triangle12Regular } from '@vicons/fluent'
 
 defineProps<{
   count: number
@@ -11,7 +13,8 @@ defineProps<{
 
 <template>
   <Row gap="6px" class="category-tab" :class="{ selected }">
-    <div class="category-tab-count">{{ count }}</div>
+    <NIcon v-if="name === 'Overview'" class="category-tab-count" :component="Triangle12Regular" :size="16" />
+    <div v-else class="category-tab-count">{{ count }}</div>
     <div class="category-tab-name">{{ name }}</div>
   </Row>
 </template>

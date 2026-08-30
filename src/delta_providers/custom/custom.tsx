@@ -7,7 +7,7 @@ import { selectedComparator } from './selectedComparator.ts'
 registerDeltaProvider('custom', {
   name: 'Custom',
   selector: () => defineAsyncComponent(() => import('./CustomSelector.vue')),
-  header(_a, _b) {
+  overview(_dr) {
     return '[[ WORK IN PROGRESS ]]'
   },
   categories() {

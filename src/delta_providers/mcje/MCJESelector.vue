@@ -10,9 +10,7 @@ import { computed, ref } from 'vue'
 import { onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import Col from '@/components/Col.vue'
-import Content from '@/components/Content.vue'
-import { asyncRenderable } from '@/util/asyncRenderable'
-import { header, singleHeader } from './header'
+import MCJEVersionSummary from './MCJEVersionSummary.vue'
 
 const diffSuggestions = ref<[string, MCJEManifestVersion[]][]>([])
 const selectedVersions = ref<Set<MCJEManifestVersion>>(new Set())
@@ -85,11 +83,6 @@ onMounted(async () => {
               b: diff[1][1].id,
             }
           }">
-            <!-- <NButton
-              class="suggestion-button"
-              :class="{ accent: i === 0 }"
-              :aria-label="`Compare ${diff[1][0].id} to ${diff[1][1].id}`"
-            /> -->
             <div
               class="suggestion-button"
               :class="{ accent: i === 0 }"
@@ -118,14 +111,30 @@ onMounted(async () => {
     </NCard>
     <NCard v-else class="main-panel" title="Selected Versions">
       <Col v-if="selectedVersions.size === 1" justify="center" gap="40px" style="height: 100%;">
-         <Content :content="asyncRenderable(singleHeader(ab.a, deselect))"/>
+         <MCJEVersionSummary :id="ab.a">
+            <NButton @click="() => deselect(ab.a)">Deselect</NButton>
+         </MCJEVersionSummary>
         <Row>
           <NIcon :size="24" :component="ArrowLeft24Regular" />
           <div>Select one more version from the list</div>
         </Row>
       </Col>
       <Row v-else justify="center" align="center" gap="20px" style="height: 100%;">
-        <Content :content="asyncRenderable(header(ab.a, ab.b, false, deselect))"/>
+        <Col gap="20px" style="flex: 1;">
+          <Row style="align-self: stretch;">
+            <Spacer />
+            <MCJEVersionSummary :id="ab.a">
+              <NButton @click="() => deselect(ab.a)">Deselect</NButton>
+            </MCJEVersionSummary>
+            <Spacer flex="1" max="100px" />
+            <NIcon :size="24" :component="ArrowRight24Regular" />
+            <Spacer flex="1" max="100px" />
+            <MCJEVersionSummary :id="ab.b">
+              <NButton @click="() => deselect(ab.a)">Deselect</NButton>
+            </MCJEVersionSummary>
+            <Spacer />
+          </Row>
+        </Col>
       </Row>
       <template #footer>
         <Row v-if="selectedVersions.size === 1">

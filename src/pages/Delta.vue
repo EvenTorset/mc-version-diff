@@ -99,8 +99,8 @@ const categoriesUnordered = computed<Map<DeltaProviderCategory | typeof symUncat
     track => getTrackCategory(prov, dr, track) ?? symUncategorized
   )
 })
-const categories = computed(() => (
-  Array.from(categoriesUnordered.value.entries()).sort((a, b) => {
+const categories = computed(() => {
+  const arr = Array.from(categoriesUnordered.value.entries()).sort((a, b) => {
     if (a[0] === symUncategorized) {
       if (b[0] === symUncategorized) {
         return 0
@@ -112,7 +112,9 @@ const categories = computed(() => (
     }
     return a[0].sort - b[0].sort
   }).map(e => [e[0] === symUncategorized ? 'Other' : e[0].name, e[1]] as const)
-))
+  arr.unshift(['Overview', []])
+  return arr
+})
 
 const states = computed<[DeltaTrackStateName, DeltaTrack[]][]>(() => {
   const dr = diff.value
@@ -136,19 +138,11 @@ const states = computed<[DeltaTrackStateName, DeltaTrack[]][]>(() => {
 
 const selectedCategory = ref<string>(param('category') ?? '')
 watch(categories, newCategories => {
+  if (!diff.value) return;
+
   const match = newCategories.find(([k, v]) =>
     v.length > 0 && k.toLowerCase() === selectedCategory.value.toLowerCase())
-  if (match) {
-    selectedCategory.value = match[0]
-    return;
-  }
-  let first = true
-  for (const [ name, tracks ] of newCategories) {
-    if (tracks.length > 0 && first) {
-      selectedCategory.value = name
-      first = false
-    }
-  }
+  selectedCategory.value = match ? match[0] : 'Overview'
 })
 
 const isImageCategory = computed(() =>
@@ -227,7 +221,9 @@ const filteredDiff = computed<DeltaResult | undefined>(() => {
 const urlState = computed(() => {
   const query: Record<string, string> = {}
 
-  if (selectedCategory.value) query.category = selectedCategory.value.toLowerCase()
+  if (selectedCategory.value && selectedCategory.value !== 'Overview') {
+    query.category = selectedCategory.value.toLowerCase()
+  }
   if (debouncedPathFilter.value) query.search = debouncedPathFilter.value
   if (findRegex.value) query.regex = '1'
 
@@ -359,7 +355,7 @@ onMounted(async () => {
                 <TransitionList :items="categories" :key-field="0">
                   <template #default="{ item: [ name, tracks ] }">
                     <CategoryTab
-                      v-if="tracks.length > 0"
+                      v-if="tracks.length > 0 || name === 'Overview'"
                       :count="tracks.length"
                       :name
                       :selected="selectedCategory === name"
@@ -413,25 +409,33 @@ onMounted(async () => {
             </NCard>
           </Transition>
         </Col>
-        <Col align="stretch" class="main-content-container">
-          <Col v-if="diff.tracks.length === 0">
-            <RouterLink :to="{ name: 'home' }">
-              <VersionDiffLogo />
-            </RouterLink>
-          </Col>
-          <Row :style="{
-            marginBottom: '60px',
-          }">
-            <Suspense>
-              <Content :content="asyncRenderable(provider?.header(diff.a, diff.b))"/>
-              <template #fallback>
-                <NSpin size="large" />
-              </template>
-            </Suspense>
-          </Row>
-          <Col v-if="diff.tracks.length === 0" style="flex: 1;">
-            <h1>No changes</h1>
-            <p>{{ diff.a }} and {{ diff.b }} have identical assets and data.</p>
+        <Col
+          align="stretch"
+          :justify="selectedCategory === 'Overview' ? 'safe center' : 'flex-start'"
+          class="main-content-container"
+        >
+          <template v-if="diff.tracks.length === 0">
+            <Col>
+              <RouterLink :to="{ name: 'home' }">
+                <VersionDiffLogo />
+              </RouterLink>
+            </Col>
+            <Col style="flex: 1;">
+              <h1>No changes</h1>
+              <p>{{ diff.a }} and {{ diff.b }} have identical assets and data.</p>
+            </Col>
+          </template>
+          <Col v-else-if="selectedCategory === 'Overview'" align="stretch">
+            <Row :style="{
+              marginBottom: '60px',
+            }">
+              <Suspense>
+                <Content :content="asyncRenderable(provider?.overview(diff))"/>
+                <template #fallback>
+                  <NSpin size="large" />
+                </template>
+              </Suspense>
+            </Row>
           </Col>
           <div v-else style="container-type: inline-size;">
             <TreeList :dr="filteredDiff ?? diff" />

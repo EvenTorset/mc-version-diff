@@ -24,8 +24,8 @@ import { naturalCompare } from '@/util/sort'
 import { parseTag, TAG_PATH, tagsEquivalent } from '@/util/tag'
 import type { ProgressList } from '@/components/progressList.tsx'
 import { DeltaTrackState } from '@/delta_providers/states'
-import { header } from './header.tsx'
 import { readPackFormats } from './pack_formats'
+import MCJEOverview from './MCJEOverview.vue'
 
 function runRehashWorker(
   items: RehashPayloadItem[],
@@ -597,8 +597,8 @@ const provider: DeltaProvider<MCJEVersionContent> = {
       },
     } as DeltaResult
   },
-  async header(a, b) {
-    return header(a, b, true)
+  overview(dr) {
+    return <MCJEOverview a={dr.a} b={dr.b} />
   },
   selector: () => defineAsyncComponent(() => import('./MCJESelector.vue')),
 }
