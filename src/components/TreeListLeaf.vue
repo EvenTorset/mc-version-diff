@@ -16,7 +16,7 @@ const { markTrackMounted, retireTrack, isTrackMounted } = inject<{
   markTrackMounted: (t: DeltaTrackType) => void
   retireTrack: (t: DeltaTrackType) => void
   isTrackMounted: (t: DeltaTrackType) => boolean
-}>('bitree-mount')!
+}>('tree-list-mount')!
 
 const leafRef = ref<HTMLElement | null>(null)
 const retiredHeight = ref<string | null>(null)
@@ -77,7 +77,7 @@ onUnmounted(() => {
 <template>
   <div
     ref="leafRef"
-    class="bitree-leaf"
+    class="tree-list-leaf"
     :class="{ mounted: isMounted }"
     :data-track="track.id"
     :style="{
@@ -93,22 +93,22 @@ onUnmounted(() => {
 
 <style>
 
-.bitree-branch,
-.bitree-leaf {
+.tree-list-branch,
+.tree-list-leaf {
   display: block;
   box-sizing: border-box;
   width: 100%;
 }
 
-.bitree-leaf {
+.tree-list-leaf {
   contain: layout style;
 }
 
-.bitree-leaf.mounted {
+.tree-list-leaf.mounted {
   content-visibility: auto;
 }
 
-.bitree-branch {
+.tree-list-branch {
   contain: layout;
 }
 

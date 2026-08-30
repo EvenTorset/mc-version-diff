@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { provide, ref, onUnmounted, shallowRef, watch, h, computed, type VNode } from 'vue'
 import type { DeltaResult, DeltaTrack } from '@/delta_providers'
-import BiTreeLeaf from './BiTreeLeaf.vue'
+import TreeLeaf from './TreeListLeaf.vue'
 import { useTrackFocus } from '@/util/trackFocus'
 
 const props = defineProps<{
@@ -27,7 +27,7 @@ function isTrackMounted(t: DeltaTrack): boolean {
   return mountedTrackKeys.value.has(t.id)
 }
 
-provide('bitree-mount', {
+provide('tree-list-mount', {
   markTrackMounted,
   retireTrack,
   isTrackMounted,
@@ -69,7 +69,7 @@ const BRANCH_FACTOR = 8
 function buildBranch(dr: DeltaResult, tracks: DeltaTrack[], lo: number, hi: number): VNode {
   if (hi - lo === 1) {
     const track = tracks[lo]
-    return h(BiTreeLeaf, { key: track.id, dr, track, observer, retireObserver })
+    return h(TreeLeaf, { key: track.id, dr, track, observer, retireObserver })
   }
 
   const children: VNode[] = []
@@ -80,7 +80,7 @@ function buildBranch(dr: DeltaResult, tracks: DeltaTrack[], lo: number, hi: numb
   }
 
   return h('div', {
-    class: 'bitree-branch',
+    class: 'tree-list-branch',
     key: `${tracks[lo].id}:${tracks[hi - 1].id}:${hi - lo}`,
   }, children)
 }
@@ -95,14 +95,14 @@ const Tree = () => tree.value
 </script>
 
 <template>
-  <div class="bitree-root" ref="root">
+  <div class="tree-list-root" ref="root">
     <Tree />
   </div>
 </template>
 
 <style>
 
-.bitree-root {
+.tree-list-root {
   width: 100%;
 }
 

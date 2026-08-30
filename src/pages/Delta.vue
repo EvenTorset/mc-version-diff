@@ -9,7 +9,7 @@ import { NButton, NCard, NCheckbox, NInput, NRadio, NRadioGroup, NSpin, type Inp
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Row from '@/components/Row.vue'
-import BiTreeList from '@/components/BiTreeList.vue'
+import TreeList from '@/components/TreeList.vue'
 import { createProgressList } from '@/components/progressList'
 import { Eraser20Filled, TextPeriodAsterisk20Filled } from '@vicons/fluent'
 import '@/viewers'
@@ -434,7 +434,7 @@ onMounted(async () => {
             <p>{{ diff.a }} and {{ diff.b }} have identical assets and data.</p>
           </Col>
           <div v-else style="container-type: inline-size;">
-            <BiTreeList :dr="filteredDiff ?? diff" />
+            <TreeList :dr="filteredDiff ?? diff" />
           </div>
         </Col>
       </div>
