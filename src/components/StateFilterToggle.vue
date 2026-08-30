@@ -1,45 +1,44 @@
 <script setup lang="ts">
-import Row from './Row.vue'
+import type { DeltaTrackStateName } from '@/delta_providers/states.ts'
+import Col from './Col.vue'
+import { computed } from 'vue'
 
-defineProps<{
+const props = defineProps<{
+  name: DeltaTrackStateName
   count: number
-  name: string
-  selected: boolean
 }>()
 
+const value = defineModel<DeltaTrackStateName | null>('modelValue')
+
+const selected = computed(() => props.name === value.value)
+const dim = computed(() => props.name !== value.value && value.value !== null)
 </script>
 
 <template>
-  <Row gap="6px" class="category-tab" :class="{ selected }">
-    <div class="category-tab-count">{{ count }}</div>
-    <div class="category-tab-name">{{ name }}</div>
-  </Row>
+  <Col
+    v-if="count > 0"
+    class="wrapper"
+    :class="{ selected, dim }"
+    @click="value = selected ? null : name"
+  >
+    <div class="count">{{ count }}</div>
+    <div class="label">{{ name }}</div>
+  </Col>
 </template>
 
 <style lang="scss" scoped>
 @use '@/util/gradients.scss' as gradients;
 
-.category-tab-count {
-  color: var(--color-accent);
-  width: 40px;
-  text-align: right;
-  font-weight: 600;
-  transition: color .15s ease-out;
-  line-height: 1;
-}
-
-.category-tab-name {
-  font-size: 16px;
-  transition: color .15s ease-out;
-  line-height: 1;
-}
-
-.category-tab {
-  box-sizing: border-box;
-  border-radius: 4px;
-  padding: 4px 2px;
-  cursor: pointer;
+.wrapper {
+  position: relative;
+  flex: 1;
+  padding: 8px 0;
   user-select: none;
+  cursor: pointer;
+  color: var(--color-5);
+  line-height: 1.1;
+  transition: color 150ms;
+  z-index: 1;
 
   --intr-color: transparent;
   --intr-color-fade: color-mix(
@@ -50,9 +49,9 @@ defineProps<{
   --intr-gradient-start: rgb(from var(--intr-color) r g b / calc(alpha * 0.75));
   --intr-gradient-end-alpha: 0.1;
   --intr-gradient-end: rgb(from var(--intr-color-fade) r g b / calc(alpha * var(--intr-gradient-end-alpha)));
-  --intr-gradient-size: 30% 50%;
-  --intr-gradient-x: 110%;
-  --intr-gradient-y: 50%;
+  --intr-gradient-size: 30% 100%;
+  --intr-gradient-x: 50%;
+  --intr-gradient-y: 100%;
   --intr-gradient-start_internal: var(--intr-gradient-start);
   --intr-gradient-end_internal: var(--intr-gradient-end);
   background-color: transparent;
@@ -72,7 +71,6 @@ defineProps<{
     color 200ms;
   border-radius: 6px;
   color: var(--color-5);
-  position: relative;
 
   &::after {
     content: '';
@@ -83,20 +81,20 @@ defineProps<{
     transition: border-color 200ms;
   }
 
+  &.dim {
+    color: var(--color-4);
+  }
+
   &:hover {
     --intr-color: oklch(from var(--color-accent) l calc(c * 1.3) h / 0.6);
     --intr-gradient-start: var(--intr-color);
     --intr-gradient-end-alpha: 0.15;
-    --intr-gradient-size: 80% 150%;
+    --intr-gradient-size: 100% 100%;
     color: var(--color-6);
     text-shadow: 0 1px 2px #000;
 
     &::after {
       border-color: rgb(from var(--intr-color) calc(1.2 * r) calc(1.2 * g) calc(1.2 * b) / 0.2);
-    }
-
-    .category-tab-count {
-      color: oklch(from var(--color-accent) calc(l * 1.2) c h);
     }
   }
 
@@ -104,7 +102,7 @@ defineProps<{
     --intr-color: oklch(from var(--color-accent) l calc(c * 1.3) h);
     --intr-gradient-start: var(--intr-color);
     --intr-gradient-end-alpha: 0.15;
-    --intr-gradient-size: 80% 150%;
+    --intr-gradient-size: 100% 100%;
     color: var(--color-6);
     background-color: rgb(from var(--color-0) r g b / 1) !important;
     text-shadow: 0 1px 2px #000;
@@ -114,24 +112,25 @@ defineProps<{
       border-color: rgb(from var(--intr-color) calc(1.2 * r) calc(1.2 * g) calc(1.2 * b) / 0.3);
     }
 
-    .category-tab-count {
-      color: oklch(from var(--color-accent) calc(l * 1.2) c h);
-    }
-
     &:hover {
-      color: var(--color-7);
-      --intr-gradient-size: 100% 180%;
+      --intr-gradient-size: 100% 110%;
       --intr-gradient-end-alpha: 0.25;
+      color: var(--color-7);
 
       &::after {
         border-color: rgb(from var(--color-accent) r g b / 0.6);
       }
-
-      .category-tab-count {
-        color: oklch(from var(--color-accent) calc(l * 1.4) calc(c * 2) h);
-      }
     }
   }
+}
+
+.count {
+  font-size: 1.2em;
+}
+
+.label {
+  font-size: 10px;
+  font-weight: 600;
 }
 
 </style>

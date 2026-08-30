@@ -19,7 +19,7 @@ import Col from '@/components/Col.vue'
 import Tooltip from '@/components/Tooltip.vue'
 import { animateTextures, imageViewMode } from '@/viewers/png'
 import { hasAnimations, mcmetaTexture } from '@/viewers/mcje_mcmeta'
-import { DeltaTrackState } from '@/delta_providers/states'
+import { DeltaTrackState, type DeltaTrackStateName } from '@/delta_providers/states'
 import { asyncRenderable } from '@/util/asyncRenderable'
 import CategoryTab from '@/components/CategoryTab.vue'
 import TransitionList from '@/components/TransitionList.vue'
@@ -27,6 +27,7 @@ import Notify from '@/notify'
 import { resolveStaticOrAsync } from '@/util/resolveToStatic'
 import { focusedTab, focusedTrack, initTrackFocus } from '@/util/trackFocus'
 import type { ImageViewMode } from '@/types'
+import StateFilterToggle from '@/components/StateFilterToggle.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -34,13 +35,6 @@ const router = useRouter()
 function param(key: string) {
   const value = route.query[key]
   return typeof value === 'string' ? value : undefined
-}
-
-const stateParams = {
-  added: DeltaTrackState.Added,
-  edited: DeltaTrackState.Edited,
-  moved: DeltaTrackState.Moved,
-  removed: DeltaTrackState.Removed,
 }
 
 initTrackFocus(param('file'), param('tab'))
@@ -78,7 +72,7 @@ const tracksFilteredByStateAndPath = computed<DeltaTrack[]>(() => {
   }
 
   return dr.tracks.filter(track => {
-    if (stateFilters.value[track.state] === false) return false
+    if (stateFilter.value !== null && DeltaTrackState[track.state] !== stateFilter.value) return false
 
     if (query) {
       const paths = [track.a, track.b].filter(p => p !== '')
@@ -120,22 +114,22 @@ const categories = computed(() => (
   }).map(e => [e[0] === symUncategorized ? 'Other' : e[0].name, e[1]] as const)
 ))
 
-const states = computed<[string, DeltaTrackState, DeltaTrack[]][]>(() => {
+const states = computed<[DeltaTrackStateName, DeltaTrack[]][]>(() => {
   const dr = diff.value
   if (!dr) return []
 
   const statesObj: Partial<Record<DeltaTrackState, DeltaTrack[]>> =
     Object.groupBy(dr.tracks, track => track.state)
 
-  const out: [string, DeltaTrackState, DeltaTrack[]][] = []
+  const out: [DeltaTrackStateName, DeltaTrack[]][] = []
   if (statesObj[DeltaTrackState.Added]?.length)
-    out.push(['Added', DeltaTrackState.Added, statesObj[DeltaTrackState.Added]])
+    out.push(['Added', statesObj[DeltaTrackState.Added]])
   if (statesObj[DeltaTrackState.Edited]?.length)
-    out.push(['Edited', DeltaTrackState.Edited, statesObj[DeltaTrackState.Edited]])
+    out.push(['Edited', statesObj[DeltaTrackState.Edited]])
   if (statesObj[DeltaTrackState.Moved]?.length)
-    out.push(['Moved', DeltaTrackState.Moved, statesObj[DeltaTrackState.Moved]])
+    out.push(['Moved', statesObj[DeltaTrackState.Moved]])
   if (statesObj[DeltaTrackState.Removed]?.length)
-    out.push(['Removed', DeltaTrackState.Removed, statesObj[DeltaTrackState.Removed]])
+    out.push(['Removed', statesObj[DeltaTrackState.Removed]])
 
   return out
 })
@@ -181,19 +175,9 @@ const imageDisplayOptions = computed(() => [
   ...categoryHasAnimations.value ? [ { id: 'preview', heading: 'Animation' } ] : [],
 ])
 
-const stateFilters = ref<Partial<Record<DeltaTrackState, boolean>>>({})
-let initialStates = param('states')?.split(',')
-watch(states, newStates => {
-  const enabled = initialStates
-    && new Set(initialStates.map(name => stateParams[name as keyof typeof stateParams]))
-  initialStates = undefined
-  stateFilters.value = {}
-  for (const [ , state, tracks ] of newStates) {
-    if (tracks.length > 0) {
-      stateFilters.value[state] = enabled?.has(state) ?? true
-    }
-  }
-})
+const stateFilter = ref<DeltaTrackStateName | null>(
+  param('state') as DeltaTrackStateName ?? null
+)
 
 const findInput = ref<InputInst | null>(null)
 const findRegex = ref(param('regex') === '1')
@@ -247,9 +231,8 @@ const urlState = computed(() => {
   if (debouncedPathFilter.value) query.search = debouncedPathFilter.value
   if (findRegex.value) query.regex = '1'
 
-  const enabled = Object.entries(stateParams).filter(([ , state ]) => stateFilters.value[state])
-  if (enabled.length < Object.keys(stateFilters.value).length) {
-    query.states = enabled.map(([ name ]) => name).join(',')
+  if (stateFilter.value !== null) {
+    query.state = stateFilter.value
   }
 
   const shown = new Set(imageDisplayOptions.value.map(option => option.id))
@@ -314,7 +297,13 @@ onMounted(async () => {
             width: 'calc(100% - 24px)',
           }">
             <Col gap="8px" align="stretch">
-              <NInput clearable placeholder="File path..." ref="findInput" @vue:mounted="onFindInputMounted" v-model:value="pathFilter">
+              <NInput
+                clearable
+                placeholder="File path..."
+                ref="findInput"
+                @vue:mounted="onFindInputMounted"
+                v-model:value="pathFilter"
+              >
                 <template #clear-icon>
                   <Tooltip>
                     <template #trigger="{ props }">
@@ -352,28 +341,12 @@ onMounted(async () => {
                 </template>
               </NInput>
               <Row align="stretch">
-                <template v-for="[name, state, tracks] in states">
-                  <NButton
-                    v-if="tracks.length > 0"
-                    :class="{
-                      accent: stateFilters[state],
-                      selected: stateFilters[state],
-                    }"
-                    @click="stateFilters[state] = !stateFilters[state]"
-                    style="height: fit-content; flex: 1; padding: 8px 0;"
-                  >
-                    <Col>
-                      <div :style="{
-                        color: stateFilters[state] ? 'var(--color-6)' : 'var(--color-5)',
-                        fontSize: '1.2em',
-                      }">{{ tracks.length }}</div>
-                      <div :style="{
-                        color: stateFilters[state] ? 'var(--color-6)' : 'var(--color-5)',
-                        fontSize: '10px',
-                        fontWeight: 600,
-                      }">{{ name }}</div>
-                    </Col>
-                  </NButton>
+                <template v-for="[name, tracks] in states">
+                  <StateFilterToggle
+                    :name
+                    :count="tracks.length"
+                    v-model="stateFilter"
+                  />
                 </template>
               </Row>
             </Col>

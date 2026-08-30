@@ -4,3 +4,5 @@ export enum DeltaTrackState {
   Moved,
   Removed,
 }
+
+export type DeltaTrackStateName = 'Added' | 'Edited' | 'Moved' | 'Removed'
