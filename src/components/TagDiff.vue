@@ -47,12 +47,12 @@ const replace = computed(() => {
   if (props.original?.replace === undefined && props.modified?.replace === undefined) return null
   if (replaceChanged.value) {
     return props.modified!.replace
-      ? 'This tag list now replaces the vanilla tag list instead of adding to it.'
-      : 'This tag list now adds to the vanilla tag list instead of replacing it.'
+      ? 'This tag list now replaces the underlying tag list instead of adding to it.'
+      : 'This tag list now adds to the underlying tag list instead of replacing it.'
   }
   return props.original?.replace || props.modified?.replace
-    ? 'This tag list replaces the vanilla tag list instead of adding to it.'
-    : 'This tag list adds to the vanilla tag list.'
+    ? 'This tag list replaces the underlying tag list instead of adding to it.'
+    : 'This tag list adds to the underlying tag list.'
 })
 </script>
 
