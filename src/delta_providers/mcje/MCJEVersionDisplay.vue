@@ -4,7 +4,7 @@ import MCJEVersionNumber from '@/delta_providers/mcje/MCJEVersionNumber.vue'
 import releaseVersionIcon from '@/assets/release_version.webp'
 import snapshotVersionIcon from '@/assets/snapshot_version.webp'
 import Tooltip from '@/components/Tooltip.vue'
-import { mergeProps, onMounted, ref } from 'vue'
+import { mergeProps, ref, watch } from 'vue'
 import { getVersion, getVersionDetails, type MCJEManifestVersion, type MCJEVersionDetails } from '@/delta_providers/mcje/version_manifest.ts'
 import Row from '@/components/Row.vue'
 import Dim from '@/components/Dim.vue'
@@ -27,13 +27,16 @@ defineOptions({
 const manVer = ref<MCJEManifestVersion | null>(null)
 const details = ref<MCJEVersionDetails | null>(null)
 
-onMounted(async () => {
-  if (typeof props.version === 'string') {
-    manVer.value = await getVersion(props.version)
+watch(() => props.version, async version => {
+  details.value = null
+  if (typeof version === 'string') {
+    manVer.value = null
+    const loaded = await getVersion(version)
+    if (props.version === version) manVer.value = loaded
   } else {
-    manVer.value = props.version
+    manVer.value = version
   }
-})
+}, { immediate: true })
 
 async function loadDetails() {
   if (details.value === null) {

@@ -204,8 +204,7 @@ onBeforeUnmount(() => {
               <NListItem
                   :style="{ height: `${ROW_HEIGHT}px` }"
                   @click="toggle(version)"
-                  class="mcje-version-list-item"
-                  :class="{ selected: true }"
+                  class="mcje-version-list-item selected"
                 >
                   <MCJEVersionDisplay
                     :version="version"
@@ -247,10 +246,7 @@ onBeforeUnmount(() => {
                   }"
                   @click="toggle(versions[virtualRow.index])"
                   class="mcje-version-list-item"
-                  :class="{
-                    selected: selectedVersions.has(versions[virtualRow.index]),
-                    disabled: !selectedVersions.has(versions[virtualRow.index]) && selectedVersions.size >= 2
-                  }"
+                  :class="{ disabled: selectedVersions.size >= 2 }"
                 >
                   <MCJEVersionDisplay
                     :version="versions[virtualRow.index]"
