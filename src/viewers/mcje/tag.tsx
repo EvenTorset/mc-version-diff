@@ -8,7 +8,7 @@ import { parseTag, TAG_PATH } from '@/util/tag'
 import { trackTab } from '@/util/trackFocus'
 import stringify from 'fabulous-json'
 import { NTabPane, NTabs } from 'naive-ui'
-import { registerViewer } from './registry'
+import { registerViewer } from '../registry'
 
 async function readSide(dr: DeltaResult, version: string, path: string) {
   const raw = new TextDecoder().decode(await dr.getEntry(version, path))

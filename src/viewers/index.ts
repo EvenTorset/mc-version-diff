@@ -9,11 +9,11 @@ export type Viewer = {
 
 await import('./deprecated_lang')
 await import('./lang')
-await import('./mcje_structure')
-await import('./mcje_loot_table')
-await import('./mcje_recipe')
-await import('./mcje_tag')
-await import('./mcje_model')
+await import('./mcje/structure')
+await import('./mcje/loot_table')
+await import('./mcje/recipe')
+await import('./mcje/tag')
+await import('./mcje/model')
 await import('./png')
-await import('./mcje_mcmeta')
-await import('./text')
+await import('./mcje/mcmeta')
+await import('./text') // fallback, must load last

@@ -10,7 +10,7 @@ import {
 } from '@/util/recipes'
 import stringify from 'fabulous-json'
 import { NTabPane, NTabs } from 'naive-ui'
-import { registerViewer } from './registry'
+import { registerViewer } from '../registry'
 import { trackTab } from '@/util/trackFocus'
 
 function getJSON(recipe: any, raw: string) {

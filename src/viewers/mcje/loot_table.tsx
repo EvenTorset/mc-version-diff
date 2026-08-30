@@ -9,7 +9,7 @@ import { deltaTableReader, describeTable, oddsChanged, sampleTableCached } from 
 import stringify from 'fabulous-json'
 import { NCheckbox, NTabPane, NTabs } from 'naive-ui'
 import { ref } from 'vue'
-import { registerViewer } from './registry'
+import { registerViewer } from '../registry'
 import { trackTab } from '@/util/trackFocus'
 
 function getJSON(table: any, raw: string) {

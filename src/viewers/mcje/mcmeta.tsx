@@ -7,7 +7,7 @@ import { NTabPane, NTabs } from 'naive-ui'
 import { ref, type Ref } from 'vue'
 import { animationOf } from '@/util/animation'
 import { trackTab } from '@/util/trackFocus'
-import { registerViewer } from './registry'
+import { registerViewer } from '../registry'
 
 export const mcmetaTexture = ref(false)
 

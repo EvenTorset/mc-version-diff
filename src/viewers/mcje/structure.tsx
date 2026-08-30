@@ -1,5 +1,5 @@
 import { TextDiff, TextView } from '@/components/lazyText'
-import { registerViewer } from './registry'
+import { registerViewer } from '../registry'
 import { trackTab } from '@/util/trackFocus'
 import { DeltaTrackState } from '@/delta_providers/states'
 import { readNbt } from '@/util/nbt'
