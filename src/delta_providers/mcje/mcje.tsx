@@ -3,7 +3,8 @@ import { getTrackCategory } from '@/delta_providers/category'
 import type { DeltaProvider, DeltaResult, DeltaTrack } from '@/delta_providers'
 import { useRoute } from 'vue-router'
 import { getVersionDetails, loadMCJEManifest, usesLegacyAssets, type MCJEVersionDetails } from '@/delta_providers/mcje/version_manifest'
-import { getCachedFile } from '@/util/download'
+import { getCachedFile, readCachedBuffer, writeCachedBuffer } from '@/util/download'
+import { fetchJarWithout } from '@/util/rangedJar'
 import zip, { type ParsedZIP, type ParsedZIPFileEntry } from '@/util/zip'
 import type { RehashPayloadItem, RehashWorkerMessage } from '@/util/rehash.worker'
 import RehashWorker from '@/util/rehash.worker?worker'
@@ -48,6 +49,18 @@ function runRehashWorker(
 
     worker.postMessage(items)
   })
+}
+
+function repackWhenIdle(name: string, archive: ParsedZIP) {
+  const run = async () => {
+    try {
+      await writeCachedBuffer(name, await zip.fromEntries(Object.values(archive.files)))
+    } catch {
+      return
+    }
+  }
+  if (typeof requestIdleCallback === 'function') requestIdleCallback(() => { run() }, { timeout: 30_000 })
+  else setTimeout(run, 5000)
 }
 
 function createProgressBar(title: string) {
@@ -135,16 +148,34 @@ async function getJAR(
       const details = await getVersionDetails(id, progressBar.progHandler)
 
       progressBar.progHandler.setMessage('Downloading JAR file...')
-      const file = await getCachedFile(id, details.downloads.client.url, {
+      const legacy = usesLegacyAssets(details.releaseTime)
+      const keep = filter(legacy)
+      const trimmedName = `${id.replace(/[^a-zA-Z0-9_-]/g, '_')}.assets.jar`
+
+      const cached = await readCachedBuffer(trimmedName)
+      if (cached) {
+        progressBar.progHandler.setMessage('Reading JAR file...')
+        return [details, zip.parse(cached, keep)]
+      }
+
+      const client = details.downloads.client
+      const trimmed = await fetchJarWithout(client.url, client.size, keep, progressBar.progHandler)
+      if (trimmed) {
+        progressBar.progHandler.setMessage('Reading JAR file...')
+        const archive = zip.parse(trimmed, keep)
+        repackWhenIdle(trimmedName, archive)
+        return [details, archive]
+      }
+
+      const file = await getCachedFile(id, client.url, {
         extension: '.jar',
         progHandler: progressBar.progHandler,
       })
 
       progressBar.progHandler.setMessage('Reading JAR file...')
-      const legacy = usesLegacyAssets(details.releaseTime)
       return [details, zip.parse(
         await file.arrayBuffer(),
-        filter(legacy)
+        keep
       )]
     }
   })()

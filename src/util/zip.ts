@@ -249,6 +249,39 @@ export async function fromFiles(files: Record<string, Uint8Array | ArrayBuffer |
   return concatUint8Arrays([content, cenDir, eocd])
 }
 
+export async function fromEntries(entries: ParsedZIPFileEntry[]): Promise<Uint8Array<ArrayBuffer>> {
+  const built = []
+  for (const entry of entries) {
+    built.push(await createFileEntry(entry.path, entry))
+  }
+
+  let o = 0
+  for (const { entry, header } of built) {
+    const dv = new DataView(header.buffer, header.byteOffset, header.byteLength)
+    dv.setUint32(42, o, true)
+    o += entry.byteLength
+  }
+
+  const content = concatUint8Arrays(built.map(e => e.entry))
+  const cenDir = concatUint8Arrays(built.map(e => e.header))
+
+  const eocd = new Uint8Array([
+    0x50, 0x4b, 0x05, 0x06,
+    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00,
+  ])
+  const eocdDV = new DataView(eocd.buffer)
+  eocdDV.setUint16(8, built.length, true)
+  eocdDV.setUint16(10, built.length, true)
+  eocdDV.setUint32(12, cenDir.byteLength, true)
+  eocdDV.setUint32(16, content.byteLength, true)
+
+  return concatUint8Arrays([ content, cenDir, eocd ])
+}
+
 /**
  * Yields file paths in the zip with a matching prefix.
  */
@@ -401,6 +434,7 @@ export async function extractFile(zip: ArrayBuffer, path: string, asText: boolea
 export default {
   createFileEntry,
   fromFiles,
+  fromEntries,
   listFiles,
   parse,
   extractFile,
