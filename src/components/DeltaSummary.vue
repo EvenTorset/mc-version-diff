@@ -59,7 +59,7 @@ const categories = computed(() => {
   </template>
   <template v-else>
     <div class="section">
-      <h3>What changed</h3>
+      <h3>Changes</h3>
       <Row class="states" gap="10px" align="stretch" wrap>
         <NCard
           v-for="state of stateSummary"
@@ -82,7 +82,7 @@ const categories = computed(() => {
     </div>
 
     <div v-if="categories.length > 0" class="section">
-      <h3>Where</h3>
+      <h3>Files</h3>
       <AnimatedHeight style="overflow: visible;">
         <TransitionList :items="categories" key-field="name" class="categories">
           <template #default="{ item: row }">
