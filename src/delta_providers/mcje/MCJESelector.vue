@@ -206,25 +206,7 @@ onMounted(async () => {
   border-radius: 6px;
   border: 1px solid var(--color-2);
 
-  --intr-color: transparent;
-  --intr-color-fade: color-mix(
-    in oklch,
-    var(--intr-color),
-    oklch(from var(--intr-color) l calc(max(c, 0.2) * 2) var(--hue-cold))
-  );
-  --intr-gradient-start: rgb(from var(--intr-color) r g b / calc(alpha * 0.75));
-  --intr-gradient-end-alpha: 0.1;
-  --intr-gradient-end: rgb(from var(--intr-color-fade) r g b / calc(alpha * var(--intr-gradient-end-alpha)));
-  --intr-gradient-size: farthest-corner;
-  --intr-gradient-x: 50%;
-  --intr-gradient-y: 100%;
-  --intr-gradient-start_internal: var(--intr-gradient-start);
-  --intr-gradient-end_internal: var(--intr-gradient-end);
-  background-image: radial-gradient(
-    var(--intr-gradient-size) at var(--intr-gradient-x) var(--intr-gradient-y) in oklch,
-    gradients.scrim(var(--intr-gradient-start_internal), var(--intr-gradient-end_internal))
-  );
-  background-color: transparent;
+  @include gradients.interactive-surface;
   transition:
     --intr-gradient-start_internal 100ms,
     --intr-gradient-end_internal 100ms,

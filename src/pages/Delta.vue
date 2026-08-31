@@ -145,6 +145,16 @@ watch(categories, newCategories => {
   selectedCategory.value = match ? match[0] : 'Overview'
 })
 
+watch(() => param('category'), value => {
+  if (!value) {
+    if (selectedCategory.value !== 'Overview') selectedCategory.value = 'Overview'
+    return
+  }
+  const match = categories.value.find(([ name, tracks ]) =>
+    tracks.length > 0 && name.toLowerCase() === value.toLowerCase())
+  if (match && match[0] !== selectedCategory.value) selectedCategory.value = match[0]
+})
+
 const isImageCategory = computed(() =>
   !!provCategories.value.find(c => c.name === selectedCategory.value)?.isImages)
 
@@ -172,6 +182,11 @@ const imageDisplayOptions = computed(() => [
 const stateFilter = ref<DeltaTrackStateName | null>(
   param('state') as DeltaTrackStateName ?? null
 )
+
+watch(() => param('state'), value => {
+  const next = (value as DeltaTrackStateName) ?? null
+  if (stateFilter.value !== next) stateFilter.value = next
+})
 
 const findInput = ref<InputInst | null>(null)
 const findRegex = ref(param('regex') === '1')
@@ -277,8 +292,8 @@ onMounted(async () => {
         alignItems: 'stretch',
         flex: 1,
         alignSelf: 'stretch',
-        marginRight: '20px',
-        marginLeft: diff.tracks.length === 0 ? '20px' : '0',
+        marginRight: 'var(--content-gutter)',
+        marginLeft: diff.tracks.length === 0 ? 'var(--content-gutter)' : '0',
       }">
         <Col  v-if="diff.tracks.length > 0" class="sidebar">
           <Row justify="center">
@@ -409,11 +424,7 @@ onMounted(async () => {
             </NCard>
           </Transition>
         </Col>
-        <Col
-          align="stretch"
-          :justify="selectedCategory === 'Overview' ? 'safe center' : 'flex-start'"
-          class="main-content-container"
-        >
+        <Col align="stretch" class="main-content-container">
           <template v-if="diff.tracks.length === 0">
             <Col>
               <RouterLink :to="{ name: 'home' }">
@@ -426,9 +437,7 @@ onMounted(async () => {
             </Col>
           </template>
           <Col v-else-if="selectedCategory === 'Overview'" align="stretch">
-            <Row :style="{
-              marginBottom: '60px',
-            }">
+            <Row align="flex-start">
               <Suspense>
                 <Content :content="asyncRenderable(provider?.overview(diff))"/>
                 <template #fallback>
@@ -496,7 +505,7 @@ onMounted(async () => {
 .sidebar {
   position: sticky;
   top: 0;
-  width: 340px;
+  width: var(--sidebar-width);
   max-height: 100vh;
   overflow-y: auto;
   padding: 20px 0 40px;
