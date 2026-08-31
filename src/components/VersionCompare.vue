@@ -143,32 +143,37 @@ defineEmits<{
   display: grid;
   padding: 4px;
   border: none;
-  border-radius: 4px;
   background: none;
   color: var(--color-5);
   cursor: pointer;
   user-select: none;
-  transition: color 150ms, background-color 150ms;
+  transition: color 200ms;
 
   > * {
     grid-area: 1 / 1;
-    transition: opacity 150ms;
+    transition: opacity 300ms, transform 300ms;
+  }
+
+  .direction {
+    transform: rotate(0deg);
   }
 
   .reverse {
     opacity: 0;
+    transform: rotate(-90deg);
   }
 
   &:hover {
-    color: var(--color-6);
-    background-color: var(--color-1);
+    color: var(--color-accent);
 
     .direction {
       opacity: 0;
+      transform: rotate(90deg);
     }
 
     .reverse {
       opacity: 1;
+      transform: rotate(0deg);
     }
   }
 }
