@@ -312,9 +312,10 @@ export async function getNearbyDeltas(a: string, b: string): Promise<NearbyDelta
     [ 'release', getReleaseVersions() ],
     [ 'main release', getMainVersions() ],
   ] as const) {
-    const { prev, next } = surroundingIn(versions, a, b)
+    const found = surroundingIn(versions, a, b)
+    const prev = groups.some(g => samePair(g.prev, found.prev)) ? null : found.prev
+    const next = groups.some(g => samePair(g.next, found.next)) ? null : found.next
     if (!prev && !next) continue
-    if (groups.some(g => samePair(g.prev, prev) && samePair(g.next, next))) continue
     groups.push({ label, prev, next })
   }
 
