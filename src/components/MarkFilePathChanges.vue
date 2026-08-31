@@ -17,7 +17,7 @@ function renderPathSlice(path: string, start: number, end: number): ComponentOrS
   const lastSlash = path.lastIndexOf('/')
   const lastDot = path.lastIndexOf('.')
   const dirEnd = lastSlash + 1
-  const extStart = lastDot > lastSlash ? lastDot : path.length
+  const extStart = lastDot > dirEnd ? lastDot : path.length
 
   const sliceNodes: ComponentOrStaticRenderableContent[] = []
 

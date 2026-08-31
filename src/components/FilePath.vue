@@ -50,8 +50,13 @@ onBeforeUnmount(() => {
     <template #trigger="{ props }">
       <span ref="pathEl" v-bind="props" class="file-path">
         <Dim>{{ directory }}</Dim>
-        <span>{{ name }}</span>
-        <Dim>{{ extension }}</Dim>&lrm;
+        <template v-if="name">
+          <span>{{ name }}</span>
+          <Dim>{{ extension }}</Dim>&lrm;
+        </template>
+        <template v-else>
+          <span>{{ extension }}</span>&lrm;
+        </template>
       </span>
     </template>
     {{ path }}
