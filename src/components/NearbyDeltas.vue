@@ -15,11 +15,12 @@ export type NearbyLink = {
 </script>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { NIcon } from 'naive-ui'
 import { ArrowLeft16Filled, ArrowRight16Filled } from '@vicons/fluent'
 import Dim from './Dim.vue'
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   provider: string
   groups: NearbyGroup[]
   links?: NearbyLink[]
@@ -27,52 +28,79 @@ withDefaults(defineProps<{
   links: () => [],
 })
 
+type Card = {
+  label: string
+  back: boolean
+  a: string
+  b: string
+}
+
+type Row = {
+  left: Card | null
+  right: Card | null
+}
+
 function suffix(label?: string) {
   return label ? ` ${label}` : ''
 }
+
+const rows = computed<Row[]>(() => {
+  const complete: Row[] = []
+  const back: Card[] = []
+  const forward: Card[] = []
+
+  for (const group of props.groups) {
+    const prev = group.prev
+      ? { label: `Previous${suffix(group.label)}`, back: true, ...group.prev }
+      : null
+    const next = group.next
+      ? { label: `Next${suffix(group.label)}`, back: false, ...group.next }
+      : null
+    if (prev && next) complete.push({ left: prev, right: next })
+    else if (prev) back.push(prev)
+    else if (next) forward.push(next)
+  }
+
+  for (const link of props.links) back.push({ ...link, back: true })
+
+  const rest: Row[] = []
+  let b = 0
+  let f = 0
+  while (b < back.length || f < forward.length) {
+    const left = b < back.length
+      ? back[b++]
+      : forward.length - f > 1 ? forward[f++] : null
+    const right = f < forward.length
+      ? forward[f++]
+      : b < back.length ? back[b++] : null
+    rest.push({ left, right })
+  }
+
+  return [ ...complete, ...rest ]
+})
 </script>
 
 <template>
-  <div v-if="groups.length > 0 || links.length > 0" class="section">
+  <div v-if="rows.length > 0" class="section">
     <h3>Related</h3>
     <div class="nearby">
-      <div v-for="group of groups" :key="group.label ?? ''" class="nearby-row">
-        <RouterLink
-          v-if="group.prev"
-          class="nearby-card"
-          :to="{ name: 'delta', params: { provider, a: group.prev.a, b: group.prev.b } }"
-        >
-          <NIcon :component="ArrowLeft16Filled" />
-          <div>
-            <Dim>Previous{{ suffix(group.label) }}</Dim>
-            <div class="nearby-pair">{{ group.prev.a }} &rarr; {{ group.prev.b }}</div>
-          </div>
-        </RouterLink>
-        <RouterLink
-          v-if="group.next"
-          class="nearby-card next"
-          :to="{ name: 'delta', params: { provider, a: group.next.a, b: group.next.b } }"
-        >
-          <div>
-            <Dim>Next{{ suffix(group.label) }}</Dim>
-            <div class="nearby-pair">{{ group.next.a }} &rarr; {{ group.next.b }}</div>
-          </div>
-          <NIcon :component="ArrowRight16Filled" />
-        </RouterLink>
+      <div v-for="(row, i) of rows" :key="i" class="nearby-row">
+        <template v-for="(card, slot) of [ row.left, row.right ]" :key="slot">
+          <RouterLink
+            v-if="card"
+            class="nearby-card"
+            :class="{ trailing: !card.back, second: slot === 1 }"
+            :to="{ name: 'delta', params: { provider, a: card.a, b: card.b } }"
+          >
+            <NIcon v-if="card.back" :component="ArrowLeft16Filled" />
+            <div>
+              <Dim>{{ card.label }}</Dim>
+              <div class="nearby-pair">{{ card.a }} &rarr; {{ card.b }}</div>
+            </div>
+            <NIcon v-if="!card.back" :component="ArrowRight16Filled" />
+          </RouterLink>
+        </template>
       </div>
-
-      <RouterLink
-        v-for="link of links"
-        :key="link.label"
-        class="nearby-card"
-        :to="{ name: 'delta', params: { provider, a: link.a, b: link.b } }"
-      >
-        <NIcon :component="ArrowLeft16Filled" />
-        <div>
-          <Dim>{{ link.label }}</Dim>
-          <div class="nearby-pair">{{ link.a }} &rarr; {{ link.b }}</div>
-        </div>
-      </RouterLink>
     </div>
   </div>
 </template>
@@ -124,9 +152,12 @@ function suffix(label?: string) {
     color: var(--color-6);
   }
 
-  &.next {
+  &.trailing {
     justify-content: flex-end;
     text-align: right;
+  }
+
+  &.second {
     grid-column: 2;
   }
 }
