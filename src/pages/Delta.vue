@@ -436,7 +436,7 @@ onMounted(async () => {
               <p>{{ diff.a }} and {{ diff.b }} have identical assets and data.</p>
             </Col>
           </template>
-          <Col v-else-if="selectedCategory === 'Overview'" align="stretch">
+          <Col v-else-if="selectedCategory === 'Overview'" align="stretch" style="padding-top: 48px;">
             <Row align="flex-start">
               <Suspense>
                 <Content :content="asyncRenderable(provider?.overview(diff))"/>
@@ -515,7 +515,7 @@ onMounted(async () => {
 .main-content-container {
   flex: 1;
   min-width: 0;
-  padding: 60px 0;
+  padding: 12px 0 60px;
   width: fit-content;
 }
 
