@@ -6,6 +6,12 @@ export type NearbyGroup = {
   prev: AdjacentDelta
   next: AdjacentDelta
 }
+
+export type NearbyLink = {
+  label: string
+  a: string
+  b: string
+}
 </script>
 
 <script setup lang="ts">
@@ -13,10 +19,13 @@ import { NIcon } from 'naive-ui'
 import { ArrowLeft16Filled, ArrowRight16Filled } from '@vicons/fluent'
 import Dim from './Dim.vue'
 
-defineProps<{
+withDefaults(defineProps<{
   provider: string
   groups: NearbyGroup[]
-}>()
+  links?: NearbyLink[]
+}>(), {
+  links: () => [],
+})
 
 function suffix(label?: string) {
   return label ? ` ${label}` : ''
@@ -24,7 +33,7 @@ function suffix(label?: string) {
 </script>
 
 <template>
-  <div v-if="groups.length > 0" class="section">
+  <div v-if="groups.length > 0 || links.length > 0" class="section">
     <h3>Related</h3>
     <div class="nearby">
       <div v-for="group of groups" :key="group.label ?? ''" class="nearby-row">
@@ -51,6 +60,19 @@ function suffix(label?: string) {
           <NIcon :component="ArrowRight16Filled" />
         </RouterLink>
       </div>
+
+      <RouterLink
+        v-for="link of links"
+        :key="link.label"
+        class="nearby-card full"
+        :to="{ name: 'delta', params: { provider, a: link.a, b: link.b } }"
+      >
+        <div>
+          <Dim>{{ link.label }}</Dim>
+          <div class="nearby-pair">{{ link.a }} &rarr; {{ link.b }}</div>
+        </div>
+        <NIcon :component="ArrowRight16Filled" />
+      </RouterLink>
     </div>
   </div>
 </template>
@@ -106,6 +128,10 @@ function suffix(label?: string) {
     justify-content: flex-end;
     text-align: right;
     grid-column: 2;
+  }
+
+  &.full {
+    justify-content: space-between;
   }
 }
 

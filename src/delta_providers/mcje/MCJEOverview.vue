@@ -9,6 +9,7 @@ import {
   type MCJEManifestVersion,
   type MCJEVersionDetails,
   type NearbyDeltaGroup,
+  type NearbyDeltaLink,
 } from './version_manifest'
 import { getPackFormats, type PackFormats } from './pack_formats'
 import MCJEVersionPicker from './MCJEVersionPicker.vue'
@@ -34,6 +35,7 @@ const empty: Side = { version: null, details: null, packs: null }
 const sideA = ref<Side>(empty)
 const sideB = ref<Side>(empty)
 const nearby = ref<NearbyDeltaGroup[]>([])
+const nearbyLinks = ref<NearbyDeltaLink[]>([])
 
 async function loadSide(id: string): Promise<Side> {
   const [ version, details ] = await Promise.all([ getVersion(id), getVersionDetails(id) ])
@@ -41,14 +43,15 @@ async function loadSide(id: string): Promise<Side> {
 }
 
 async function load() {
-  const [ a, b, groups ] = await Promise.all([
+  const [ a, b, related ] = await Promise.all([
     loadSide(props.dr.a),
     loadSide(props.dr.b),
     getNearbyDeltas(props.dr.a, props.dr.b),
   ])
   sideA.value = a
   sideB.value = b
-  nearby.value = groups
+  nearby.value = related.groups
+  nearbyLinks.value = related.links
 }
 
 onMounted(load)
@@ -126,7 +129,7 @@ const between = computed(() => {
 
     <DeltaSummary :dr="dr" />
 
-    <NearbyDeltas provider="mcje" :groups="nearby" />
+    <NearbyDeltas provider="mcje" :groups="nearby" :links="nearbyLinks" />
   </div>
 </template>
 
