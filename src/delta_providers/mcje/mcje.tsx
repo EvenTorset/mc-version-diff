@@ -598,7 +598,7 @@ const provider: DeltaProvider<MCJEVersionContent> = {
     } as DeltaResult
   },
   overview(dr) {
-    return <MCJEOverview a={dr.a} b={dr.b} />
+    return <MCJEOverview dr={dr} />
   },
   selector: () => defineAsyncComponent(() => import('./MCJESelector.vue')),
 }

@@ -239,34 +239,108 @@ export async function getVersion(id: string): Promise<MCJEManifestVersion | null
   return findVersion(id)
 }
 
-export async function getSurroundingDeltas(
-  a: string,
-  b: string,
-): Promise<{
-  prev: { a: string; b: string } | null
-  next: { a: string; b: string } | null
-}> {
-  await loadMCJEManifest()
-  const versions = mcjeManifest?.versions ?? []
+const MAIN_EXTRA = new Set([
+  '1.20.4', '1.20.6',
+  '1.21.3', '1.21.4', '1.21.5', '1.21.8', '1.21.10', '1.21.11',
+])
+
+export function getReleaseVersions(): MCJEManifestVersion[] {
+  return getVersionList().filter(v => v.type === 'release')
+}
+
+export function getMainVersions(): MCJEManifestVersion[] {
+  const all = getVersionList()
+  const releases = all.filter(v => v.type === 'release')
+  const lines = new Set<string>()
+  const picked: MCJEManifestVersion[] = []
+
+  for (const release of releases) {
+    const line = release.id.split('.').slice(0, 2).join('.')
+    const latestOfLine = !lines.has(line)
+    lines.add(line)
+    if (latestOfLine || MAIN_EXTRA.has(release.id)) picked.push(release)
+  }
+
+  const snapshot = all.find(v => v.type === 'snapshot')
+  if (snapshot && (!releases[0] || snapshot.releaseTime > releases[0].releaseTime)) {
+    picked.unshift(snapshot)
+  }
+
+  return picked
+}
+
+export interface AdjacentDelta {
+  a: string
+  b: string
+}
+
+export interface NearbyDeltaGroup {
+  label: string
+  prev: AdjacentDelta | null
+  next: AdjacentDelta | null
+}
+
+export interface NearbyDeltaLink extends AdjacentDelta {
+  label: string
+}
+
+function surroundingIn(versions: MCJEManifestVersion[], a: string, b: string) {
   const ai = versions.findIndex(v => v.id === a)
   const bi = versions.findIndex(v => v.id === b)
   if (ai === -1 || bi === -1 || bi !== ai - 1) {
     return { prev: null, next: null }
   }
   return {
-    prev:
-      ai < versions.length - 1
-        ? {
-            a: versions[ai + 1].id,
-            b: a,
-          }
-        : null,
-    next:
-      bi > 0
-        ? {
-            a: b,
-            b: versions[bi - 1].id,
-          }
-        : null,
+    prev: ai < versions.length - 1 ? { a: versions[ai + 1].id, b: a } : null,
+    next: bi > 0 ? { a: b, b: versions[bi - 1].id } : null,
   }
+}
+
+function samePair(x: AdjacentDelta | null, y: AdjacentDelta | null) {
+  if (!x || !y) return x === y
+  return x.a === y.a && x.b === y.b
+}
+
+export async function getSurroundingDeltas(a: string, b: string) {
+  await loadMCJEManifest()
+  return surroundingIn(getVersionList(), a, b)
+}
+
+function cycleRelease(versions: MCJEManifestVersion[], id: string) {
+  const i = versions.findIndex(v => v.id === id)
+  if (i === -1 || versions[i].type !== 'snapshot') return null
+  for (let j = i + 1; j < versions.length; j++) {
+    if (versions[j].type === 'release') return versions[j]
+  }
+  return null
+}
+
+export async function getNearbyDeltas(a: string, b: string): Promise<{
+  groups: NearbyDeltaGroup[]
+  links: NearbyDeltaLink[]
+}> {
+  await loadMCJEManifest()
+
+  const all = getVersionList()
+  const groups: NearbyDeltaGroup[] = []
+
+  for (const [ label, versions ] of [
+    [ '', all ],
+    [ 'release', getReleaseVersions() ],
+    [ 'main release', getMainVersions() ],
+  ] as const) {
+    const found = surroundingIn(versions, a, b)
+    const prev = groups.some(g => samePair(g.prev, found.prev)) ? null : found.prev
+    const next = groups.some(g => samePair(g.next, found.next)) ? null : found.next
+    if (!prev && !next) continue
+    groups.push({ label, prev, next })
+  }
+
+  const links: NearbyDeltaLink[] = []
+  const release = cycleRelease(all, a)
+  if (release && release.id === cycleRelease(all, b)?.id) {
+    links.push({ label: 'Since the last release', a: release.id, b })
+  }
+
+  return { groups, links }
 }

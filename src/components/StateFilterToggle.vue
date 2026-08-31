@@ -40,26 +40,7 @@ const dim = computed(() => props.name !== value.value && value.value !== null)
   transition: color 150ms;
   z-index: 1;
 
-  --intr-color: transparent;
-  --intr-color-fade: color-mix(
-    in oklch,
-    var(--intr-color),
-    oklch(from var(--intr-color) l calc(max(c, 0.2) * 2) var(--hue-cold))
-  );
-  --intr-gradient-start: rgb(from var(--intr-color) r g b / calc(alpha * 0.75));
-  --intr-gradient-end-alpha: 0.1;
-  --intr-gradient-end: rgb(from var(--intr-color-fade) r g b / calc(alpha * var(--intr-gradient-end-alpha)));
-  --intr-gradient-size: 30% 100%;
-  --intr-gradient-x: 50%;
-  --intr-gradient-y: 100%;
-  --intr-gradient-start_internal: var(--intr-gradient-start);
-  --intr-gradient-end_internal: var(--intr-gradient-end);
-  background-color: transparent;
-  background-image: radial-gradient(
-    var(--intr-gradient-size) at var(--intr-gradient-x) var(--intr-gradient-y) in oklch,
-    gradients.scrim(var(--intr-gradient-start_internal), var(--intr-gradient-end_internal))
-  );
-  background-repeat: no-repeat;
+  @include gradients.interactive-surface(30% 100%);
   transition:
     --intr-gradient-start_internal 200ms,
     --intr-gradient-end_internal 200ms,

@@ -65,6 +65,8 @@
 
 :root {
   color-scheme: dark;
+  --sidebar-width: 340px;
+  --content-gutter: 20px;
   --hue-cold: 264;
   --hue-warm: 53;
   --color-accent: #58f;
@@ -283,6 +285,13 @@ body {
   background-color: var(--color-1) !important;
   color: inherit;
   border-color: rgb(from var(--color-5) r g b / 0.1) !important;
+  border-radius: 6px !important;
+}
+
+.n-popover:not(.n-tooltip) {
+  background-color: var(--color-1) !important;
+  color: inherit;
+  border: 1px solid rgb(from var(--color-5) r g b / 0.1) !important;
   border-radius: 6px !important;
 }
 

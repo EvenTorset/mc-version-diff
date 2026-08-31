@@ -50,17 +50,7 @@ async function loadDetails() {
     <template #trigger="{ props }">
       <Row gap="8px" v-bind="mergeProps($attrs, props)">
         <NAvatar
-          v-if="manVer.type === 'release'"
-          :src="releaseVersionIcon"
-          :img-props="{
-            width: 20,
-            height: 20,
-            style: 'image-rendering: pixelated;'
-          }"
-        />
-        <NAvatar
-          v-else
-          :src="snapshotVersionIcon"
+          :src="manVer.type === 'release' ? releaseVersionIcon : snapshotVersionIcon"
           :img-props="{
             width: 20,
             height: 20,
