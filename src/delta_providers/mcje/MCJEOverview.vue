@@ -143,11 +143,17 @@ const between = computed(() => {
   gap: 32px;
   width: 100%;
   max-width: var(--overview-width);
-  margin-right: auto;
-  margin-left: max(0px, calc(
-    50% - var(--sidebar-width) / 2 - var(--overview-width) / 2 + var(--content-gutter) / 2
-  ));
+  margin-inline: auto;
   padding-bottom: 40px;
+}
+
+@media (min-width: 1700px) {
+  .overview {
+    margin-right: auto;
+    margin-left: max(0px, calc(
+      50% - var(--sidebar-width) / 2 - var(--overview-width) / 2 + var(--content-gutter) / 2
+    ));
+  }
 }
 
 </style>
