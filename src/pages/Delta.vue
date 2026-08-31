@@ -47,7 +47,7 @@ mcmetaTexture.value = param('animtexture') === '1'
 const progressDisplay = createProgressList()
 
 const provider = shallowRef<DeltaProvider<unknown> | null>(null)
-const diff = shallowRef<DeltaResult>()
+const dr = shallowRef<DeltaResult>()
 const provCategories = ref<DeltaProviderCategory[]>([])
 
 watch(provider, async p => {
@@ -57,8 +57,8 @@ watch(provider, async p => {
 const symUncategorized = Symbol('Uncategorized')
 
 const tracksFilteredByStateAndPath = computed<DeltaTrack[]>(() => {
-  const dr = diff.value
-  if (!dr) return []
+  const dr_ = dr.value
+  if (!dr_) return []
 
   const query = debouncedPathFilter.value.trim()
 
@@ -71,7 +71,7 @@ const tracksFilteredByStateAndPath = computed<DeltaTrack[]>(() => {
     }
   }
 
-  return dr.tracks.filter(track => {
+  return dr_.tracks.filter(track => {
     if (stateFilter.value !== null && DeltaTrackState[track.state] !== stateFilter.value) return false
 
     if (query) {
@@ -91,12 +91,12 @@ const tracksFilteredByStateAndPath = computed<DeltaTrack[]>(() => {
 })
 
 const categoriesUnordered = computed<Map<DeltaProviderCategory | typeof symUncategorized, DeltaTrack[]>>(() => {
-  const dr = diff.value
+  const dr_ = dr.value
   const prov = provider.value
-  if (!dr || !prov) return new Map()
+  if (!dr_ || !prov) return new Map()
   return Map.groupBy(
     tracksFilteredByStateAndPath.value,
-    track => getTrackCategory(prov, dr, track) ?? symUncategorized
+    track => getTrackCategory(prov, dr_, track) ?? symUncategorized
   )
 })
 const categories = computed(() => {
@@ -117,11 +117,11 @@ const categories = computed(() => {
 })
 
 const states = computed<[DeltaTrackStateName, DeltaTrack[]][]>(() => {
-  const dr = diff.value
-  if (!dr) return []
+  const dr_ = dr.value
+  if (!dr_) return []
 
   const statesObj: Partial<Record<DeltaTrackState, DeltaTrack[]>> =
-    Object.groupBy(dr.tracks, track => track.state)
+    Object.groupBy(dr_.tracks, track => track.state)
 
   const out: [DeltaTrackStateName, DeltaTrack[]][] = []
   if (statesObj[DeltaTrackState.Added]?.length)
@@ -138,7 +138,7 @@ const states = computed<[DeltaTrackStateName, DeltaTrack[]][]>(() => {
 
 const selectedCategory = ref<string>(param('category') ?? '')
 watch(categories, newCategories => {
-  if (!diff.value) return;
+  if (!dr.value) return;
 
   const match = newCategories.find(([k, v]) =>
     v.length > 0 && k.toLowerCase() === selectedCategory.value.toLowerCase())
@@ -162,9 +162,9 @@ const animationCategories = ref(new Set<string>())
 let animationScan = 0
 watch(categories, async list => {
   const scan = ++animationScan
-  const dr = diff.value
-  const names = dr
-    ? await Promise.all(list.map(async ([ name, tracks ]) => await hasAnimations(dr, tracks) ? name : null))
+  const dr_ = dr.value
+  const names = dr_
+    ? await Promise.all(list.map(async ([ name, tracks ]) => await hasAnimations(dr_, tracks) ? name : null))
     : []
   if (scan === animationScan) animationCategories.value = new Set(names.filter(n => n !== null))
 }, { immediate: true })
@@ -221,14 +221,14 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown)
 })
 
-const filteredDiff = computed<DeltaResult | undefined>(() => {
-  const dr = diff.value
-  if (!dr) return undefined
+const filteredDR = computed<DeltaResult | undefined>(() => {
+  const dr_ = dr.value
+  if (!dr_) return undefined
 
   const activeCategory = categories.value.find(([name]) => name === selectedCategory.value)
 
   return {
-    ...dr,
+    ...dr_,
     tracks: activeCategory ? [...activeCategory[1]] : [],
   }
 })
@@ -272,7 +272,7 @@ onMounted(async () => {
     const a = route.params.a as string
     const b = route.params.b as string
     const { contentA, contentB } = await provider.value.fetch(a, b, progressDisplay)
-    diff.value = await provider.value.compare(a, b, contentA, contentB, progressDisplay)
+    dr.value = await provider.value.compare(a, b, contentA, contentB, progressDisplay)
     prefetchTextViews()
     prefetchRenderers()
   } catch (err: any) {
@@ -316,15 +316,15 @@ onMounted(() => {
 <template>
   <div class="transition-container">
     <Transition name="cross-slide">
-      <div v-if="diff" :style="{
+      <div v-if="dr" :style="{
         display: 'flex',
         alignItems: 'stretch',
         flex: 1,
         alignSelf: 'stretch',
         marginRight: 'var(--content-gutter)',
-        marginLeft: diff.tracks.length === 0 ? 'var(--content-gutter)' : '0',
+        marginLeft: dr.tracks.length === 0 ? 'var(--content-gutter)' : '0',
       }">
-        <Col  v-if="diff.tracks.length > 0" class="sidebar">
+        <Col class="sidebar">
           <Row justify="center">
             <RouterLink :to="{ name: 'home' }">
               <VersionDiffLogo :style="{
@@ -333,7 +333,7 @@ onMounted(() => {
               }" :weight="1.4" />
             </RouterLink>
           </Row>
-          <NCard title="Filter" :style="{
+          <NCard v-if="dr.tracks.length > 0" title="Filter" :style="{
             width: 'calc(100% - 24px)',
           }">
             <Col gap="8px" align="stretch">
@@ -459,18 +459,7 @@ onMounted(() => {
           </Transition>
         </Col>
         <Col align="stretch" class="main-content-container">
-          <template v-if="diff.tracks.length === 0">
-            <Col>
-              <RouterLink :to="{ name: 'home' }">
-                <VersionDiffLogo />
-              </RouterLink>
-            </Col>
-            <Col style="flex: 1;">
-              <h1>No changes</h1>
-              <p>{{ diff.a }} and {{ diff.b }} have identical assets and data.</p>
-            </Col>
-          </template>
-          <div v-else class="category-transition-container">
+          <div class="category-transition-container">
             <Transition name="category-fade">
               <Col
                 v-if="selectedCategory === 'Overview'"
@@ -480,7 +469,7 @@ onMounted(() => {
               >
                 <Row align="flex-start">
                   <Suspense>
-                    <Content :content="asyncRenderable(provider?.overview(diff))"/>
+                    <Content :content="asyncRenderable(provider?.overview(dr))"/>
                     <template #fallback>
                       <NSpin size="large" />
                     </template>
@@ -492,7 +481,7 @@ onMounted(() => {
                 :key="selectedCategory"
                 style="container-type: inline-size;"
               >
-                <TreeList :dr="filteredDiff ?? diff" />
+                <TreeList :dr="filteredDR ?? dr" />
               </div>
             </Transition>
           </div>

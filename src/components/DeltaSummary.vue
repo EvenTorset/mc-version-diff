@@ -51,46 +51,54 @@ const categories = computed(() => {
 </script>
 
 <template>
-  <div class="section">
-    <h3>What changed</h3>
-    <Row class="states" gap="10px" align="stretch" wrap>
-      <NCard
-        v-for="state of stateSummary"
-        :key="state.name"
-        class="state"
-        :class="{
-          empty: state.count === 0,
-          selected: activeState === state.name,
-          dim: activeState !== null && activeState !== state.name,
-        }"
-        size="small"
-        @click="state.count > 0 && toggleState(state.name)"
-      >
-        <Col>
-          <div class="state-count">{{ state.count }}</div>
-          <TrackTag :color="state.color" :border-alpha="state.borderAlpha">{{ state.name }}</TrackTag>
-        </Col>
-      </NCard>
-    </Row>
-  </div>
+  <template v-if="dr.tracks.length === 0">
+    <Col style="flex: 1;">
+      <h1>No changes</h1>
+      <p>{{ dr.a }} and {{ dr.b }} have identical assets and data.</p>
+    </Col>
+  </template>
+  <template v-else>
+    <div class="section">
+      <h3>What changed</h3>
+      <Row class="states" gap="10px" align="stretch" wrap>
+        <NCard
+          v-for="state of stateSummary"
+          :key="state.name"
+          class="state"
+          :class="{
+            empty: state.count === 0,
+            selected: activeState === state.name,
+            dim: activeState !== null && activeState !== state.name,
+          }"
+          size="small"
+          @click="state.count > 0 && toggleState(state.name)"
+        >
+          <Col>
+            <div class="state-count">{{ state.count }}</div>
+            <TrackTag :color="state.color" :border-alpha="state.borderAlpha">{{ state.name }}</TrackTag>
+          </Col>
+        </NCard>
+      </Row>
+    </div>
 
-  <div v-if="categories.length > 0" class="section">
-    <h3>Where</h3>
-    <AnimatedHeight style="overflow: visible;">
-      <TransitionList :items="categories" key-field="name" class="categories">
-        <template #default="{ item: row }">
-          <RouterLink
-            class="category"
-            :to="{ query: { ...$route.query, category: row.name.toLowerCase() } }"
-          >
-            <div class="category-name">{{ row.name }}</div>
-            <Meter class="category-bar" :percentage="row.share" />
-            <div class="category-count">{{ row.count }}</div>
-          </RouterLink>
-        </template>
-      </TransitionList>
-    </AnimatedHeight>
-  </div>
+    <div v-if="categories.length > 0" class="section">
+      <h3>Where</h3>
+      <AnimatedHeight style="overflow: visible;">
+        <TransitionList :items="categories" key-field="name" class="categories">
+          <template #default="{ item: row }">
+            <RouterLink
+              class="category"
+              :to="{ query: { ...$route.query, category: row.name.toLowerCase() } }"
+            >
+              <div class="category-name">{{ row.name }}</div>
+              <Meter class="category-bar" :percentage="row.share" />
+              <div class="category-count">{{ row.count }}</div>
+            </RouterLink>
+          </template>
+        </TransitionList>
+      </AnimatedHeight>
+    </div>
+  </template>
 </template>
 
 <style lang="scss" scoped>
