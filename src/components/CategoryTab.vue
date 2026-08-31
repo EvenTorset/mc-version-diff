@@ -11,7 +11,13 @@ defineProps<{
 
 <template>
   <div class="category-tab" :class="{ selected }">
-    <NIcon v-if="name === 'Overview'" class="category-tab-count" :component="Triangle12Regular" :size="16" />
+    <NIcon
+      v-if="name === 'Overview'"
+      class="category-tab-count"
+      :component="Triangle12Regular"
+      :size="17"
+      style="margin-bottom: -1px;"
+    />
     <div v-else class="category-tab-count">{{ count }}</div>
     <div class="category-tab-name">{{ name }}</div>
   </div>
