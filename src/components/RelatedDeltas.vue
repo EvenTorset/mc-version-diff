@@ -1,13 +1,13 @@
 <script lang="ts">
-export type AdjacentDelta = { a: string, b: string } | null
+import type { VersionPair } from '@/types.ts'
 
-export type NearbyGroup = {
+export type RelatedGroup = {
   label?: string
-  prev: AdjacentDelta
-  next: AdjacentDelta
+  prev: VersionPair | null
+  next: VersionPair | null
 }
 
-export type NearbyLink = {
+export type RelatedLink = {
   label: string
   a: string
   b: string
@@ -17,13 +17,13 @@ export type NearbyLink = {
 <script setup lang="ts">
 import { computed } from 'vue'
 import { NIcon } from 'naive-ui'
-import { ArrowLeft16Filled, ArrowRight16Filled } from '@vicons/fluent'
+import { ArrowLeft24Filled, ArrowRight24Filled } from '@vicons/fluent'
 import Dim from './Dim.vue'
 
 const props = withDefaults(defineProps<{
   provider: string
-  groups: NearbyGroup[]
-  links?: NearbyLink[]
+  groups: RelatedGroup[]
+  links?: RelatedLink[]
 }>(), {
   links: () => [],
 })
@@ -92,12 +92,12 @@ const rows = computed<Row[]>(() => {
             :class="{ trailing: !card.back, second: slot === 1 }"
             :to="{ name: 'delta', params: { provider, a: card.a, b: card.b } }"
           >
-            <NIcon v-if="card.back" :component="ArrowLeft16Filled" />
+            <NIcon v-if="card.back" :component="ArrowLeft24Filled" :size="24" />
             <div>
               <Dim>{{ card.label }}</Dim>
               <div class="nearby-pair">{{ card.a }} &rarr; {{ card.b }}</div>
             </div>
-            <NIcon v-if="!card.back" :component="ArrowRight16Filled" />
+            <NIcon v-if="!card.back" :component="ArrowRight24Filled" :size="24" />
           </RouterLink>
         </template>
       </div>
@@ -145,11 +145,13 @@ const rows = computed<Row[]>(() => {
   transition:
     --intr-gradient-start_internal 100ms,
     --intr-gradient-end_internal 100ms,
+    --color-dim 200ms,
     color 200ms;
 
   &:hover {
     --intr-color: rgb(from var(--color-accent) r g b / calc(alpha * 0.5));
     color: var(--color-6);
+    --color-dim: var(--color-5);
   }
 
   &.trailing {

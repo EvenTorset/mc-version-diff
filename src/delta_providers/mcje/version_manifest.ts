@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { download } from '@/util/download'
 import { ProgressHandler } from '@/util/progress'
 import { clearDirectory, getDirectory } from '@/util/opfs'
+import type { VersionPair } from '@/types'
 
 const mcjeManifestUrl = 'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json'
 const manifestCacheFile = 'mcje_version_manifest.json'
@@ -269,18 +270,13 @@ export function getMainVersions(): MCJEManifestVersion[] {
   return picked
 }
 
-export interface AdjacentDelta {
-  a: string
-  b: string
-}
-
-export interface NearbyDeltaGroup {
+export interface RelatedDeltaGroup {
   label: string
-  prev: AdjacentDelta | null
-  next: AdjacentDelta | null
+  prev: VersionPair | null
+  next: VersionPair | null
 }
 
-export interface NearbyDeltaLink extends AdjacentDelta {
+export interface RelatedDeltaLink extends VersionPair {
   label: string
 }
 
@@ -296,7 +292,7 @@ function surroundingIn(versions: MCJEManifestVersion[], a: string, b: string) {
   }
 }
 
-function samePair(x: AdjacentDelta | null, y: AdjacentDelta | null) {
+function samePair(x: VersionPair | null, y: VersionPair | null) {
   if (!x || !y) return x === y
   return x.a === y.a && x.b === y.b
 }
@@ -315,17 +311,17 @@ function cycleRelease(versions: MCJEManifestVersion[], id: string) {
   return null
 }
 
-export async function getNearbyDeltas(a: string, b: string): Promise<{
-  groups: NearbyDeltaGroup[]
-  links: NearbyDeltaLink[]
+export async function getRelatedDeltas(a: string, b: string): Promise<{
+  groups: RelatedDeltaGroup[]
+  links: RelatedDeltaLink[]
 }> {
   await loadMCJEManifest()
 
   const all = getVersionList()
-  const groups: NearbyDeltaGroup[] = []
+  const groups: RelatedDeltaGroup[] = []
 
   for (const [ label, versions ] of [
-    [ '', all ],
+    [ 'version', all ],
     [ 'release', getReleaseVersions() ],
     [ 'main release', getMainVersions() ],
   ] as const) {
@@ -336,7 +332,7 @@ export async function getNearbyDeltas(a: string, b: string): Promise<{
     groups.push({ label, prev, next })
   }
 
-  const links: NearbyDeltaLink[] = []
+  const links: RelatedDeltaLink[] = []
   const release = cycleRelease(all, a)
   if (release && release.id === cycleRelease(all, b)?.id) {
     links.push({ label: 'Since the last release', a: release.id, b })

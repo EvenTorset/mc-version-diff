@@ -28,3 +28,8 @@ export type ImageViewMode =
   | 'a'
 
 export type TooltipSide = 'above' | 'below' | 'left' | 'right'
+
+export interface VersionPair {
+  a: string
+  b: string
+}

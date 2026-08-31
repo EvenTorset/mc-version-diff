@@ -15,6 +15,12 @@
   src: url('@/assets/MinecraftSeven.ttf');
 }
 
+@property --color-dim {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #fff;
+}
+
 @property --intr-color {
   syntax: "<color>";
   inherits: true;
