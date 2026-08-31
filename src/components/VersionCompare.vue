@@ -22,6 +22,8 @@ import { NButton, NCard, NIcon, NTime } from 'naive-ui'
 import { ArrowDownload16Filled, ArrowRight24Regular, ArrowSwap24Regular } from '@vicons/fluent'
 import Dim from './Dim.vue'
 import Tooltip from './Tooltip.vue'
+import Row from './Row.vue'
+import Spacer from './Spacer.vue'
 
 withDefaults(defineProps<{
   sides: CompareSide[]
@@ -43,11 +45,13 @@ defineEmits<{
       <slot name="picker" :index="i"></slot>
 
       <div v-if="side.facts.length > 0" class="facts">
-        <div v-for="fact of side.facts" :key="fact.label" class="fact">
+        <Row v-for="fact of side.facts" :key="fact.label" class="fact">
           <Tooltip :disabled="!fact.tip">
             <template #trigger="{ props: tip }"><Dim v-bind="tip" class="label">{{ fact.label }}</Dim></template>
-            {{ fact.tip }}
+            <h3>{{ fact.label }}</h3>
+            <p>{{ fact.tip }}</p>
           </Tooltip>
+          <Spacer bridge />
           <Tooltip v-if="fact.time">
             <template #trigger="{ props: tip }">
               <span v-bind="tip">
@@ -57,22 +61,22 @@ defineEmits<{
             <NTime :time="fact.time" />
           </Tooltip>
           <span v-else>{{ fact.value }}</span>
-        </div>
+        </Row>
       </div>
 
       <div v-if="side.downloads.length > 0" class="downloads">
-        <a
+        <NButton
           v-for="download of side.downloads"
+          size="small"
+          tag="a"
           :key="download.label"
           :href="download.url"
           rel="noreferrer"
           download
         >
-          <NButton size="small" secondary>
-            <template #icon><NIcon :component="ArrowDownload16Filled" /></template>
-            {{ download.label }}
-          </NButton>
-        </a>
+          <template #icon><NIcon :component="ArrowDownload16Filled" /></template>
+          {{ download.label }}
+        </NButton>
       </div>
     </NCard>
 
@@ -80,8 +84,8 @@ defineEmits<{
       <Tooltip v-if="swappable">
         <template #trigger="{ props: tip }">
           <button v-bind="tip" type="button" class="swap" @click="$emit('swap')">
-            <NIcon :size="24" :component="ArrowRight24Regular" class="direction" />
-            <NIcon :size="24" :component="ArrowSwap24Regular" class="reverse" />
+            <NIcon :size="32" :component="ArrowRight24Regular" class="direction" />
+            <NIcon :size="32" :component="ArrowSwap24Regular" class="reverse" />
           </button>
         </template>
         Swap sides
@@ -96,7 +100,7 @@ defineEmits<{
 
 .compare {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: 340px 1fr 340px;
   align-items: start;
   gap: 20px;
 }
@@ -118,9 +122,6 @@ defineEmits<{
 }
 
 .fact {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
   font-size: 14px;
 }
 
@@ -136,6 +137,7 @@ defineEmits<{
 
   a {
     text-decoration: none;
+    flex: 1;
   }
 }
 
@@ -185,6 +187,7 @@ defineEmits<{
   align-self: center;
   gap: 4px;
   font-size: 12px;
+  font-weight: 600;
   white-space: nowrap;
 }
 
