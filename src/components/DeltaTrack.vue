@@ -365,7 +365,7 @@ async function copy(version: 'a' | 'b') {
   gap: 8px;
   position: sticky;
   top: 0;
-  z-index: 3;
+  z-index: 50;
   background-color: inherit;
   min-width: 0;
   margin: -1px;
