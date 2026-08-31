@@ -30,6 +30,7 @@ defineProps<{
   white-space: nowrap;
   width: max-content;
   padding-left: 8px;
+  font-family: var(--monospace-font-family);
 }
 
 .category-tab-name {
