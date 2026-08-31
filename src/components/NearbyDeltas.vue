@@ -64,14 +64,14 @@ function suffix(label?: string) {
       <RouterLink
         v-for="link of links"
         :key="link.label"
-        class="nearby-card full"
+        class="nearby-card"
         :to="{ name: 'delta', params: { provider, a: link.a, b: link.b } }"
       >
+        <NIcon :component="ArrowLeft16Filled" />
         <div>
           <Dim>{{ link.label }}</Dim>
           <div class="nearby-pair">{{ link.a }} &rarr; {{ link.b }}</div>
         </div>
-        <NIcon :component="ArrowRight16Filled" />
       </RouterLink>
     </div>
   </div>
@@ -128,10 +128,6 @@ function suffix(label?: string) {
     justify-content: flex-end;
     text-align: right;
     grid-column: 2;
-  }
-
-  &.full {
-    justify-content: space-between;
   }
 }
 
