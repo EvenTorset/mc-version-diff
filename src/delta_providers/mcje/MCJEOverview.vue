@@ -17,6 +17,8 @@ import { formatBytes } from '@/util/bytes'
 import DeltaSummary from '@/components/DeltaSummary.vue'
 import RelatedDeltas from '@/components/RelatedDeltas.vue'
 import VersionCompare, { type CompareSide } from '@/components/VersionCompare.vue'
+import { ArrowDownload16Filled, Open16Filled } from '@vicons/fluent'
+import { getMcjeChangelogUrl } from '@/util/download.ts'
 
 const props = defineProps<{
   dr: DeltaResult
@@ -28,9 +30,10 @@ type Side = {
   version: MCJEManifestVersion | null
   details: MCJEVersionDetails | null
   packs: PackFormats | null
+  changelog: string | null
 }
 
-const empty: Side = { version: null, details: null, packs: null }
+const empty: Side = { version: null, details: null, packs: null, changelog: null }
 
 const sideA = ref<Side>(empty)
 const sideB = ref<Side>(empty)
@@ -38,8 +41,12 @@ const nearby = ref<RelatedDeltaGroup[]>([])
 const nearbyLinks = ref<RelatedDeltaLink[]>([])
 
 async function loadSide(id: string): Promise<Side> {
-  const [ version, details ] = await Promise.all([ getVersion(id), getVersionDetails(id) ])
-  return { version, details, packs: getPackFormats(id) }
+  const [ version, details, changelog ] = await Promise.all([
+    getVersion(id),
+    getVersionDetails(id),
+    getMcjeChangelogUrl(id),
+  ])
+  return { version, details, packs: getPackFormats(id), changelog }
 }
 
 async function load() {
@@ -73,8 +80,8 @@ const TIPS: Record<string, string> = {
   data: 'The data pack format this version accepts. A pack made for a different number needs updating.',
 }
 
-function toSide({ version, details, packs }: Side): CompareSide {
-  if (!version || !details) return { facts: [], downloads: [] }
+function toSide({ version, details, packs, changelog }: Side): CompareSide {
+  if (!version || !details) return { facts: [], links: [] }
   return {
     facts: [
       { label: 'Released', time: new Date(version.releaseTime), tip: TIPS.released },
@@ -85,9 +92,25 @@ function toSide({ version, details, packs }: Side): CompareSide {
       ...packs?.resource ? [ { label: 'Resource pack format', value: packs.resource, tip: TIPS.resource } ] : [],
       ...packs?.data ? [ { label: 'Data pack format', value: packs.data, tip: TIPS.data } ] : [],
     ],
-    downloads: [
-      { label: 'Client jar', url: details.downloads.client.url },
-      ...details.downloads.server ? [ { label: 'Server jar', url: details.downloads.server.url } ] : [],
+    links: [
+      {
+        label: 'Client jar',
+        url: details.downloads.client.url,
+        icon: ArrowDownload16Filled,
+        download: true,
+      },
+      ...details.downloads.server ? [ {
+        label: 'Server jar',
+        url: details.downloads.server.url,
+        icon: ArrowDownload16Filled,
+        download: true,
+      } ] : [],
+      ...changelog ? [ {
+        label: 'Blog post',
+        url: changelog,
+        icon: Open16Filled,
+        download: false,
+      } ] : []
     ],
   }
 }

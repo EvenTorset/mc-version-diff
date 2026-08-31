@@ -1,4 +1,6 @@
 <script lang="ts">
+import type { Component } from 'vue'
+
 export type CompareFact = {
   label: string
   tip?: string
@@ -6,20 +8,22 @@ export type CompareFact = {
   time?: Date
 }
 
-export type CompareDownload = {
+export type CompareLink = {
   label: string
   url: string
+  icon: Component
+  download?: boolean
 }
 
 export type CompareSide = {
   facts: CompareFact[]
-  downloads: CompareDownload[]
+  links: CompareLink[]
 }
 </script>
 
 <script setup lang="ts">
 import { NButton, NCard, NIcon, NTime } from 'naive-ui'
-import { ArrowDownload16Filled, ArrowRight24Regular, ArrowSwap24Regular } from '@vicons/fluent'
+import { ArrowRight24Regular, ArrowSwap24Regular } from '@vicons/fluent'
 import Dim from './Dim.vue'
 import Tooltip from './Tooltip.vue'
 import Row from './Row.vue'
@@ -64,18 +68,19 @@ defineEmits<{
         </Row>
       </div>
 
-      <div v-if="side.downloads.length > 0" class="downloads">
+      <div v-if="side.links.length > 0" class="links">
         <NButton
-          v-for="download of side.downloads"
+          v-for="link of side.links"
           size="small"
           tag="a"
-          :key="download.label"
-          :href="download.url"
+          :key="link.label"
+          :href="link.url"
           rel="noreferrer"
-          download
+          :download="link.download"
+          :target="!link.download ? '_blank' : undefined"
         >
-          <template #icon><NIcon :component="ArrowDownload16Filled" /></template>
-          {{ download.label }}
+          <template #icon><NIcon :component="link.icon" /></template>
+          {{ link.label }}
         </NButton>
       </div>
     </NCard>
@@ -131,8 +136,9 @@ defineEmits<{
   text-underline-offset: 3px;
 }
 
-.downloads {
+.links {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 
   a {

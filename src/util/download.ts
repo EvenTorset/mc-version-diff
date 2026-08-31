@@ -16,7 +16,7 @@ export interface GetFileOptions {
 
 type Manifest = Record<string, CacheManifestEntry>
 
-export const CORS = import.meta.env.PROD ? 'https://cors.dokucraft.co.uk:2096/' : ''
+export const CORS = 'https://cors.dokucraft.co.uk:2096/'
 
 const CACHE_DIR = 'download_cache'
 
@@ -231,4 +231,43 @@ function buildFilename(id: string, extension: string): string {
   if (!extension) return safeId
   const ext = extension.startsWith('.') ? extension : `.${extension}`
   return `${safeId}${ext}`
+}
+
+const MC_BLOG_ARTICLE_URL = 'https://www.minecraft.net/en-us/article/'
+export async function getMcjeChangelogUrl(id: string): Promise<string | null> {
+  const cacheName = buildFilename(`changelog_${id}`, '.txt')
+
+  const cached = await readCachedBuffer(cacheName)
+  if (cached) {
+    return new TextDecoder().decode(cached)
+  }
+
+  let url: string
+
+  if (/^\d\dw\d\d[a-z]$/.test(id)) {
+    url = `${MC_BLOG_ARTICLE_URL}minecraft-snapshot-${id}`
+  } else if (id.includes('snapshot')) {
+    url = `${MC_BLOG_ARTICLE_URL}minecraft-${id.replaceAll('.', '-')}`
+  } else if (id.includes('-pre')) {
+    const [version, pre] = id.split('-pre')
+    const preNum = pre.replace(/^-/, '')
+    url = `${MC_BLOG_ARTICLE_URL}minecraft-${version.replaceAll('.', '-')}-pre-release-${preNum}`
+  } else if (id.includes('-rc')) {
+    const [version, rc] = id.split('-rc')
+    const rcNum = rc.replace(/^-/, '')
+    url = `${MC_BLOG_ARTICLE_URL}minecraft-${version.replaceAll('.', '-')}-release-candidate-${rcNum}`
+  } else {
+    url = `${MC_BLOG_ARTICLE_URL}minecraft-java-edition-${id.replaceAll('.', '-')}`
+  }
+
+  try {
+    const response = await fetch(CORS + url, { method: 'HEAD' })
+    if (response.ok) {
+      await writeCachedBuffer(cacheName, new TextEncoder().encode(url))
+      return url
+    }
+    return null
+  } catch {
+    return null
+  }
 }
