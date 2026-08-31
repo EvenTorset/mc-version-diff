@@ -18,7 +18,7 @@
     "@vitejs/plugin-vue": "^6.0.7",
     "@vitejs/plugin-vue-jsx": "^5.1.6",
     "@vue/tsconfig": "^0.9.1",
-    "easy-tooltips": "^3.5.1",
+    "easy-tooltips": "^3.5.2",
     "fabulous-json": "^1.1.0",
     "file-saver": "^2.0.5",
     "monaco-editor": "^0.53.0",
