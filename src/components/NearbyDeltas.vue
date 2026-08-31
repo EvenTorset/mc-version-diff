@@ -1,5 +1,11 @@
 <script lang="ts">
 export type AdjacentDelta = { a: string, b: string } | null
+
+export type NearbyGroup = {
+  label?: string
+  prev: AdjacentDelta
+  next: AdjacentDelta
+}
 </script>
 
 <script setup lang="ts">
@@ -9,37 +15,42 @@ import Dim from './Dim.vue'
 
 defineProps<{
   provider: string
-  prev: AdjacentDelta
-  next: AdjacentDelta
+  groups: NearbyGroup[]
 }>()
+
+function suffix(label?: string) {
+  return label ? ` ${label}` : ''
+}
 </script>
 
 <template>
-  <div v-if="prev || next" class="section">
-    <h3>Nearby comparisons</h3>
+  <div v-if="groups.length > 0" class="section">
+    <h3>Related</h3>
     <div class="nearby">
-      <RouterLink
-        v-if="prev"
-        class="nearby-card"
-        :to="{ name: 'delta', params: { provider, a: prev.a, b: prev.b } }"
-      >
-        <NIcon :component="ArrowLeft16Filled" />
-        <div>
-          <Dim>Previous</Dim>
-          <div class="nearby-pair">{{ prev.a }} &rarr; {{ prev.b }}</div>
-        </div>
-      </RouterLink>
-      <RouterLink
-        v-if="next"
-        class="nearby-card next"
-        :to="{ name: 'delta', params: { provider, a: next.a, b: next.b } }"
-      >
-        <div>
-          <Dim>Next</Dim>
-          <div class="nearby-pair">{{ next.a }} &rarr; {{ next.b }}</div>
-        </div>
-        <NIcon :component="ArrowRight16Filled" />
-      </RouterLink>
+      <div v-for="group of groups" :key="group.label ?? ''" class="nearby-row">
+        <RouterLink
+          v-if="group.prev"
+          class="nearby-card"
+          :to="{ name: 'delta', params: { provider, a: group.prev.a, b: group.prev.b } }"
+        >
+          <NIcon :component="ArrowLeft16Filled" />
+          <div>
+            <Dim>Previous{{ suffix(group.label) }}</Dim>
+            <div class="nearby-pair">{{ group.prev.a }} &rarr; {{ group.prev.b }}</div>
+          </div>
+        </RouterLink>
+        <RouterLink
+          v-if="group.next"
+          class="nearby-card next"
+          :to="{ name: 'delta', params: { provider, a: group.next.a, b: group.next.b } }"
+        >
+          <div>
+            <Dim>Next{{ suffix(group.label) }}</Dim>
+            <div class="nearby-pair">{{ group.next.a }} &rarr; {{ group.next.b }}</div>
+          </div>
+          <NIcon :component="ArrowRight16Filled" />
+        </RouterLink>
+      </div>
     </div>
   </div>
 </template>
@@ -58,6 +69,12 @@ defineProps<{
 }
 
 .nearby {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nearby-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;

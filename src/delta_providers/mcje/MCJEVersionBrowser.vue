@@ -9,7 +9,13 @@ export const VERSION_MODES: { value: VersionMode, label: string }[] = [
 </script>
 
 <script setup lang="ts">
-import { getVersionList, loadMCJEManifest, type MCJEManifestVersion } from '@/delta_providers/mcje/version_manifest.ts'
+import {
+  getMainVersions,
+  getReleaseVersions,
+  getVersionList,
+  loadMCJEManifest,
+  type MCJEManifestVersion,
+} from '@/delta_providers/mcje/version_manifest.ts'
 import { NList, NListItem, NProgress } from 'naive-ui'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useVirtualizer } from '@tanstack/vue-virtual'
@@ -37,34 +43,12 @@ const ROW_HEIGHT = 60
 const loadingProgress = ref(0)
 const allVersions = ref<MCJEManifestVersion[]>([])
 const releasesOnly = ref<MCJEManifestVersion[]>([])
+const mainVersions = ref<MCJEManifestVersion[]>([])
 const debouncedFilter = ref<string>('')
 
 const versionMode = defineModel<VersionMode>('mode', { default: 'main' })
 const filter = defineModel<string>('filter', { default: '' })
 const selectedVersions = defineModel<Set<MCJEManifestVersion>>({ default: () => new Set() })
-
-const MAIN_EXTRA = new Set([
-  '1.20.4', '1.20.6',
-  '1.21.3', '1.21.4', '1.21.5', '1.21.8', '1.21.10', '1.21.11',
-])
-
-const mainVersions = computed<MCJEManifestVersion[]>(() => {
-  const releases = releasesOnly.value
-  const lines = new Set<string>()
-  const picked: MCJEManifestVersion[] = []
-  for (const release of releases) {
-    const line = release.id.split('.').slice(0, 2).join('.')
-    const latestOfLine = !lines.has(line)
-    lines.add(line)
-    if (latestOfLine || MAIN_EXTRA.has(release.id)) picked.push(release)
-  }
-
-  const snapshot = allVersions.value.find(v => v.type === 'snapshot')
-  if (snapshot && (!releases[0] || snapshot.releaseTime > releases[0].releaseTime)) {
-    picked.unshift(snapshot)
-  }
-  return picked
-})
 
 const listForMode = computed<MCJEManifestVersion[]>(() => {
   if (versionMode.value === 'all') return allVersions.value
@@ -152,7 +136,8 @@ onMounted(async () => {
       loadingProgress.value = Number((p.ratio * 100).toFixed(1))
     }))
     allVersions.value = getVersionList()
-    releasesOnly.value = allVersions.value.filter(v => v.type === 'release')
+    releasesOnly.value = getReleaseVersions()
+    mainVersions.value = getMainVersions()
   } catch {
     // Errors with loading the manifest will be handled by the selector component.
   }

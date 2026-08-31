@@ -3,17 +3,18 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import type { DeltaResult } from '@/delta_providers'
 import {
-  getSurroundingDeltas,
+  getNearbyDeltas,
   getVersion,
   getVersionDetails,
   type MCJEManifestVersion,
   type MCJEVersionDetails,
+  type NearbyDeltaGroup,
 } from './version_manifest'
 import { getPackFormats, type PackFormats } from './pack_formats'
 import MCJEVersionPicker from './MCJEVersionPicker.vue'
 import { formatBytes } from '@/util/bytes'
 import DeltaSummary from '@/components/DeltaSummary.vue'
-import NearbyDeltas, { type AdjacentDelta } from '@/components/NearbyDeltas.vue'
+import NearbyDeltas from '@/components/NearbyDeltas.vue'
 import VersionCompare, { type CompareSide } from '@/components/VersionCompare.vue'
 
 const props = defineProps<{
@@ -32,8 +33,7 @@ const empty: Side = { version: null, details: null, packs: null }
 
 const sideA = ref<Side>(empty)
 const sideB = ref<Side>(empty)
-const prev = ref<AdjacentDelta>(null)
-const next = ref<AdjacentDelta>(null)
+const nearby = ref<NearbyDeltaGroup[]>([])
 
 async function loadSide(id: string): Promise<Side> {
   const [ version, details ] = await Promise.all([ getVersion(id), getVersionDetails(id) ])
@@ -41,15 +41,14 @@ async function loadSide(id: string): Promise<Side> {
 }
 
 async function load() {
-  const [ a, b, around ] = await Promise.all([
+  const [ a, b, groups ] = await Promise.all([
     loadSide(props.dr.a),
     loadSide(props.dr.b),
-    getSurroundingDeltas(props.dr.a, props.dr.b),
+    getNearbyDeltas(props.dr.a, props.dr.b),
   ])
   sideA.value = a
   sideB.value = b
-  prev.value = around.prev
-  next.value = around.next
+  nearby.value = groups
 }
 
 onMounted(load)
@@ -127,7 +126,7 @@ const between = computed(() => {
 
     <DeltaSummary :dr="dr" />
 
-    <NearbyDeltas provider="mcje" :prev="prev" :next="next" />
+    <NearbyDeltas provider="mcje" :groups="nearby" />
   </div>
 </template>
 
