@@ -117,7 +117,7 @@ const between = computed(() => {
 
 <template>
   <div class="overview">
-    <VersionCompare :sides="sides" :between="between">
+    <VersionCompare :sides="sides" :between="between" swappable @swap="go(dr.b, dr.a)">
       <template #picker="{ index }">
         <MCJEVersionPicker
           :model-value="index === 0 ? dr.a : dr.b"

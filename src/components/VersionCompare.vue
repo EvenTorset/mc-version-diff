@@ -19,16 +19,22 @@ export type CompareSide = {
 
 <script setup lang="ts">
 import { NButton, NCard, NIcon, NTime } from 'naive-ui'
-import { ArrowDownload16Filled, ArrowRight24Regular } from '@vicons/fluent'
+import { ArrowDownload16Filled, ArrowRight24Regular, ArrowSwap24Regular } from '@vicons/fluent'
 import Dim from './Dim.vue'
 import Tooltip from './Tooltip.vue'
 
 withDefaults(defineProps<{
   sides: CompareSide[]
   between?: string[]
+  swappable?: boolean
 }>(), {
   between: () => [],
+  swappable: false,
 })
+
+defineEmits<{
+  swap: []
+}>()
 </script>
 
 <template>
@@ -71,7 +77,16 @@ withDefaults(defineProps<{
     </NCard>
 
     <div class="compare-arrow">
-      <NIcon :size="24" :component="ArrowRight24Regular" />
+      <Tooltip v-if="swappable">
+        <template #trigger="{ props: tip }">
+          <button v-bind="tip" type="button" class="swap" @click="$emit('swap')">
+            <NIcon :size="24" :component="ArrowRight24Regular" class="direction" />
+            <NIcon :size="24" :component="ArrowSwap24Regular" class="reverse" />
+          </button>
+        </template>
+        Swap sides
+      </Tooltip>
+      <NIcon v-else :size="24" :component="ArrowRight24Regular" />
       <Dim v-for="line of between" :key="line" class="apart">{{ line }}</Dim>
     </div>
   </div>
@@ -121,6 +136,40 @@ withDefaults(defineProps<{
 
   a {
     text-decoration: none;
+  }
+}
+
+.swap {
+  display: grid;
+  padding: 4px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--color-5);
+  cursor: pointer;
+  user-select: none;
+  transition: color 150ms, background-color 150ms;
+
+  > * {
+    grid-area: 1 / 1;
+    transition: opacity 150ms;
+  }
+
+  .reverse {
+    opacity: 0;
+  }
+
+  &:hover {
+    color: var(--color-6);
+    background-color: var(--color-1);
+
+    .direction {
+      opacity: 0;
+    }
+
+    .reverse {
+      opacity: 1;
+    }
   }
 }
 
