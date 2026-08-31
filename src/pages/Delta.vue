@@ -470,18 +470,31 @@ onMounted(() => {
               <p>{{ diff.a }} and {{ diff.b }} have identical assets and data.</p>
             </Col>
           </template>
-          <Col v-else-if="selectedCategory === 'Overview'" align="stretch" style="padding-top: 48px;">
-            <Row align="flex-start">
-              <Suspense>
-                <Content :content="asyncRenderable(provider?.overview(diff))"/>
-                <template #fallback>
-                  <NSpin size="large" />
-                </template>
-              </Suspense>
-            </Row>
-          </Col>
-          <div v-else style="container-type: inline-size;">
-            <TreeList :dr="filteredDiff ?? diff" />
+          <div v-else class="category-transition-container">
+            <Transition name="category-fade">
+              <Col
+                v-if="selectedCategory === 'Overview'"
+                key="Overview"
+                align="stretch"
+                style="padding-top: 48px;"
+              >
+                <Row align="flex-start">
+                  <Suspense>
+                    <Content :content="asyncRenderable(provider?.overview(diff))"/>
+                    <template #fallback>
+                      <NSpin size="large" />
+                    </template>
+                  </Suspense>
+                </Row>
+              </Col>
+              <div
+                v-else
+                :key="selectedCategory"
+                style="container-type: inline-size;"
+              >
+                <TreeList :dr="filteredDiff ?? diff" />
+              </div>
+            </Transition>
           </div>
         </Col>
       </div>
@@ -534,6 +547,34 @@ onMounted(() => {
 .cross-slide-leave-to {
   opacity: 0;
   transform: translateY(-128px);
+}
+
+.category-transition-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+  width: 100%;
+}
+
+.category-transition-container > * {
+  grid-area: 1 / 1;
+}
+
+.category-fade-enter-active,
+.category-fade-leave-active {
+  transition:
+    opacity 200ms ease-in,
+    transform 200ms ease-in;
+}
+
+.category-fade-enter-from {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+.category-fade-leave-to {
+  opacity: 0;
+  transform: translateY(20px);
 }
 
 .sidebar {
