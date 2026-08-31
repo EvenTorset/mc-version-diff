@@ -22,10 +22,35 @@ function getItemKey(item: T): string | number | symbol {
 
   return item[props.keyField as keyof T]
 }
+
+function onBeforeLeave(el: Element) {
+  if (el instanceof HTMLElement) {
+    const parent = el.parentElement
+    if (parent) {
+      const parentStyle = window.getComputedStyle(parent)
+      const cols = parentStyle.gridTemplateColumns
+      const gap = parentStyle.columnGap
+
+      if (cols && cols !== 'none' && cols !== 'subgrid') {
+        el.style.gridTemplateColumns = cols
+        el.style.columnGap = gap
+      }
+    }
+
+    el.style.top = `${el.offsetTop}px`
+    el.style.left = `${el.offsetLeft}px`
+    el.style.width = `${el.offsetWidth}px`
+  }
+}
 </script>
 
 <template>
-  <TransitionGroup :name="name" :tag="tag" class="transition-list-container">
+  <TransitionGroup
+    :name="name"
+    :tag="tag"
+    class="transition-list-container"
+    @before-leave="onBeforeLeave"
+  >
     <div
       v-for="item in items"
       :key="getItemKey(item)"
@@ -37,6 +62,7 @@ function getItemKey(item: T): string | number | symbol {
 </template>
 
 <style scoped>
+
 .transition-list-container {
   position: relative;
 }
@@ -61,4 +87,5 @@ function getItemKey(item: T): string | number | symbol {
   position: absolute;
   width: 100%;
 }
+
 </style>

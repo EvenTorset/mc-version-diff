@@ -6,7 +6,7 @@ import type { DeltaProvider, DeltaProviderCategory, DeltaResult, DeltaTrack } fr
 import { getDeltaProvider } from '@/delta_providers/registry'
 import { getTrackCategory } from '@/delta_providers/category'
 import { NButton, NCard, NCheckbox, NInput, NRadio, NRadioGroup, NSpin, type InputInst } from 'naive-ui'
-import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Row from '@/components/Row.vue'
 import TreeList from '@/components/TreeList.vue'
@@ -282,6 +282,35 @@ onMounted(async () => {
     router.replace({ name: 'home' })
   }
 })
+
+const countColWidth = ref<string>('auto')
+
+function updateCountWidth() {
+  requestAnimationFrame(() => {
+    const countEls = document.querySelectorAll<HTMLElement>(
+      '.category-list .transition-list-item:not(.transition-list-leave-active) .category-tab-count'
+    )
+    if (!countEls.length) return
+
+    let max = 0
+    countEls.forEach(el => {
+      const width = el.scrollWidth
+      if (width > max) max = width
+    })
+
+    if (max > 0) {
+      countColWidth.value = `${Math.ceil(max)}px`
+    }
+  })
+}
+
+watch(categories, () => {
+  nextTick(updateCountWidth)
+}, { immediate: true })
+
+onMounted(() => {
+  nextTick(updateCountWidth)
+})
 </script>
 
 <template>
@@ -367,7 +396,12 @@ onMounted(async () => {
           }">
             <Col align="stretch" gap="0">
               <AnimatedHeight style="overflow: visible;">
-                <TransitionList :items="categories" :key-field="0">
+                <TransitionList
+                  :items="categories"
+                  :key-field="0"
+                  class="category-list"
+                  :style="{ '--count-col-width': countColWidth }"
+                >
                   <template #default="{ item: [ name, tracks ] }">
                     <CategoryTab
                       v-if="tracks.length > 0 || name === 'Overview'"
@@ -472,7 +506,7 @@ onMounted(async () => {
   </div>
 </template>
 
-<style lang="css" scoped>
+<style lang="scss" scoped>
 
 .transition-container {
   display: grid;
@@ -510,6 +544,19 @@ onMounted(async () => {
   overflow-y: auto;
   padding: 20px 0 40px;
   box-sizing: border-box;
+}
+
+.category-list {
+  display: grid;
+  grid-template-columns: var(--count-col-width, auto) 1fr;
+  column-gap: 6px;
+  transition: grid-template-columns 250ms;
+}
+
+.category-list :deep(.transition-list-item) {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
 }
 
 .main-content-container {

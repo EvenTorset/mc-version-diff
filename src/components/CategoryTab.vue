@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { NIcon } from 'naive-ui'
-import Row from './Row.vue'
 import { Triangle12Regular } from '@vicons/fluent'
 
 defineProps<{
@@ -8,15 +7,14 @@ defineProps<{
   name: string
   selected: boolean
 }>()
-
 </script>
 
 <template>
-  <Row gap="6px" class="category-tab" :class="{ selected }">
+  <div class="category-tab" :class="{ selected }">
     <NIcon v-if="name === 'Overview'" class="category-tab-count" :component="Triangle12Regular" :size="16" />
     <div v-else class="category-tab-count">{{ count }}</div>
     <div class="category-tab-name">{{ name }}</div>
-  </Row>
+  </div>
 </template>
 
 <style lang="scss" scoped>
@@ -24,11 +22,14 @@ defineProps<{
 
 .category-tab-count {
   color: var(--color-accent);
-  width: 40px;
   text-align: right;
+  justify-self: end;
   font-weight: 600;
   transition: color .15s ease-out;
   line-height: 1;
+  white-space: nowrap;
+  width: max-content;
+  padding-left: 8px;
 }
 
 .category-tab-name {
@@ -38,9 +39,12 @@ defineProps<{
 }
 
 .category-tab {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: center;
   box-sizing: border-box;
-  border-radius: 4px;
-  padding: 4px 2px;
+  padding: 4px 6px;
   cursor: pointer;
   user-select: none;
 
