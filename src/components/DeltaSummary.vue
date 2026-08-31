@@ -115,9 +115,10 @@ const categories = computed(() => {
   transition:
     --intr-gradient-start_internal 200ms,
     --intr-gradient-end_internal 200ms,
-    --intr-gradient-size 750ms,
+    --intr-gradient-size 300ms,
     box-shadow 200ms,
     border-color 200ms,
+    color 200ms,
     opacity 200ms;
 
   :deep(.n-card-content) {
@@ -133,6 +134,7 @@ const categories = computed(() => {
     --intr-gradient-end-alpha: 0.15;
     --intr-gradient-size: 100% 100%;
     border-color: rgb(from var(--color-accent) r g b / 0.4) !important;
+    color: var(--color-6);
   }
 
   &.selected {
@@ -142,6 +144,7 @@ const categories = computed(() => {
     --intr-gradient-size: 100% 100%;
     border-color: rgb(from var(--color-accent) r g b / 0.6) !important;
     box-shadow: 0 0 8px rgb(from var(--intr-color) calc(1.2 * r) calc(1.2 * g) calc(1.2 * b) / 0.333);
+    color: var(--color-6);
   }
 
   &.dim {
@@ -155,9 +158,8 @@ const categories = computed(() => {
 }
 
 .state-count {
-  font-size: 22px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
+  font-size: 1.8em;
+  font-weight: 400;
 }
 
 .categories {
@@ -179,6 +181,15 @@ const categories = computed(() => {
 
   &:hover {
     background: var(--color-1);
+    color: var(--color-6);
+
+    .category-count {
+      color: var(--color-accent-suppl);
+    }
+
+    :deep(.n-progress-graph-line-fill) {
+      background-color: var(--color-accent-suppl) !important;
+    }
   }
 }
 
@@ -194,10 +205,11 @@ const categories = computed(() => {
 }
 
 .category-count {
-  font-size: 13px;
+  font-size: 14px;
   text-align: right;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-dim);
+  color: var(--color-accent);
+  font-weight: 600;
+  font-family: var(--monospace-font-family);
 }
 
 </style>
