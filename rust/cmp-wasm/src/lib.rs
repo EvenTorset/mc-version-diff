@@ -1,7 +1,10 @@
 //! One wasm call compares a whole batch: zip entry inflation, PNG pixel
-//! comparison and NBT comparison with the DataVersion masked. Anything
-//! malformed compares as false, matching how the worker treated a throw.
+//! comparison, NBT comparison with the DataVersion masked, and structures
+//! compared by the blocks they hold. Anything malformed compares as false,
+//! matching how the worker treated a throw.
 
+use minecraft_block_reader::nbt::sorted;
+use minecraft_block_reader::{read_any, Compound, State, Structure, Value};
 use png_pixel_cmp::compare_png_pixels;
 use wasm_bindgen::prelude::*;
 use zune_inflate::{DeflateDecoder, DeflateOptions};
@@ -12,8 +15,8 @@ const STRIDE: usize = 8;
 const ENTRY_LIMIT: usize = 1 << 30;
 
 /// `tasks` is a flat array with a stride of [`STRIDE`]:
-/// kind (0 png, 1 nbt), aOffset, aLength, aMethod, bOffset, bLength, bMethod,
-/// littleEndian.
+/// kind (0 png, 1 nbt, 2 structure), aOffset, aLength, aMethod, bOffset,
+/// bLength, bMethod, littleEndian.
 #[wasm_bindgen]
 pub fn compare_batch(buffer: &[u8], tasks: &[u32]) -> Vec<u8> {
     let count = tasks.len() / STRIDE;
@@ -44,10 +47,10 @@ fn run_task(
     let raw_a = decompress_entry(buffer.get(a.0..a.0 + a.1)?, a.2)?;
     let raw_b = decompress_entry(buffer.get(b.0..b.0 + b.1)?, b.2)?;
 
-    if kind == 0 {
-        compare_png_pixels(&raw_a, &raw_b).ok()
-    } else {
-        compare_nbt(raw_a, raw_b, little_endian)
+    match kind {
+        0 => compare_png_pixels(&raw_a, &raw_b).ok(),
+        2 => compare_structure(&raw_a, &raw_b, little_endian),
+        _ => compare_nbt(&raw_a, &raw_b, little_endian),
     }
 }
 
@@ -66,9 +69,9 @@ fn decompress_entry(data: &[u8], method: u32) -> Option<Vec<u8>> {
         .ok()
 }
 
-fn compare_nbt(a: Vec<u8>, b: Vec<u8>, little_endian: bool) -> Option<bool> {
-    let mut a = decompress_nbt(a)?;
-    let mut b = decompress_nbt(b)?;
+fn compare_nbt(a: &[u8], b: &[u8], little_endian: bool) -> Option<bool> {
+    let mut a = decompress_nbt(a.to_vec())?;
+    let mut b = decompress_nbt(b.to_vec())?;
     if a.len() != b.len() {
         return Some(false);
     }
@@ -81,6 +84,74 @@ fn compare_nbt(a: Vec<u8>, b: Vec<u8>, little_endian: bool) -> Option<bool> {
     }
 
     Some(a == b)
+}
+
+fn compare_structure(a: &[u8], b: &[u8], little_endian: bool) -> Option<bool> {
+    if compare_nbt(a, b, little_endian) == Some(true) {
+        return Some(true);
+    }
+    Some(same_structure(&read_any(a)?, &read_any(b)?))
+}
+
+fn same_structure(a: &Structure, b: &Structure) -> bool {
+    a.size == b.size
+        && a.palette.len() == b.palette.len()
+        && a.blocks.len() == b.blocks.len()
+        && a.entities.len() == b.entities.len()
+        && a.palette.iter().zip(&b.palette).all(same_state)
+        && a.blocks.iter().zip(&b.blocks).all(|(x, y)| {
+            x.state == y.state && x.pos == y.pos && same_opt(x.nbt.as_ref(), y.nbt.as_ref())
+        })
+        && a.entities
+            .iter()
+            .zip(&b.entities)
+            .all(|(x, y)| x.pos == y.pos && same_compound(&x.nbt, &y.nbt))
+}
+
+fn same_state((a, b): (&State, &State)) -> bool {
+    if a.id != b.id {
+        return false;
+    }
+    match (&a.properties, &b.properties) {
+        (None, None) => true,
+        (Some(x), Some(y)) if x.len() == y.len() => {
+            let mut x: Vec<_> = x.iter().collect();
+            let mut y: Vec<_> = y.iter().collect();
+            x.sort();
+            y.sort();
+            x == y
+        }
+        _ => false,
+    }
+}
+
+fn same_opt(a: Option<&Compound>, b: Option<&Compound>) -> bool {
+    match (a, b) {
+        (None, None) => true,
+        (Some(x), Some(y)) => same_compound(x, y),
+        _ => false,
+    }
+}
+
+fn same_compound(a: &Compound, b: &Compound) -> bool {
+    if a.entries.len() != b.entries.len() {
+        return false;
+    }
+    let (a, b) = (sorted(a), sorted(b));
+    a.len() == b.len()
+        && a.iter()
+            .zip(b.iter())
+            .all(|((ka, va), (kb, vb))| ka == kb && same_value(va, vb))
+}
+
+fn same_value(a: &Value, b: &Value) -> bool {
+    match (a, b) {
+        (Value::Compound(x), Value::Compound(y)) => same_compound(x, y),
+        (Value::List(ta, xs), Value::List(tb, ys)) => {
+            ta == tb && xs.len() == ys.len() && xs.iter().zip(ys).all(|(x, y)| same_value(x, y))
+        }
+        _ => a == b,
+    }
 }
 
 fn decompress_nbt(bytes: Vec<u8>) -> Option<Vec<u8>> {
@@ -217,5 +288,78 @@ fn find_data_version_offset(bytes: &[u8], le: bool) -> Option<usize> {
         }
 
         w.skip_payload(tag, 0)?;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use minecraft_block_reader::nbt::Writer;
+
+    fn c(entries: &[(&str, Value)]) -> Compound {
+        Compound {
+            entries: entries.iter().map(|(k, v)| (k.to_string(), v.clone())).collect(),
+        }
+    }
+
+    /// props are written in the order given, so a caller can swap them
+    fn structure(props: &[(&str, &str)], block_pos: [i32; 3]) -> Vec<u8> {
+        let state = c(&[
+            ("Name", Value::Str("minecraft:oak_stairs".into())),
+            (
+                "Properties",
+                Value::Compound(c(&props
+                    .iter()
+                    .map(|(k, v)| (*k, Value::Str((*v).into())))
+                    .collect::<Vec<_>>())),
+            ),
+        ]);
+        let block = c(&[
+            ("state", Value::Int(0)),
+            (
+                "pos",
+                Value::List(3, block_pos.iter().map(|x| Value::Int(*x)).collect()),
+            ),
+        ]);
+        let root = c(&[
+            ("size", Value::List(3, vec![Value::Int(1), Value::Int(1), Value::Int(1)])),
+            ("palette", Value::List(10, vec![Value::Compound(state)])),
+            ("blocks", Value::List(10, vec![Value::Compound(block)])),
+            ("entities", Value::List(10, vec![])),
+        ]);
+        Writer::new().root(&root)
+    }
+
+    #[test]
+    fn identical_bytes_match() {
+        let a = structure(&[("facing", "north"), ("half", "top")], [0, 0, 0]);
+        assert_eq!(compare_structure(&a, &a, false), Some(true));
+    }
+
+    #[test]
+    fn property_order_does_not_count_as_a_change() {
+        let a = structure(&[("facing", "north"), ("half", "top")], [0, 0, 0]);
+        let b = structure(&[("half", "top"), ("facing", "north")], [0, 0, 0]);
+        assert_ne!(a, b, "the fixtures must differ as bytes");
+        assert_eq!(compare_structure(&a, &b, false), Some(true));
+    }
+
+    #[test]
+    fn a_moved_block_is_a_change() {
+        let a = structure(&[("facing", "north")], [0, 0, 0]);
+        let b = structure(&[("facing", "north")], [0, 1, 0]);
+        assert_eq!(compare_structure(&a, &b, false), Some(false));
+    }
+
+    #[test]
+    fn a_different_property_value_is_a_change() {
+        let a = structure(&[("facing", "north")], [0, 0, 0]);
+        let b = structure(&[("facing", "south")], [0, 0, 0]);
+        assert_eq!(compare_structure(&a, &b, false), Some(false));
+    }
+
+    #[test]
+    fn garbage_does_not_match() {
+        assert_eq!(compare_structure(b"not nbt", b"also not nbt", false), None);
     }
 }

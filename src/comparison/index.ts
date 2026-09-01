@@ -160,6 +160,10 @@ export function comparePng(a: CompareItem, b: CompareItem): Promise<boolean> {
   return getPool().run({ kind: 'png', a, b })
 }
 
+export function compareStructure(a: CompareItem, b: CompareItem): Promise<boolean> {
+  return getPool().run({ kind: 'structure', a, b })
+}
+
 export function compareNbt(
   a: CompareItem,
   b: CompareItem,

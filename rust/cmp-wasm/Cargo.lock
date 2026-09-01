@@ -18,8 +18,17 @@ checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
 name = "cmp-wasm"
 version = "0.1.0"
 dependencies = [
+ "minecraft-block-reader",
  "png-pixel-cmp",
  "wasm-bindgen",
+ "zune-inflate",
+]
+
+[[package]]
+name = "minecraft-block-reader"
+version = "2.0.0"
+source = "git+https://github.com/ewanhowell5195/minecraft-block-reader.git#a03b6cc0e83c770a05fc5813b6eae07fe06d541d"
+dependencies = [
  "zune-inflate",
 ]
 
