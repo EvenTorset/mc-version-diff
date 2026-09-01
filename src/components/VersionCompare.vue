@@ -1,5 +1,7 @@
 <script lang="ts">
 import type { Component } from 'vue'
+import Content from './Content.vue'
+import type { Renderable } from '@/types.ts'
 
 export type CompareFact = {
   label: string
@@ -31,7 +33,7 @@ import Spacer from './Spacer.vue'
 
 withDefaults(defineProps<{
   sides: CompareSide[]
-  between?: string[]
+  between?: Renderable[]
   swappable?: boolean
 }>(), {
   between: () => [],
@@ -96,7 +98,10 @@ defineEmits<{
         Swap sides
       </Tooltip>
       <NIcon v-else :size="24" :component="ArrowRight24Regular" />
-      <Dim v-for="line of between" :key="line" class="apart">{{ line }}</Dim>
+      <template v-for="line of between">
+        <Dim v-if="typeof line === 'string'" :key="line" class="apart">{{ line }}</Dim>
+        <Content v-else :content="line" />
+      </template>
     </div>
   </div>
 </template>

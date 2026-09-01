@@ -81,6 +81,12 @@ let loadedSettings = false
 onMounted(async () => {
   loadSettings()
   loadedSettings = true
+
+  Object.defineProperty(globalThis, 'toggleCopyStatusButton', {
+    value: () => {
+      Settings.enableCopyStatusButton = !Settings.enableCopyStatusButton
+    }
+  })
 })
 
 watchEffect(async () => {

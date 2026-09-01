@@ -7,6 +7,7 @@ export type SettingsType = {
   pixelFont: boolean
   formatJSON: boolean
   cacheSizeMax: number
+  enableCopyStatusButton: boolean
 }
 
 export const Settings = reactive<SettingsType>({
@@ -14,6 +15,7 @@ export const Settings = reactive<SettingsType>({
   pixelFont: false,
   formatJSON: false,
   cacheSizeMax: 157286400,
+  enableCopyStatusButton: false,
 })
 
 export function loadSettings() {
@@ -22,4 +24,5 @@ export function loadSettings() {
   Settings.pixelFont = !!(so?.pixelFont ?? Settings.pixelFont)
   Settings.formatJSON = !!(so?.formatJSON ?? Settings.formatJSON)
   Settings.cacheSizeMax = Number((so?.cacheSizeMax ?? Settings.cacheSizeMax))
+  Settings.enableCopyStatusButton = !!(so?.enableCopyStatusButton ?? Settings.enableCopyStatusButton)
 }

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup lang="tsx">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import type { DeltaResult } from '@/delta_providers'
@@ -17,8 +17,18 @@ import { formatBytes } from '@/util/bytes'
 import DeltaSummary from '@/components/DeltaSummary.vue'
 import RelatedDeltas from '@/components/RelatedDeltas.vue'
 import VersionCompare, { type CompareSide } from '@/components/VersionCompare.vue'
-import { ArrowDownload16Filled, Open16Filled } from '@vicons/fluent'
+import { ArrowDownload16Filled, ClipboardBulletListLtr16Filled, Open16Filled } from '@vicons/fluent'
 import { getMcjeChangelogUrl } from '@/util/download.ts'
+import type { Renderable } from '@/types.ts'
+import { Settings } from '@/settings.ts'
+import IconButton from '@/components/IconButton.vue'
+import Tooltip from '@/components/Tooltip.vue'
+import Dim from '@/components/Dim.vue'
+import { copyToClipboard } from '@/util/clipboard.ts'
+import { DeltaTrackState } from '../states.ts'
+import { naturalCompare } from '@/util/sort.ts'
+import Notify from '@/notify.tsx'
+import { errorMessage } from '@/util/errorMessage.ts'
 
 const props = defineProps<{
   dr: DeltaResult
@@ -118,23 +128,63 @@ function toSide({ version, details, packs, changelog }: Side): CompareSide {
 const sides = computed(() => [ toSide(sideA.value), toSide(sideB.value) ])
 
 const between = computed(() => {
-  const lines: string[] = []
+  const rows: Renderable[] = []
 
   const timeA = sideA.value.version?.releaseTime
   const timeB = sideB.value.version?.releaseTime
   if (timeA && timeB) {
     const days = Math.round(Math.abs(new Date(timeB).valueOf() - new Date(timeA).valueOf()) / 86400000)
-    lines.push(days === 0 ? 'same day' : days === 1 ? '1 day apart' : `${days} days apart`)
+    rows.push(days === 0 ? 'same day' : days === 1 ? '1 day apart' : `${days} days apart`)
   }
 
   const sizeA = sideA.value.details?.downloads.client.size
   const sizeB = sideB.value.details?.downloads.client.size
   if (sizeA !== undefined && sizeB !== undefined) {
     const delta = sizeB - sizeA
-    lines.push(delta === 0 ? 'same size' : `${delta > 0 ? '+' : '-'}${formatBytes(Math.abs(delta))}`)
+    rows.push(delta === 0 ? 'same size' : `${delta > 0 ? '+' : '-'}${formatBytes(Math.abs(delta))}`)
   }
 
-  return lines
+  if (Settings.enableCopyStatusButton) {
+    rows.push(() => <Tooltip
+      v-slots={{
+        trigger: ({ props: ttp }: any) => <IconButton
+          {...ttp}
+          onClick={async () => {
+            try {
+              const content = (await Promise.all(
+                props.dr.tracks
+                  .filter(t => (
+                    t.state === DeltaTrackState.Added
+                    || t.state === DeltaTrackState.Edited
+                  ) && t.b.endsWith('.png'))
+                  .sort((a, b) => naturalCompare(a.id, b.id))
+                  .map(async t => [
+                    (await props.dr.getEntry(props.dr.b, t.b)).toBase64({ alphabet: 'base64url' }),
+                    t.b.replace(/^assets\/minecraft\/textures\//, '')
+                  ].join('\t'))
+              )).join('\n')
+              await copyToClipboard(new TextEncoder().encode(content), 'text/plain')
+              Notify.success({
+                content: 'Copied!',
+                duration: 1000,
+              })
+            } catch (err) {
+              console.error(err)
+              Notify.error(errorMessage(err))
+            }
+          }}
+        >
+          <ClipboardBulletListLtr16Filled />
+        </IconButton>
+      }}
+    >
+      <h3>Copy Spreadsheet</h3>
+      <p>Copies the added and edited textures as tab-separated values.</p>
+      <Dim tag='p'>[ Dokucraft ]</Dim>
+    </Tooltip>)
+  }
+
+  return rows
 })
 </script>
 

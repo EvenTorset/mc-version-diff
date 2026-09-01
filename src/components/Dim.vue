@@ -15,7 +15,7 @@ withDefaults(defineProps<{
 <style lang="scss" scoped>
 
 .dim {
-  color: var(--color-dim);
+  color: var(--color-dim) !important;
 }
 
 </style>
