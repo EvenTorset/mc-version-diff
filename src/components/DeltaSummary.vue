@@ -171,17 +171,24 @@ const categories = computed(() => {
 }
 
 .categories {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  row-gap: 2px;
+  column-gap: 16px;
+
+  &>:deep(.transition-list-item) {
+    grid-column: 1/-1;
+    display: grid;
+    grid-template-columns: subgrid;
+  }
 }
 
 .category {
+  grid-column: 1/-1;
   display: grid;
-  grid-template-columns: 140px 1fr 48px;
+  grid-template-columns: subgrid;
   align-items: center;
-  gap: 12px;
-  padding: 5px 8px;
+  padding: 4px 8px;
   border-radius: 4px;
   text-decoration: none;
   color: inherit;
