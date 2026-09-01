@@ -8,7 +8,7 @@ import { fetchJarWithout } from '@/util/rangedJar'
 import zip, { type ParsedZIP, type ParsedZIPFileEntry } from '@/util/zip'
 import type { RehashPayloadItem, RehashWorkerMessage } from '@/util/rehash.worker'
 import RehashWorker from '@/util/rehash.worker?worker'
-import { compareNbt, comparePng, compareStructure, HashEquivalence, terminateCmpWorkers } from '@/comparison'
+import { compareJson, compareNbt, comparePng, compareStructure, HashEquivalence, terminateCmpWorkers } from '@/comparison'
 import { loadVerdicts, saveVerdicts, verdictKey } from '@/comparison/verdictCache'
 import getFileExt from '@/util/getFileExt'
 import { ProgressHandler } from '@/util/progress'
@@ -218,6 +218,7 @@ async function getJAR(
 }
 
 const STRUCTURE_PATH = /(assets|data)\/[^\/]+\/structures?\/.+\.nbt$/
+const JSON_PATH = /\.(json|mcmeta)$/
 
 const provider: DeltaProvider<MCJEVersionContent> = {
   name: 'Java Edition',
@@ -402,13 +403,13 @@ const provider: DeltaProvider<MCJEVersionContent> = {
       progressBar.progHandler.setUnit('file')
 
       const candidates: Array<{
-        kind: 'png' | 'nbt' | 'structure'
+        kind: 'png' | 'nbt' | 'structure' | 'json'
         entryA: ParsedZIPFileEntry
         entryB: ParsedZIPFileEntry
       }> = []
 
       for (const [path, entryB] of jarB.entries) {
-        if (!path.endsWith('.png') && !path.endsWith('.nbt')) continue
+        if (!path.endsWith('.png') && !path.endsWith('.nbt') && !JSON_PATH.test(path)) continue
         const entryA = jarA.entries.get(path)
         if (!entryA) continue
 
@@ -416,7 +417,9 @@ const provider: DeltaProvider<MCJEVersionContent> = {
           candidates.push({
             kind: path.endsWith('.png')
               ? 'png'
-              : STRUCTURE_PATH.test(path) ? 'structure' : 'nbt',
+              : JSON_PATH.test(path)
+                ? 'json'
+                : STRUCTURE_PATH.test(path) ? 'structure' : 'nbt',
             entryA,
             entryB,
           })
@@ -438,7 +441,12 @@ const provider: DeltaProvider<MCJEVersionContent> = {
         await Promise.all(
           misses.map(async candidate => {
             let equal = false
-            if (candidate.kind === 'structure') {
+            if (candidate.kind === 'json') {
+              equal = await compareJson(
+                { compressedContent: candidate.entryA.compressedContent, compressionMethod: candidate.entryA.compressionMethod },
+                { compressedContent: candidate.entryB.compressedContent, compressionMethod: candidate.entryB.compressionMethod }
+              )
+            } else if (candidate.kind === 'structure') {
               equal = await compareStructure(
                 { compressedContent: candidate.entryA.compressedContent, compressionMethod: candidate.entryA.compressionMethod },
                 { compressedContent: candidate.entryB.compressedContent, compressionMethod: candidate.entryB.compressionMethod }

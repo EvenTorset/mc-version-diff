@@ -6,7 +6,7 @@ self.addEventListener('unhandledrejection', e => console.error('unhandled reject
 const ready = init({ module_or_path: wasmUrl })
 
 const STRIDE = 8
-const KIND = { png: 0, nbt: 1, structure: 2 } as const
+const KIND = { png: 0, nbt: 1, structure: 2, json: 3 } as const
 
 export type CompareItem = {
   compressedContent: Uint8Array<ArrayBuffer>
@@ -17,10 +17,11 @@ export type CompareTask =
   | { kind: 'png'; a: CompareItem; b: CompareItem }
   | { kind: 'nbt'; a: CompareItem; b: CompareItem; littleEndian?: boolean }
   | { kind: 'structure'; a: CompareItem; b: CompareItem }
+  | { kind: 'json'; a: CompareItem; b: CompareItem }
 
 export type BatchTask = {
   id: number
-  kind: 'png' | 'nbt' | 'structure'
+  kind: 'png' | 'nbt' | 'structure' | 'json'
   littleEndian?: boolean
   aOffset: number
   aLength: number
