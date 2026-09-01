@@ -1,11 +1,12 @@
 //! One wasm call compares a whole batch: zip entry inflation, PNG pixel
-//! comparison, NBT comparison with the DataVersion masked, and structures
-//! compared by the blocks they hold. Anything malformed compares as false,
-//! matching how the worker treated a throw.
+//! comparison, NBT comparison with the DataVersion masked, structures compared
+//! by the blocks they hold, and JSON compared by its values. Anything malformed
+//! compares as false, matching how the worker treated a throw.
 
 use minecraft_block_reader::nbt::sorted;
 use minecraft_block_reader::{read_any, Compound, State, Structure, Value};
 use png_pixel_cmp::compare_png_pixels;
+use serde_json::{Number as JsonNumber, Value as JsonValue};
 use wasm_bindgen::prelude::*;
 use zune_inflate::{DeflateDecoder, DeflateOptions};
 
@@ -15,8 +16,8 @@ const STRIDE: usize = 8;
 const ENTRY_LIMIT: usize = 1 << 30;
 
 /// `tasks` is a flat array with a stride of [`STRIDE`]:
-/// kind (0 png, 1 nbt, 2 structure), aOffset, aLength, aMethod, bOffset,
-/// bLength, bMethod, littleEndian.
+/// kind (0 png, 1 nbt, 2 structure, 3 json), aOffset, aLength, aMethod,
+/// bOffset, bLength, bMethod, littleEndian.
 #[wasm_bindgen]
 pub fn compare_batch(buffer: &[u8], tasks: &[u32]) -> Vec<u8> {
     let count = tasks.len() / STRIDE;
@@ -50,7 +51,45 @@ fn run_task(
     match kind {
         0 => compare_png_pixels(&raw_a, &raw_b).ok(),
         2 => compare_structure(&raw_a, &raw_b, little_endian),
+        3 => compare_json(&raw_a, &raw_b),
         _ => compare_nbt(&raw_a, &raw_b, little_endian),
+    }
+}
+
+/// `3` and `3.0` are the same number, so a file rewritten with the other
+/// spelling is not a change.
+fn compare_json(a: &[u8], b: &[u8]) -> Option<bool> {
+    let a: JsonValue = serde_json::from_slice(a).ok()?;
+    let b: JsonValue = serde_json::from_slice(b).ok()?;
+    Some(same_json(&a, &b))
+}
+
+fn same_json(a: &JsonValue, b: &JsonValue) -> bool {
+    match (a, b) {
+        (JsonValue::Number(x), JsonValue::Number(y)) => same_json_number(x, y),
+        (JsonValue::Array(x), JsonValue::Array(y)) => {
+            x.len() == y.len() && x.iter().zip(y).all(|(i, j)| same_json(i, j))
+        }
+        (JsonValue::Object(x), JsonValue::Object(y)) => {
+            x.len() == y.len()
+                && x.iter()
+                    .all(|(k, v)| y.get(k).is_some_and(|other| same_json(v, other)))
+        }
+        _ => a == b,
+    }
+}
+
+fn same_json_number(x: &JsonNumber, y: &JsonNumber) -> bool {
+    // whole numbers first, so the ones f64 cannot hold still compare exactly
+    if let (Some(x), Some(y)) = (x.as_i64(), y.as_i64()) {
+        return x == y;
+    }
+    if let (Some(x), Some(y)) = (x.as_u64(), y.as_u64()) {
+        return x == y;
+    }
+    match (x.as_f64(), y.as_f64()) {
+        (Some(x), Some(y)) => x == y,
+        _ => false,
     }
 }
 
@@ -147,10 +186,38 @@ fn same_compound(a: &Compound, b: &Compound) -> bool {
 fn same_value(a: &Value, b: &Value) -> bool {
     match (a, b) {
         (Value::Compound(x), Value::Compound(y)) => same_compound(x, y),
-        (Value::List(ta, xs), Value::List(tb, ys)) => {
-            ta == tb && xs.len() == ys.len() && xs.iter().zip(ys).all(|(x, y)| same_value(x, y))
+        (Value::List(_, xs), Value::List(_, ys)) => {
+            xs.len() == ys.len() && xs.iter().zip(ys).all(|(x, y)| same_value(x, y))
         }
-        _ => a == b,
+        _ => {
+            if let (Some(x), Some(y)) = (as_int(a), as_int(b)) {
+                return x == y;
+            }
+            if let (Some(x), Some(y)) = (as_float(a), as_float(b)) {
+                return x == y;
+            }
+            a == b
+        }
+    }
+}
+
+/// A tag's numeric type is not the value, so `3f` and `3` match. Whole numbers
+/// are matched as integers to keep the ones f64 cannot hold exact.
+fn as_int(v: &Value) -> Option<i64> {
+    match v {
+        Value::Byte(x) => Some(*x as i64),
+        Value::Short(x) => Some(*x as i64),
+        Value::Int(x) => Some(*x as i64),
+        Value::Long(x) => Some(*x),
+        _ => None,
+    }
+}
+
+fn as_float(v: &Value) -> Option<f64> {
+    match v {
+        Value::Float(x) => Some(*x as f64),
+        Value::Double(x) => Some(*x),
+        _ => as_int(v).map(|x| x as f64),
     }
 }
 
@@ -361,5 +428,59 @@ mod tests {
     #[test]
     fn garbage_does_not_match() {
         assert_eq!(compare_structure(b"not nbt", b"also not nbt", false), None);
+    }
+
+    #[test]
+    fn json_float_and_int_spellings_match() {
+        let a = br#"{"type":"minecraft:uniform","max":3.0,"min":1.0}"#;
+        let b = br#"{"type":"minecraft:uniform","max":3,"min":1}"#;
+        assert_eq!(compare_json(a, b), Some(true));
+    }
+
+    #[test]
+    fn json_value_changes_are_still_changes() {
+        let a = br#"{"max":3.0}"#;
+        let b = br#"{"max":4}"#;
+        assert_eq!(compare_json(a, b), Some(false));
+    }
+
+    #[test]
+    fn json_keeps_big_integers_exact() {
+        // both sit past what f64 can tell apart
+        let a = br#"{"seed":9007199254740993}"#;
+        let b = br#"{"seed":9007199254740992}"#;
+        assert_eq!(compare_json(a, b), Some(false));
+    }
+
+    #[test]
+    fn json_missing_key_is_a_change() {
+        let a = br#"{"a":1,"b":2}"#;
+        let b = br#"{"a":1}"#;
+        assert_eq!(compare_json(a, b), Some(false));
+    }
+
+    #[test]
+    fn json_true_is_not_one() {
+        assert_eq!(compare_json(br#"{"a":true}"#, br#"{"a":1}"#), Some(false));
+    }
+
+    #[test]
+    fn broken_json_does_not_match() {
+        assert_eq!(compare_json(b"{", b"{"), None);
+    }
+
+    #[test]
+    fn nbt_numeric_tags_match_on_value() {
+        assert!(same_value(&Value::Float(3.0), &Value::Int(3)));
+        assert!(same_value(&Value::Byte(1), &Value::Long(1)));
+        assert!(!same_value(&Value::Float(3.5), &Value::Int(3)));
+        assert!(!same_value(&Value::Int(3), &Value::Str("3".into())));
+    }
+
+    #[test]
+    fn nbt_keeps_big_longs_exact() {
+        let a = Value::Long(9007199254740993);
+        let b = Value::Long(9007199254740992);
+        assert!(!same_value(&a, &b));
     }
 }

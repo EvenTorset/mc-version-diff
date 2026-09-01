@@ -2,8 +2,8 @@
 
 /**
  * `tasks` is a flat array with a stride of [`STRIDE`]:
- * kind (0 png, 1 nbt, 2 structure), aOffset, aLength, aMethod, bOffset,
- * bLength, bMethod, littleEndian.
+ * kind (0 png, 1 nbt, 2 structure, 3 json), aOffset, aLength, aMethod,
+ * bOffset, bLength, bMethod, littleEndian.
  * @param {Uint8Array} buffer
  * @param {Uint32Array} tasks
  * @returns {Uint8Array}

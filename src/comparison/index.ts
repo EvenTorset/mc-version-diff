@@ -164,6 +164,10 @@ export function compareStructure(a: CompareItem, b: CompareItem): Promise<boolea
   return getPool().run({ kind: 'structure', a, b })
 }
 
+export function compareJson(a: CompareItem, b: CompareItem): Promise<boolean> {
+  return getPool().run({ kind: 'json', a, b })
+}
+
 export function compareNbt(
   a: CompareItem,
   b: CompareItem,
