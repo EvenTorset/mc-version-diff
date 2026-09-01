@@ -45,7 +45,7 @@ const favorite = computed({
         />
       </template>
       <h3>Favorite Category</h3>
-      <p>Your favorite category will be opened automatically when opening a new diff.</p>
+      <p>Your favorite category will be opened automatically when opening a new comparison.</p>
     </Tooltip>
   </div>
 </template>
