@@ -56,7 +56,7 @@ function onBeforeLeave(el: Element) {
       :key="getItemKey(item)"
       class="transition-list-item"
     >
-      <slot :item="item" />
+      <slot :item="item"></slot>
     </div>
   </TransitionGroup>
 </template>

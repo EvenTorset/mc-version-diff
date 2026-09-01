@@ -1,5 +1,5 @@
 <template>
-  <button class="n-button icon lite-icon-button" type="button"><slot /></button>
+  <button class="n-button icon lite-icon-button" type="button"><slot></slot></button>
 </template>
 
 <style>

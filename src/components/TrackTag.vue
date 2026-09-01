@@ -9,7 +9,7 @@ defineProps<{
   <span class="track-tag" :style="{
     '--tag-color': color,
     '--tag-border-alpha': borderAlpha ?? 0.4,
-  }"><slot /></span>
+  }"><slot></slot></span>
 </template>
 
 <style>
