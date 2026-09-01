@@ -3,8 +3,8 @@
 //! by the blocks they hold, and JSON compared by its values. Anything malformed
 //! compares as false, matching how the worker treated a throw.
 
-use minecraft_block_reader::nbt::sorted;
 use minecraft_block_reader::{read_any, Compound, State, Structure, Value};
+use std::collections::BTreeMap;
 use png_pixel_cmp::compare_png_pixels;
 use serde_json::{Number as JsonNumber, Value as JsonValue};
 use wasm_bindgen::prelude::*;
@@ -173,14 +173,32 @@ fn same_opt(a: Option<&Compound>, b: Option<&Compound>) -> bool {
 }
 
 fn same_compound(a: &Compound, b: &Compound) -> bool {
-    if a.entries.len() != b.entries.len() {
-        return false;
-    }
-    let (a, b) = (sorted(a), sorted(b));
+    let (a, b) = (fields(a), fields(b));
     a.len() == b.len()
         && a.iter()
             .zip(b.iter())
             .all(|((ka, va), (kb, vb))| ka == kb && same_value(va, vb))
+}
+
+fn fields(c: &Compound) -> BTreeMap<&str, &Value> {
+    let loot = c.entries.iter().any(|(k, _)| k == "LootTable");
+    c.entries
+        .iter()
+        .filter(|(k, v)| !is_identity(k) && !(loot && is_empty_contents(k, v)))
+        .map(|(k, v)| (k.as_str(), v))
+        .collect()
+}
+
+fn is_identity(k: &str) -> bool {
+    matches!(k, "UUID" | "UUIDMost" | "UUIDLeast")
+}
+
+fn is_empty_contents(k: &str, v: &Value) -> bool {
+    match v {
+        Value::List(_, items) => k == "Items" && items.is_empty(),
+        Value::Compound(c) => k == "components" && c.entries.is_empty(),
+        _ => false,
+    }
 }
 
 fn same_value(a: &Value, b: &Value) -> bool {
@@ -482,5 +500,42 @@ mod tests {
         let a = Value::Long(9007199254740993);
         let b = Value::Long(9007199254740992);
         assert!(!same_value(&a, &b));
+    }
+
+    #[test]
+    fn a_uuid_is_not_content() {
+        let with = c(&[("id", Value::Str("minecraft:cushion".into())), ("UUID", Value::IntArray(vec![1, 2, 3, 4]))]);
+        let other = c(&[("id", Value::Str("minecraft:cushion".into())), ("UUID", Value::IntArray(vec![9, 9, 9, 9]))]);
+        let without = c(&[("id", Value::Str("minecraft:cushion".into()))]);
+        assert!(same_compound(&with, &other), "a rewritten uuid is not a change");
+        assert!(same_compound(&with, &without), "having one and not the other is not a change");
+    }
+
+    #[test]
+    fn an_unfilled_loot_container_matches_one_without_the_fields() {
+        let full = c(&[
+            ("LootTable", Value::Str("minecraft:chests/x".into())),
+            ("components", Value::Compound(Compound::default())),
+            ("Items", Value::List(10, vec![])),
+        ]);
+        let bare = c(&[("LootTable", Value::Str("minecraft:chests/x".into()))]);
+        assert!(same_compound(&full, &bare));
+    }
+
+    #[test]
+    fn an_empty_field_counts_everywhere_else() {
+        let full = c(&[("id", Value::Str("minecraft:chest".into())), ("Items", Value::List(10, vec![]))]);
+        let bare = c(&[("id", Value::Str("minecraft:chest".into()))]);
+        assert!(!same_compound(&full, &bare), "no loot table, so an empty list is not nothing");
+    }
+
+    #[test]
+    fn a_filled_loot_container_still_differs() {
+        let full = c(&[
+            ("LootTable", Value::Str("minecraft:chests/x".into())),
+            ("Items", Value::List(10, vec![Value::Compound(c(&[("id", Value::Str("stone".into()))]))])),
+        ]);
+        let bare = c(&[("LootTable", Value::Str("minecraft:chests/x".into()))]);
+        assert!(!same_compound(&full, &bare));
     }
 }
