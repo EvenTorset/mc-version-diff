@@ -8,6 +8,7 @@ export type SettingsType = {
   formatJSON: boolean
   cacheSizeMax: number
   enableCopyStatusButton: boolean
+  favoriteCategory: Record<string, string>
 }
 
 export const Settings = reactive<SettingsType>({
@@ -16,6 +17,7 @@ export const Settings = reactive<SettingsType>({
   formatJSON: false,
   cacheSizeMax: 157286400,
   enableCopyStatusButton: false,
+  favoriteCategory: {},
 })
 
 export function loadSettings() {
@@ -25,4 +27,5 @@ export function loadSettings() {
   Settings.formatJSON = !!(so?.formatJSON ?? Settings.formatJSON)
   Settings.cacheSizeMax = Number((so?.cacheSizeMax ?? Settings.cacheSizeMax))
   Settings.enableCopyStatusButton = !!(so?.enableCopyStatusButton ?? Settings.enableCopyStatusButton)
+  Settings.favoriteCategory = so?.favoriteCategory ?? Settings.favoriteCategory
 }

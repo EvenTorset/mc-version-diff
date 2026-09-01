@@ -28,6 +28,7 @@ import { resolveStaticOrAsync } from '@/util/resolveToStatic'
 import { focusedTab, focusedTrack, initTrackFocus } from '@/util/trackFocus'
 import type { ImageViewMode } from '@/types'
 import StateFilterToggle from '@/components/StateFilterToggle.vue'
+import { Settings } from '@/settings'
 
 const route = useRoute()
 const router = useRouter()
@@ -136,18 +137,23 @@ const states = computed<[DeltaTrackStateName, DeltaTrack[]][]>(() => {
   return out
 })
 
+const defaultCategory = computed(() => {
+  const favorite = Settings.favoriteCategory[route.params.provider as string]
+  return favorite && categories.value.some(e => e[0] === favorite) ? favorite ?? 'Overview' : 'Overview'
+})
+
 const selectedCategory = ref<string>(param('category') ?? '')
 watch(categories, newCategories => {
   if (!dr.value) return;
 
   const match = newCategories.find(([k, v]) =>
     v.length > 0 && k.toLowerCase() === selectedCategory.value.toLowerCase())
-  selectedCategory.value = match ? match[0] : 'Overview'
+  selectedCategory.value = match ? match[0] : defaultCategory.value
 })
 
 watch(() => param('category'), value => {
   if (!value) {
-    if (selectedCategory.value !== 'Overview') selectedCategory.value = 'Overview'
+    if (selectedCategory.value !== defaultCategory.value) selectedCategory.value = defaultCategory.value
     return
   }
   const match = categories.value.find(([ name, tracks ]) =>
@@ -236,7 +242,7 @@ const filteredDR = computed<DeltaResult | undefined>(() => {
 const urlState = computed(() => {
   const query: Record<string, string> = {}
 
-  if (selectedCategory.value && selectedCategory.value !== 'Overview') {
+  if (selectedCategory.value && selectedCategory.value !== defaultCategory.value) {
     query.category = selectedCategory.value.toLowerCase()
   }
   if (debouncedPathFilter.value) query.search = debouncedPathFilter.value
@@ -578,7 +584,7 @@ onMounted(() => {
 
 .category-list {
   display: grid;
-  grid-template-columns: var(--count-col-width, auto) 1fr;
+  grid-template-columns: var(--count-col-width, auto) 1fr auto;
   column-gap: 6px;
   transition: grid-template-columns 250ms;
 }

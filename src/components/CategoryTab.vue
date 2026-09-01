@@ -1,12 +1,27 @@
 <script setup lang="ts">
 import { NIcon } from 'naive-ui'
-import { Triangle12Regular } from '@vicons/fluent'
+import { Star12Filled, Star12Regular, Triangle12Regular } from '@vicons/fluent'
+import Tooltip from './Tooltip.vue'
+import { useRoute } from 'vue-router'
+import { Settings } from '@/settings'
+import { computed } from 'vue'
 
 defineProps<{
   count: number
   name: string
   selected: boolean
 }>()
+
+const route = useRoute()
+const provider = computed(() => route.params.provider as string)
+const favorite = computed({
+  get() {
+    return Settings.favoriteCategory[provider.value] ?? 'Overview'
+  },
+  set(value) {
+    Settings.favoriteCategory[provider.value] = value
+  },
+})
 </script>
 
 <template>
@@ -20,6 +35,18 @@ defineProps<{
     />
     <div v-else class="category-tab-count">{{ count }}</div>
     <div class="category-tab-name">{{ name }}</div>
+    <Tooltip>
+      <template #trigger="{ props }">
+        <NIcon
+          v-bind="props"
+          class="favorite-button"
+          @click.stop="favorite = name"
+          :component="favorite === name ? Star12Filled : Star12Regular"
+        />
+      </template>
+      <h3>Favorite Category</h3>
+      <p>Your favorite category will be opened automatically when opening a new diff.</p>
+    </Tooltip>
   </div>
 </template>
 
@@ -43,6 +70,19 @@ defineProps<{
   font-size: 16px;
   transition: color .15s ease-out;
   line-height: 1;
+}
+
+.favorite-button {
+  opacity: 0;
+  transition: opacity 200ms;
+  color: var(--color-6);
+  z-index: 1;
+  padding: 4px;
+  margin: -4px;
+
+  &:hover {
+    color: var(--color-7);
+  }
 }
 
 .category-tab {
@@ -111,6 +151,10 @@ defineProps<{
 
     .category-tab-count {
       color: oklch(from var(--color-accent) calc(l * 1.2) c h);
+    }
+
+    .favorite-button {
+      opacity: 1;
     }
   }
 
