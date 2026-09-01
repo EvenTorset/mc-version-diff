@@ -4,12 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 wasm-bindgen = "0.2"
 zune-inflate = "0.2"
 png-pixel-cmp = { git = "https://github.com/EvenTorset/png-pixel-cmp.git" }
+minecraft-block-reader = { git = "https://github.com/ewanhowell5195/minecraft-block-reader.git" }
 
 [profile.release]
 opt-level = 3

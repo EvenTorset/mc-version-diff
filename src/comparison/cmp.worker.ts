@@ -6,6 +6,7 @@ self.addEventListener('unhandledrejection', e => console.error('unhandled reject
 const ready = init({ module_or_path: wasmUrl })
 
 const STRIDE = 8
+const KIND = { png: 0, nbt: 1, structure: 2 } as const
 
 export type CompareItem = {
   compressedContent: Uint8Array<ArrayBuffer>
@@ -15,10 +16,11 @@ export type CompareItem = {
 export type CompareTask =
   | { kind: 'png'; a: CompareItem; b: CompareItem }
   | { kind: 'nbt'; a: CompareItem; b: CompareItem; littleEndian?: boolean }
+  | { kind: 'structure'; a: CompareItem; b: CompareItem }
 
 export type BatchTask = {
   id: number
-  kind: 'png' | 'nbt'
+  kind: 'png' | 'nbt' | 'structure'
   littleEndian?: boolean
   aOffset: number
   aLength: number
@@ -52,7 +54,7 @@ self.onmessage = async (event: MessageEvent<WorkerComparePayload>) => {
   for (let i = 0; i < tasks.length; i++) {
     const task = tasks[i]
     const o = i * STRIDE
-    flat[o] = task.kind === 'png' ? 0 : 1
+    flat[o] = KIND[task.kind]
     flat[o + 1] = task.aOffset
     flat[o + 2] = task.aLength
     flat[o + 3] = task.aMethod
@@ -61,7 +63,6 @@ self.onmessage = async (event: MessageEvent<WorkerComparePayload>) => {
     flat[o + 6] = task.bMethod
     flat[o + 7] = task.littleEndian ? 1 : 0
   }
-
   const same = compare_batch(new Uint8Array(data), flat)
   const results: WorkerCompareResult[] = tasks.map((task, i) => ({ id: task.id, same: same[i] === 1 }))
 
