@@ -155,7 +155,7 @@ watch(categories, newCategories => {
 
 watch(() => param('category'), value => {
   if (!value) {
-    if (selectedCategory.value !== defaultCategory.value) selectedCategory.value = defaultCategory.value
+    if (selectedCategory.value !== 'Overview') selectedCategory.value = 'Overview'
     return
   }
   const match = categories.value.find(([ name, tracks ]) =>
@@ -264,7 +264,7 @@ const drFilteredSorted = computed<DeltaResult | undefined>(() => {
 const urlState = computed(() => {
   const query: Record<string, string> = {}
 
-  if (selectedCategory.value && selectedCategory.value !== defaultCategory.value) {
+  if (selectedCategory.value) {
     query.category = selectedCategory.value.toLowerCase()
   }
   if (debouncedPathFilter.value) query.search = debouncedPathFilter.value
