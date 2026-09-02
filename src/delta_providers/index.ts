@@ -29,8 +29,6 @@ export type DeltaProviderCategory = {
   expand?: boolean
   /** If true, enables the image display settings panel while the category is selected */
   isImages?: boolean
-  /** Including this enables the copy button(s) on the track */
-  mimeType?: (path: string) => string
   /** Used to check if a track belongs to this category */
   test(dr: DeltaResult, track: DeltaTrack): boolean
 }

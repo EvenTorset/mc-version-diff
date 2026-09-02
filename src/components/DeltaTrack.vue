@@ -16,7 +16,7 @@ import MarkFilePathChanges from './MarkFilePathChanges.vue'
 import { basename } from '@/util/path.ts'
 import { saveAs } from 'file-saver'
 import Tooltip from './Tooltip.vue'
-import { copyToClipboard } from '@/util/clipboard.ts'
+import { getCopier } from '@/util/clipboard.ts'
 import { holdFocus, isInitialFocus } from '@/util/trackFocus.ts'
 import { computed } from 'vue'
 import Notify from '@/notify.tsx'
@@ -28,6 +28,7 @@ const props = defineProps<{
 }>()
 
 const category = computed(() => props.dr.getCategory(props.track))
+const copyFunc = computed(() => getCopier(props.track))
 
 let restoredFocus = isInitialFocus(props.track.id)
 
@@ -141,7 +142,7 @@ async function copy(version: 'a' | 'b') {
     return;
   }
   try {
-    await copyToClipboard(content, category.value?.mimeType?.(props.track[version]) ?? 'text/plain')
+    await copyFunc.value?.(content)
     Notify.success({
       duration: 2000,
       content: 'File copied to clipboard.',
@@ -218,7 +219,7 @@ async function copy(version: 'a' | 'b') {
       <div class="delta-track-spacer" @click="expanded = !expanded"></div>
       <div v-if="interacted" class="delta-track-action-buttons">
         <Tooltip v-if="
-          category?.mimeType && (
+          copyFunc && (
             track.state === DeltaTrackState.Removed ||
             track.state === DeltaTrackState.Edited
           )
@@ -241,7 +242,7 @@ async function copy(version: 'a' | 'b') {
           <p><b>{{ basename(track.a) }}</b> from <b>{{ dr.a }}</b></p>
         </Tooltip>
         <Tooltip v-if="
-          category?.mimeType && (
+          copyFunc && (
             track.state === DeltaTrackState.Added ||
             track.state === DeltaTrackState.Edited ||
             track.state === DeltaTrackState.Moved
