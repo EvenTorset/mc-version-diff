@@ -4,9 +4,11 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 const props = withDefaults(defineProps<{
   duration?: number
   show?: boolean
+  immediateInit?: boolean
 }>(), {
   duration: 200,
   show: true,
+  immediateInit: false,
 })
 
 const emit = defineEmits<{
@@ -107,14 +109,15 @@ onMounted(() => {
   const wrapperEl = wrapper.value!
   const contentEl = content.value!
 
-  wrapperEl.style.overflow = 'hidden'
+  wrapperEl.style.overflowY = 'clip'
 
   if (!props.show) {
     wrapperEl.style.height = '0px'
     currentHeight = 0
-  } else if (props.duration <= 0) {
+  } else if (props.immediateInit || props.duration <= 0) {
     wrapperEl.style.transition = `height ${props.duration}ms ease`
     wrapperEl.style.height = 'auto'
+    currentHeight = contentEl.getBoundingClientRect().height
     emitEnd()
   } else {
     wrapperEl.style.height = '0px'

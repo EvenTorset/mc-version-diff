@@ -1,19 +1,19 @@
 <script setup lang="ts" generic="T extends Record<string, any>">
+import type { CSSProperties } from 'vue'
+
 type KeyField<T> = keyof T | ((item: T) => string | number | symbol)
 
-const props = withDefaults(
-  defineProps<{
-    items: T[]
-    keyField?: KeyField<T>
-    tag?: string
-    name?: string
-  }>(),
-  {
-    keyField: 'id' as keyof T,
-    tag: 'div',
-    name: 'transition-list',
-  }
-)
+const props = withDefaults(defineProps<{
+  items: T[]
+  keyField?: KeyField<T>
+  tag?: string
+  name?: string
+  itemStyle?: string | CSSProperties
+}>(), {
+  keyField: 'id' as keyof T,
+  tag: 'div',
+  name: 'transition-list',
+})
 
 function getItemKey(item: T): string | number | symbol {
   if (typeof props.keyField === 'function') {
@@ -55,6 +55,7 @@ function onBeforeLeave(el: Element) {
       v-for="item in items"
       :key="getItemKey(item)"
       class="transition-list-item"
+      :style="itemStyle"
     >
       <slot :item="item"></slot>
     </div>

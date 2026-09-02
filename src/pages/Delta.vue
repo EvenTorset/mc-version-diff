@@ -31,6 +31,7 @@ import StateFilterToggle from '@/components/StateFilterToggle.vue'
 import { Settings } from '@/settings'
 import { errorMessage } from '@/util/errorMessage'
 import { naturalCompare } from '@/util/sort'
+import CardSectionHeader from '@/components/CardSectionHeader.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -181,7 +182,7 @@ const categoryHasAnimations = computed(() => animationCategories.value.has(selec
 
 const imageDisplayOptions = computed(() => [
   ...isImageCategory.value ? [
-    { id: 'modes', heading: 'Channels' },
+    { id: 'modes', heading: 'Image Channels' },
     { id: 'animate', heading: 'Animation' },
   ] : [],
   ...categoryHasAnimations.value ? [ { id: 'preview', heading: 'Animation' } ] : [],
@@ -364,171 +365,175 @@ onMounted(() => {
               }" :weight="1.4" />
             </RouterLink>
           </Row>
-          <NCard v-if="dr.tracks.length > 0" title="Filter & Sort" :style="{
+          <NCard :style="{
             width: 'calc(100% - 24px)',
           }">
-            <Col gap="8px" align="stretch">
-              <NInput
-                clearable
-                placeholder="File path..."
-                ref="findInput"
-                @vue:mounted="onFindInputMounted"
-                v-model:value="pathFilter"
-              >
-                <template #clear-icon>
-                  <Tooltip>
-                    <template #trigger="{ props }">
-                      <NButton v-bind="props" class="icon" circle size="small">
-                        <template #icon>
-                          <Eraser20Filled />
+            <AnimatedHeight :duration="350" immediate-init>
+              <Col gap="8px" align="stretch">
+                <template v-if="dr.tracks.length > 0">
+                  <CardSectionHeader text="Filter" />
+                  <NInput
+                    clearable
+                    placeholder="File path..."
+                    ref="findInput"
+                    @vue:mounted="onFindInputMounted"
+                    v-model:value="pathFilter"
+                  >
+                    <template #clear-icon>
+                      <Tooltip>
+                        <template #trigger="{ props }">
+                          <NButton v-bind="props" class="icon" circle size="small">
+                            <template #icon>
+                              <Eraser20Filled />
+                            </template>
+                          </NButton>
                         </template>
-                      </NButton>
+                        Clear
+                      </Tooltip>
                     </template>
-                    Clear
-                  </Tooltip>
-                </template>
-                <template #suffix>
-                  <Tooltip>
-                    <template #trigger="{ props }">
-                      <NButton
-                        v-bind="props"
-                        circle
-                        class="icon"
-                        :class="{
-                          selected: findRegex,
-                          accent: findRegex,
-                        }"
-                        size="small"
-                        :bordered="false"
-                        @click="findRegex = !findRegex"
-                      >
-                        <template #icon>
-                          <TextPeriodAsterisk20Filled />
+                    <template #suffix>
+                      <Tooltip>
+                        <template #trigger="{ props }">
+                          <NButton
+                            v-bind="props"
+                            circle
+                            class="icon"
+                            :class="{
+                              selected: findRegex,
+                              accent: findRegex,
+                            }"
+                            size="small"
+                            :bordered="false"
+                            @click="findRegex = !findRegex"
+                          >
+                            <template #icon>
+                              <TextPeriodAsterisk20Filled />
+                            </template>
+                          </NButton>
                         </template>
-                      </NButton>
+                        Use Regular Expression
+                      </Tooltip>
                     </template>
-                    Use Regular Expression
-                  </Tooltip>
-                </template>
-              </NInput>
-              <Row align="stretch">
-                <template v-for="[name, tracks] in states">
-                  <StateFilterToggle
-                    :name
-                    :count="tracks.length"
-                    v-model="stateFilter"
-                  />
-                </template>
-              </Row>
-              <div class="panel-heading">Sort</div>
-              <Row>
-                <NSelect
-                  style="flex: 2; overflow: hidden; user-select: none;"
-                  :consistent-menu-width="false"
-                  v-model:value="sortBy"
-                  :options="[
-                    {
-                      label: 'State > file path',
-                      value: 'state_file_path',
-                    },
-                    {
-                      label: 'File path',
-                      value: 'file_path',
-                    },
-                    {
-                      label: 'Size difference',
-                      value: 'size',
-                    },
-                    {
-                      label: 'Absolute size difference',
-                      value: 'abs_size',
-                    },
-                  ]"
-                />
-                <NSelect
-                  style="flex: 1; overflow: hidden; user-select: none;"
-                  :consistent-menu-width="false"
-                  v-model:value="sortDir"
-                  :options="[
-                    {
-                      label: 'Ascending',
-                      value: 'asc',
-                    },
-                    {
-                      label: 'Descending',
-                      value: 'desc',
-                    },
-                  ]"
-                />
-              </Row>
-            </Col>
-          </NCard>
-          <NCard title="Categories" :style="{
-            width: 'calc(100% - 24px)',
-          }">
-            <Col align="stretch" gap="0">
-              <AnimatedHeight style="overflow: visible;">
-                <TransitionList
-                  :items="categories"
-                  :key-field="0"
-                  class="category-list"
-                  :style="{ '--count-col-width': countColWidth }"
-                >
-                  <template #default="{ item: [ name, tracks ] }">
-                    <CategoryTab
-                      v-if="tracks.length > 0 || name === 'Overview'"
-                      :count="tracks.length"
-                      :name
-                      :selected="selectedCategory === name"
-                      @click="selectedCategory = name"
+                  </NInput>
+                  <Row align="stretch">
+                    <template v-for="[name, tracks] in states">
+                      <StateFilterToggle
+                        :name
+                        :count="tracks.length"
+                        v-model="stateFilter"
+                      />
+                    </template>
+                  </Row>
+                  <CardSectionHeader text="Sort" />
+                  <Row>
+                    <NSelect
+                      style="flex: 2; overflow: hidden; user-select: none;"
+                      :consistent-menu-width="false"
+                      v-model:value="sortBy"
+                      :options="[
+                        {
+                          label: 'State > file path',
+                          value: 'state_file_path',
+                        },
+                        {
+                          label: 'File path',
+                          value: 'file_path',
+                        },
+                        {
+                          label: 'Size difference',
+                          value: 'size',
+                        },
+                        {
+                          label: 'Absolute size difference',
+                          value: 'abs_size',
+                        },
+                      ]"
                     />
-                  </template>
-                </TransitionList>
-              </AnimatedHeight>
-            </Col>
-          </NCard>
-          <Transition name="slide-fade">
-            <NCard
-              v-if="imageDisplayOptions.length > 0"
-              class="image-display"
-              title="Image Display"
-              :style="{
-                width: 'calc(100% - 24px)',
-              }"
-            >
-              <AnimatedHeight :duration="350">
-                <TransitionList :items="imageDisplayOptions" :style="{
-                  display: 'flex',
-                  flexFlow: 'column',
-                  gap: '12px',
-                }">
-                  <template #default="{ item }">
-                    <div v-if="imageDisplayOptions.length > 1" class="panel-heading">{{ item.heading }}</div>
-                    <NRadioGroup v-if="item.id === 'modes'" v-model:value="imageViewMode">
-                      <div :style="{
-                        display: 'grid',
-                        gridTemplateColumns: '1fr 1fr 1fr',
-                      }">
-                        <NRadio value="rgba" label="RGBA" />
-                        <NRadio value="rgb" label="RGB" />
-                        <NRadio value="a" label="Alpha" />
+                    <NSelect
+                      style="flex: 1; overflow: hidden; user-select: none;"
+                      :consistent-menu-width="false"
+                      v-model:value="sortDir"
+                      :options="[
+                        {
+                          label: 'Ascending',
+                          value: 'asc',
+                        },
+                        {
+                          label: 'Descending',
+                          value: 'desc',
+                        },
+                      ]"
+                    />
+                  </Row>
+                </template>
+                <CardSectionHeader text="Categories" />
+                <Col align="stretch" gap="0">
+                  <AnimatedHeight style="overflow: visible;">
+                    <TransitionList
+                      :items="categories"
+                      :key-field="0"
+                      class="category-list"
+                      :style="{ '--count-col-width': countColWidth }"
+                    >
+                      <template #default="{ item: [ name, tracks ] }">
+                        <CategoryTab
+                          v-if="tracks.length > 0 || name === 'Overview'"
+                          :count="tracks.length"
+                          :name
+                          :selected="selectedCategory === name"
+                          @click="selectedCategory = name"
+                        />
+                      </template>
+                    </TransitionList>
+                  </AnimatedHeight>
+                </Col>
+                <Transition name="pass-up-fade">
+                  <div v-if="imageDisplayOptions.length > 0">
+                    <TransitionList :items="imageDisplayOptions" :style="{
+                      display: 'flex',
+                      flexFlow: 'column',
+                      gap: '12px',
+                    }" :item-style="{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                    }">
+                      <template #default="{ item }">
+                        <CardSectionHeader v-if="imageDisplayOptions.length > 1" :text="item.heading" />
+                        <NRadioGroup v-if="item.id === 'modes'" v-model:value="imageViewMode">
+                          <div :style="{
+                            display: 'grid',
+                            gridTemplateColumns: '1fr 1fr 1fr',
+                            marginLeft: '-4px',
+                          }">
+                            <NRadio value="rgba" label="RGBA" />
+                            <NRadio value="rgb" label="RGB" />
+                            <NRadio value="a" label="Alpha" />
 
-                        <NRadio value="r" label="Red" />
-                        <NRadio value="g" label="Green" />
-                        <NRadio value="b" label="Blue" />
-                      </div>
-                    </NRadioGroup>
-                    <NCheckbox
-                      v-else-if="item.id === 'animate'"
-                      v-model:checked="animateTextures"
-                      label="Animate textures"
-                    />
-                    <NCheckbox v-else v-model:checked="mcmetaTexture" label="Show animation texture" />
-                  </template>
-                </TransitionList>
-              </AnimatedHeight>
-            </NCard>
-          </Transition>
+                            <NRadio value="r" label="Red" />
+                            <NRadio value="g" label="Green" />
+                            <NRadio value="b" label="Blue" />
+                          </div>
+                        </NRadioGroup>
+                        <NCheckbox
+                          v-else-if="item.id === 'animate'"
+                          v-model:checked="animateTextures"
+                          label="Animate textures"
+                          style="margin-left: -4px;"
+                        />
+                        <NCheckbox
+                          v-else
+                          v-model:checked="mcmetaTexture"
+                          label="Show animation texture"
+                          style="margin-left: -4px;"
+                        />
+                      </template>
+                    </TransitionList>
+                  </div>
+                </Transition>
+              </Col>
+            </AnimatedHeight>
+          </NCard>
         </Col>
         <Col align="stretch" class="main-content-container">
           <div class="category-transition-container">
@@ -646,6 +651,10 @@ onMounted(() => {
   overflow-y: auto;
   padding: 20px 0 40px;
   box-sizing: border-box;
+
+  .n-card>:deep(.n-card-content) {
+    padding: 0 16px 20px;
+  }
 }
 
 .category-list {
