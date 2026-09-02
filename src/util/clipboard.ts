@@ -1,4 +1,4 @@
-import type { DeltaResult, DeltaTrack } from '@/delta_providers'
+import type { DeltaTrack } from '@/delta_providers'
 import { extname } from './path'
 
 export async function copyToClipboard(bytes: Uint8Array<ArrayBuffer> | Blob, mimeType: string) {
