@@ -7,6 +7,8 @@ export type DeltaTrack = {
   state: DeltaTrackState
   a: string
   b: string
+  sizeDiff: number
+  absSizeDiff: number
 }
 
 export type DeltaResult = {

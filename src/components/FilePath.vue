@@ -69,7 +69,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
-  min-width: 0;
+  min-width: 32px;
   white-space: nowrap;
   direction: rtl;
   text-align: left;

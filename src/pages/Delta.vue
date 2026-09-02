@@ -5,7 +5,7 @@ import VersionDiffLogo from '@/components/VersionDiffLogo.vue'
 import type { DeltaProvider, DeltaProviderCategory, DeltaResult, DeltaTrack } from '@/delta_providers'
 import { getDeltaProvider } from '@/delta_providers/registry'
 import { getTrackCategory } from '@/delta_providers/category'
-import { NButton, NCard, NCheckbox, NInput, NRadio, NRadioGroup, NSpin, type InputInst } from 'naive-ui'
+import { NButton, NCard, NCheckbox, NInput, NRadio, NRadioGroup, NSelect, NSpin, type InputInst } from 'naive-ui'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Row from '@/components/Row.vue'
@@ -29,13 +29,15 @@ import { focusedTab, focusedTrack, initTrackFocus } from '@/util/trackFocus'
 import type { ImageViewMode } from '@/types'
 import StateFilterToggle from '@/components/StateFilterToggle.vue'
 import { Settings } from '@/settings'
+import { errorMessage } from '@/util/errorMessage'
+import { naturalCompare } from '@/util/sort'
 
 const route = useRoute()
 const router = useRouter()
 
-function param(key: string) {
+function param<T extends string>(key: string): T | undefined {
   const value = route.query[key]
-  return typeof value === 'string' ? value : undefined
+  return typeof value === 'string' ? value as T : undefined
 }
 
 initTrackFocus(param('file'), param('tab'))
@@ -200,6 +202,9 @@ const pathFilter = ref<string>(param('search') ?? '')
 const debouncedPathFilter = ref<string>(pathFilter.value)
 let debounceTimer: ReturnType<typeof setTimeout> | undefined
 
+const sortBy = ref<'state_file_path' | 'file_path' | 'size' | 'abs_size'>(param('sortBy') ?? 'state_file_path')
+const sortDir = ref<'asc' | 'desc'>(param('sortDir') ?? 'asc')
+
 watch(pathFilter, (newVal) => {
   clearTimeout(debounceTimer)
   debounceTimer = setTimeout(() => {
@@ -227,7 +232,24 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown)
 })
 
-const filteredDR = computed<DeltaResult | undefined>(() => {
+const baseSortFunc = computed<(a: DeltaTrack, b: DeltaTrack) => number>(() => {
+  switch (sortBy.value) {
+    case 'state_file_path': return (a, b) => a.state - b.state || naturalCompare(a.id, b.id)
+    case 'file_path': return (a, b) => naturalCompare(a.id, b.id)
+    case 'size': return (a, b) => a.sizeDiff - b.sizeDiff
+    case 'abs_size': return (a, b) => a.absSizeDiff - b.absSizeDiff
+  }
+})
+
+const sortFunc = computed(() => {
+  if (sortDir.value === 'asc') {
+    return baseSortFunc.value
+  } else {
+    return (a, b) => baseSortFunc.value(b, a)
+  }
+})
+
+const drFilteredSorted = computed<DeltaResult | undefined>(() => {
   const dr_ = dr.value
   if (!dr_) return undefined
 
@@ -235,7 +257,7 @@ const filteredDR = computed<DeltaResult | undefined>(() => {
 
   return {
     ...dr_,
-    tracks: activeCategory ? [...activeCategory[1]] : [],
+    tracks: activeCategory ? activeCategory[1].toSorted(sortFunc.value) : [],
   }
 })
 
@@ -260,6 +282,9 @@ const urlState = computed(() => {
   if (focusedTrack.value) query.file = focusedTrack.value
   if (focusedTab.value) query.tab = focusedTab.value
 
+  if (sortBy.value !== 'state_file_path') query.sortBy = sortBy.value
+  if (sortDir.value !== 'asc') query.sortDir = sortDir.value
+
   return query
 })
 
@@ -283,7 +308,7 @@ onMounted(async () => {
     prefetchRenderers()
   } catch (err: any) {
     Notify.error({
-      content: err?.message ?? err?.toString() ?? 'Unknown error.'
+      content: errorMessage(err)
     })
     router.replace({ name: 'home' })
   }
@@ -339,7 +364,7 @@ onMounted(() => {
               }" :weight="1.4" />
             </RouterLink>
           </Row>
-          <NCard v-if="dr.tracks.length > 0" title="Filter" :style="{
+          <NCard v-if="dr.tracks.length > 0" title="Filter & Sort" :style="{
             width: 'calc(100% - 24px)',
           }">
             <Col gap="8px" align="stretch">
@@ -394,6 +419,47 @@ onMounted(() => {
                     v-model="stateFilter"
                   />
                 </template>
+              </Row>
+              <div class="panel-heading">Sort</div>
+              <Row>
+                <NSelect
+                  style="flex: 2; overflow: hidden; user-select: none;"
+                  :consistent-menu-width="false"
+                  v-model:value="sortBy"
+                  :options="[
+                    {
+                      label: 'State > file path',
+                      value: 'state_file_path',
+                    },
+                    {
+                      label: 'File path',
+                      value: 'file_path',
+                    },
+                    {
+                      label: 'Size difference',
+                      value: 'size',
+                    },
+                    {
+                      label: 'Absolute size difference',
+                      value: 'abs_size',
+                    },
+                  ]"
+                />
+                <NSelect
+                  style="flex: 1; overflow: hidden; user-select: none;"
+                  :consistent-menu-width="false"
+                  v-model:value="sortDir"
+                  :options="[
+                    {
+                      label: 'Ascending',
+                      value: 'asc',
+                    },
+                    {
+                      label: 'Descending',
+                      value: 'desc',
+                    },
+                  ]"
+                />
               </Row>
             </Col>
           </NCard>
@@ -487,7 +553,7 @@ onMounted(() => {
                 :key="selectedCategory"
                 style="container-type: inline-size;"
               >
-                <TreeList :dr="filteredDR ?? dr" />
+                <TreeList :dr="drFilteredSorted ?? dr" />
               </div>
             </Transition>
           </div>

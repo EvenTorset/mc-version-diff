@@ -518,6 +518,8 @@ const provider: DeltaProvider<MCJEVersionContent> = {
             state: DeltaTrackState.Edited,
             a: path,
             b: path,
+            sizeDiff: entryB.size - entryA.size,
+            absSizeDiff: Math.abs(entryB.size - entryA.size),
           })
         }
       } else {
@@ -554,6 +556,8 @@ const provider: DeltaProvider<MCJEVersionContent> = {
           state: DeltaTrackState.Moved,
           a: match.path,
           b: newFile.path,
+          sizeDiff: 0,
+          absSizeDiff: 0,
         })
         matchedFromA.add(match.path)
         matchedNewInB.add(newFile.path)
@@ -567,6 +571,8 @@ const provider: DeltaProvider<MCJEVersionContent> = {
           state: DeltaTrackState.Added,
           a: '',
           b: newFile.path,
+          sizeDiff: newFile.entry.size,
+          absSizeDiff: newFile.entry.size,
         })
       }
     }
@@ -578,6 +584,8 @@ const provider: DeltaProvider<MCJEVersionContent> = {
           state: DeltaTrackState.Removed,
           a: oldFile.path,
           b: '',
+          sizeDiff: -oldFile.entry.size,
+          absSizeDiff: oldFile.entry.size,
         })
       }
     }

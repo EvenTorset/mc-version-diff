@@ -20,6 +20,7 @@ import { copyToClipboard } from '@/util/clipboard.ts'
 import { holdFocus, isInitialFocus } from '@/util/trackFocus.ts'
 import { computed } from 'vue'
 import Notify from '@/notify.tsx'
+import SizeDiff from './SizeDiff.vue'
 
 const props = defineProps<{
   track: DeltaTrack
@@ -206,7 +207,16 @@ async function copy(version: 'a' | 'b') {
         />
       </Col>
       <FilePath v-else :path="track.id"/>
-      <div style="width: 16px;"></div>
+      <div v-if="track.state === DeltaTrackState.Moved" style="min-width: 16px;"></div>
+      <SizeDiff
+          v-else
+        :diff="track.sizeDiff"
+        :style="{
+          userSelect: 'none',
+          pointerEvents: 'none',
+          minWidth: 'fit-content',
+        }"
+      />
       <div class="delta-track-spacer" @click="expanded = !expanded"></div>
       <div v-if="interacted" class="delta-track-action-buttons">
         <Tooltip v-if="
