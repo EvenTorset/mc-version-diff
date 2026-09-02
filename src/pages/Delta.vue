@@ -164,6 +164,18 @@ watch(() => param('category'), value => {
   if (match && match[0] !== selectedCategory.value) selectedCategory.value = match[0]
 })
 
+let pendingScrollReset = false
+
+watch(selectedCategory, () => {
+  pendingScrollReset = true
+})
+
+function onCategoryTransitionEnd() {
+  if (!pendingScrollReset) return
+  pendingScrollReset = false
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
 const isImageCategory = computed(() =>
   !!provCategories.value.find(c => c.name === selectedCategory.value)?.isImages)
 
@@ -537,7 +549,7 @@ onMounted(() => {
         </Col>
         <Col align="stretch" class="main-content-container">
           <div class="category-transition-container">
-            <Transition name="category-fade">
+            <Transition name="category-fade" @after-enter="onCategoryTransitionEnd">
               <Col
                 v-if="selectedCategory === 'Overview'"
                 key="Overview"
