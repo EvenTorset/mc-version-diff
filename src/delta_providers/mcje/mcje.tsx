@@ -532,11 +532,11 @@ const provider: DeltaProvider<MCJEVersionContent> = {
 
     type RemovedFile = { index: number, path: string, ext: string }
     const removedByHash = new Map<number, RemovedFile[]>()
-    missingFromA.forEach(({ path, entry }, index) => {
+    for (const [ i, { path, entry } ] of missingFromA.entries()) {
       let list = removedByHash.get(entry.crc32)
       if (!list) removedByHash.set(entry.crc32, list = [])
-      list.push({ index, path, ext: getFileExt(path) })
-    })
+      list.push({ index: i, path, ext: getFileExt(path) })
+    }
 
     for (const newFile of unmatchedNewInB) {
       const newExt = getFileExt(newFile.path)

@@ -324,10 +324,10 @@ function updateCountWidth() {
     if (!countEls.length) return
 
     let max = 0
-    countEls.forEach(el => {
+    for (const el of countEls) {
       const width = el.scrollWidth
       if (width > max) max = width
-    })
+    }
 
     if (max > 0) {
       countColWidth.value = `${Math.ceil(max)}px`

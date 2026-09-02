@@ -81,9 +81,9 @@ function diffEntries(before: LootRuleEntry[], after: LootRuleEntry[]): EntryRow[
     const match = after[index]
     rows.push({ state: sameEntry(entry, match) ? 'same' : 'changed', before: entry, after: match })
   }
-  after.forEach((entry, i) => {
+  for (const [i, entry] of after.entries()) {
     if (!taken.has(i)) rows.push({ state: 'added', before: null, after: entry })
-  })
+  }
   return rows
 }
 

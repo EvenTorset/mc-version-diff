@@ -68,9 +68,9 @@ const numbered = computed(() => {
 
   const added: Array<{ entry: TagEntry, number: number }> = []
   const unchanged: Array<{ entry: TagEntry, number: number }> = []
-  current.forEach((item, i) => {
+  for (const [i, item] of current.entries()) {
     (item.matched ? unchanged : added).push({ entry: item.entry, number: i + 1 })
-  })
+  }
 
   const removed = classify(props.original!.values, props.modified!.values)
     .map((item, i) => ({ entry: item.entry, matched: item.matched, number: i + 1 }))

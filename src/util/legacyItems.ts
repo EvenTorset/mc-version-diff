@@ -27,20 +27,20 @@ const VARIANTS: Record<string, string> = {
   'double_plant#5': 'paeonia',
 }
 for (const family of COLOR_FAMILIES) {
-  COLORS.forEach((color, i) => VARIANTS[`${family}#${i}`] = `${color}_${family}`)
+  for (const [ i, color ] of COLORS.entries()) VARIANTS[`${family}#${i}`] = `${color}_${family}`
 }
-DYES.forEach((dye, i) => VARIANTS[`dye#${i}`] = `dye_${dye}`)
-FISH.forEach((fish, i) => {
+for (const [ i, dye ] of DYES.entries()) VARIANTS[`dye#${i}`] = `dye_${dye}`
+for (const [ i, fish ] of DYES.entries()) {
   VARIANTS[`fish#${i}`] = fish
   if (i < 2) VARIANTS[`cooked_fish#${i}`] = `cooked_${fish}`
-})
-WOODS.forEach((wood, i) => {
+}
+for (const [ i, wood ] of DYES.entries()) {
   VARIANTS[`planks#${i}`] = `${wood}_planks`
   VARIANTS[`wooden_slab#${i}`] = `${wood}_slab`
   VARIANTS[`sapling#${i}`] = `${wood}_sapling`
   VARIANTS[`leaves${i < 4 ? '' : '2'}#${i % 4}`] = `${wood}_leaves`
   if (i < 4) VARIANTS[`log#${i}`] = `${wood}_log`
-})
+}
 VARIANTS['log2#0'] = 'acacia_log'
 VARIANTS['log2#1'] = 'dark_oak_log'
 
