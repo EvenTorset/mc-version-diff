@@ -97,6 +97,13 @@ const tracksFilteredByStateAndPath = computed<DeltaTrack[]>(() => {
   return ranked
 })
 
+const searchRank = computed(() => {
+  const rank = new Map<DeltaTrack, number>()
+  if (!debouncedPathFilter.value.trim()) return rank
+  tracksFilteredByStateAndPath.value.forEach((track, i) => rank.set(track, i))
+  return rank
+})
+
 const categoriesUnordered = computed<Map<DeltaProviderCategory | typeof symUncategorized, DeltaTrack[]>>(() => {
   const dr_ = dr.value
   const prov = provider.value
@@ -218,7 +225,31 @@ const pathFilter = ref<string>(param('search') ?? '')
 const debouncedPathFilter = ref<string>(pathFilter.value)
 let debounceTimer: ReturnType<typeof setTimeout> | undefined
 
-const sortBy = ref<'state_file_path' | 'file_path' | 'size' | 'abs_size'>(param('sortBy') ?? 'state_file_path')
+type SortBy = 'state_file_path' | 'file_path' | 'size' | 'abs_size' | 'closest_match'
+const defaultSortBy = (searching: boolean): SortBy => searching ? 'closest_match' : 'state_file_path'
+const sortBy = ref<SortBy>(param('sortBy') as SortBy ?? defaultSortBy(!!param('search')))
+let sortBeforeSearch: SortBy | null = null
+
+watch(() => debouncedPathFilter.value.trim(), (query, previous) => {
+  if (query && !previous) {
+    if (sortBy.value !== 'closest_match') sortBeforeSearch = sortBy.value
+    sortBy.value = 'closest_match'
+  } else if (!query && previous) {
+    if (sortBy.value === 'closest_match') sortBy.value = sortBeforeSearch ?? 'state_file_path'
+    sortBeforeSearch = null
+  }
+})
+
+const sortOptions = computed(() => {
+  const options = [
+    { label: 'Change type', value: 'state_file_path' },
+    { label: 'File path', value: 'file_path' },
+    { label: 'Size difference', value: 'size' },
+    { label: 'Absolute size difference', value: 'abs_size' },
+  ]
+  if (sortBy.value === 'closest_match') options.unshift({ label: 'Closest match', value: 'closest_match' })
+  return options
+})
 const sortDir = ref<'asc' | 'desc'>(param('sortDir') ?? 'asc')
 
 watch(pathFilter, (newVal) => {
@@ -250,6 +281,10 @@ onBeforeUnmount(() => {
 
 const baseSortFunc = computed<(a: DeltaTrack, b: DeltaTrack) => number>(() => {
   switch (sortBy.value) {
+    case 'closest_match': {
+      const rank = searchRank.value
+      return (a, b) => (rank.get(a) ?? 0) - (rank.get(b) ?? 0) || a.state - b.state || naturalCompare(a.id, b.id)
+    }
     case 'state_file_path': return (a, b) => a.state - b.state || naturalCompare(a.id, b.id)
     case 'file_path': return (a, b) => naturalCompare(a.id, b.id)
     case 'size': return (a, b) => a.sizeDiff - b.sizeDiff
@@ -298,7 +333,7 @@ const urlState = computed(() => {
   if (focusedTrack.value) query.file = focusedTrack.value
   if (focusedTab.value) query.tab = focusedTab.value
 
-  if (sortBy.value !== 'state_file_path') query.sortBy = sortBy.value
+  if (sortBy.value !== defaultSortBy(!!debouncedPathFilter.value)) query.sortBy = sortBy.value
   if (sortDir.value !== 'asc') query.sortDir = sortDir.value
 
   return query
@@ -445,24 +480,7 @@ onMounted(() => {
                       style="flex: 2; overflow: hidden; user-select: none;"
                       :consistent-menu-width="false"
                       v-model:value="sortBy"
-                      :options="[
-                        {
-                          label: 'State > file path',
-                          value: 'state_file_path',
-                        },
-                        {
-                          label: 'File path',
-                          value: 'file_path',
-                        },
-                        {
-                          label: 'Size difference',
-                          value: 'size',
-                        },
-                        {
-                          label: 'Absolute size difference',
-                          value: 'abs_size',
-                        },
-                      ]"
+                      :options="sortOptions"
                     />
                     <NSelect
                       style="flex: 1; overflow: hidden; user-select: none;"
