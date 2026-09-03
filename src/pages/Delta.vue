@@ -16,6 +16,7 @@ import '@/viewers'
 import { prefetchTextViews } from '@/components/lazyText'
 import { prefetchRenderers } from '@/components/lazyRenderers'
 import Col from '@/components/Col.vue'
+import Dim from '@/components/Dim.vue'
 import Tooltip from '@/components/Tooltip.vue'
 import { animateTextures, imageViewMode } from '@/viewers/png'
 import { hasAnimations, mcmetaTexture } from '@/viewers/mcje/mcmeta'
@@ -104,14 +105,23 @@ const searchRank = computed(() => {
   return rank
 })
 
-const categoriesUnordered = computed<Map<DeltaProviderCategory | typeof symUncategorized, DeltaTrack[]>>(() => {
+const unfilteredCategories = computed<Map<DeltaProviderCategory | typeof symUncategorized, DeltaTrack[]>>(() => {
   const dr_ = dr.value
   const prov = provider.value
   if (!dr_ || !prov) return new Map()
   return Map.groupBy(
-    tracksFilteredByStateAndPath.value,
+    dr_.tracks,
     track => getTrackCategory(prov, dr_, track) ?? symUncategorized
   )
+})
+
+const categoriesUnordered = computed<Map<DeltaProviderCategory | typeof symUncategorized, DeltaTrack[]>>(() => {
+  const kept = new Set(tracksFilteredByStateAndPath.value)
+  const out = new Map<DeltaProviderCategory | typeof symUncategorized, DeltaTrack[]>()
+  for (const [category, tracks] of unfilteredCategories.value) {
+    out.set(category, tracks.filter(track => kept.has(track)))
+  }
+  return out
 })
 const categories = computed(() => {
   const arr = Array.from(categoriesUnordered.value.entries()).sort((a, b) => {
@@ -159,8 +169,8 @@ const selectedCategory = ref<string>(param('category') ?? '')
 watch(categories, newCategories => {
   if (!dr.value) return;
 
-  const match = newCategories.find(([k, v]) =>
-    v.length > 0 && k.toLowerCase() === selectedCategory.value.toLowerCase())
+  const match = newCategories.find(([k]) =>
+    k.toLowerCase() === selectedCategory.value.toLowerCase())
   selectedCategory.value = match ? match[0] : defaultCategory.value
 })
 
@@ -169,8 +179,8 @@ watch(() => param('category'), value => {
     if (selectedCategory.value !== 'Overview') selectedCategory.value = 'Overview'
     return
   }
-  const match = categories.value.find(([ name, tracks ]) =>
-    tracks.length > 0 && name.toLowerCase() === value.toLowerCase())
+  const match = categories.value.find(([ name ]) =>
+    name.toLowerCase() === value.toLowerCase())
   if (match && match[0] !== selectedCategory.value) selectedCategory.value = match[0]
 })
 
@@ -327,6 +337,9 @@ const drFilteredSorted = computed<DeltaResult | undefined>(() => {
     tracks: activeCategory ? activeCategory[1].toSorted(sortFunc.value) : [],
   }
 })
+
+const categoryIsEmpty = computed(() =>
+  selectedCategory.value !== 'Overview' && drFilteredSorted.value?.tracks.length === 0)
 
 const urlState = computed(() => {
   const query: Record<string, string> = {}
@@ -526,7 +539,6 @@ onMounted(() => {
                     >
                       <template #default="{ item: [ name, tracks ] }">
                         <CategoryTab
-                          v-if="tracks.length > 0 || name === 'Overview'"
                           :count="tracks.length"
                           :name
                           :selected="selectedCategory === name"
@@ -607,7 +619,10 @@ onMounted(() => {
                 :key="selectedCategory"
                 style="container-type: inline-size;"
               >
-                <TreeList :dr="drFilteredSorted ?? dr" />
+                <Col v-if="categoryIsEmpty" align="center" class="category-empty">
+                  <Dim>No files in this category match the filter</Dim>
+                </Col>
+                <TreeList v-else :dr="drFilteredSorted ?? dr" />
               </div>
             </Transition>
           </div>
@@ -635,6 +650,12 @@ onMounted(() => {
 </template>
 
 <style lang="scss" scoped>
+
+.category-empty {
+  padding: 64px 20px;
+  text-align: center;
+  font-size: 16px;
+}
 
 .sort-dir {
   display: grid;
