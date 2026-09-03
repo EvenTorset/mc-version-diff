@@ -31,6 +31,7 @@ import StateFilterToggle from '@/components/StateFilterToggle.vue'
 import { Settings } from '@/settings'
 import { errorMessage } from '@/util/errorMessage'
 import { naturalCompare } from '@/util/sort'
+import { pathSearch } from 'path-search-sort'
 import CardSectionHeader from '@/components/CardSectionHeader.vue'
 
 const route = useRoute()
@@ -64,34 +65,36 @@ const tracksFilteredByStateAndPath = computed<DeltaTrack[]>(() => {
   const dr_ = dr.value
   if (!dr_) return []
 
-  const query = debouncedPathFilter.value.trim()
+  const byState = stateFilter.value === null
+    ? dr_.tracks
+    : dr_.tracks.filter(track => DeltaTrackState[track.state] === stateFilter.value)
 
-  let regex: RegExp | null = null
-  if (findRegex.value && query) {
+  const query = debouncedPathFilter.value.trim()
+  if (!query) return byState
+
+  let search: string | RegExp = query
+  if (findRegex.value) {
     try {
-      regex = new RegExp(query, 'i')
+      search = new RegExp(query, 'i')
     } catch {
-      // invalid regex
+      return []
     }
   }
 
-  return dr_.tracks.filter(track => {
-    if (stateFilter.value !== null && DeltaTrackState[track.state] !== stateFilter.value) return false
+  const entries: { path: string, track: DeltaTrack }[] = []
+  for (const track of byState) {
+    if (track.a) entries.push({ path: track.a, track })
+    if (track.b && track.b !== track.a) entries.push({ path: track.b, track })
+  }
 
-    if (query) {
-      const paths = [track.a, track.b].filter(p => p !== '')
-
-      if (findRegex.value) {
-        if (!regex) return false
-        if (!paths.some(p => regex.test(p))) return false
-      } else {
-        const lowerQuery = query.toLowerCase()
-        if (!paths.some(p => p.toLowerCase().includes(lowerQuery))) return false
-      }
-    }
-
-    return true
-  })
+  const seen = new Set<DeltaTrack>()
+  const ranked: DeltaTrack[] = []
+  for (const { track } of pathSearch(entries, search)) {
+    if (seen.has(track)) continue
+    seen.add(track)
+    ranked.push(track)
+  }
+  return ranked
 })
 
 const categoriesUnordered = computed<Map<DeltaProviderCategory | typeof symUncategorized, DeltaTrack[]>>(() => {
