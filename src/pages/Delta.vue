@@ -271,6 +271,10 @@ const pathHighlight = computed<string | RegExp | null>(() => {
 })
 provide('path-highlight', pathHighlight)
 
+watch([debouncedPathFilter, stateFilter], () => {
+  window.scrollTo({ top: 0, behavior: 'instant' })
+})
+
 function onKeydown(event: KeyboardEvent) {
   if (
     (event.ctrlKey || event.metaKey)
