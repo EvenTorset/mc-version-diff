@@ -23,6 +23,7 @@
     "file-saver": "^2.0.5",
     "monaco-editor": "^0.53.0",
     "naive-ui": "^2.44.1",
+    "path-search-sort": "^1.2.0",
     "popupable": "^1.11.0",
     "sass": "^1.102.0",
     "three": "^0.185.1",

@@ -5,17 +5,18 @@ import VersionDiffLogo from '@/components/VersionDiffLogo.vue'
 import type { DeltaProvider, DeltaProviderCategory, DeltaResult, DeltaTrack } from '@/delta_providers'
 import { getDeltaProvider } from '@/delta_providers/registry'
 import { getTrackCategory } from '@/delta_providers/category'
-import { NButton, NCard, NCheckbox, NInput, NRadio, NRadioGroup, NSelect, NSpin, type InputInst } from 'naive-ui'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import { NButton, NCard, NCheckbox, NIcon, NInput, NRadio, NRadioGroup, NSelect, NSpin, type InputInst } from 'naive-ui'
+import { computed, nextTick, onBeforeUnmount, onMounted, provide, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Row from '@/components/Row.vue'
 import TreeList from '@/components/TreeList.vue'
 import { createProgressList } from '@/components/progressList'
-import { Eraser20Filled, TextPeriodAsterisk20Filled } from '@vicons/fluent'
+import { ArrowSortDownLines20Regular, Eraser20Filled, TextPeriodAsterisk20Filled } from '@vicons/fluent'
 import '@/viewers'
 import { prefetchTextViews } from '@/components/lazyText'
 import { prefetchRenderers } from '@/components/lazyRenderers'
 import Col from '@/components/Col.vue'
+import Dim from '@/components/Dim.vue'
 import Tooltip from '@/components/Tooltip.vue'
 import { animateTextures, imageViewMode } from '@/viewers/png'
 import { hasAnimations, mcmetaTexture } from '@/viewers/mcje/mcmeta'
@@ -31,6 +32,7 @@ import StateFilterToggle from '@/components/StateFilterToggle.vue'
 import { Settings } from '@/settings'
 import { errorMessage } from '@/util/errorMessage'
 import { naturalCompare } from '@/util/sort'
+import { pathSearch } from 'path-search-sort'
 import CardSectionHeader from '@/components/CardSectionHeader.vue'
 
 const route = useRoute()
@@ -64,44 +66,62 @@ const tracksFilteredByStateAndPath = computed<DeltaTrack[]>(() => {
   const dr_ = dr.value
   if (!dr_) return []
 
-  const query = debouncedPathFilter.value.trim()
+  const byState = stateFilter.value === null
+    ? dr_.tracks
+    : dr_.tracks.filter(track => DeltaTrackState[track.state] === stateFilter.value)
 
-  let regex: RegExp | null = null
-  if (findRegex.value && query) {
+  const query = debouncedPathFilter.value.trim()
+  if (!query) return byState
+
+  let search: string | RegExp = query
+  if (findRegex.value) {
     try {
-      regex = new RegExp(query, 'i')
+      search = new RegExp(query, 'i')
     } catch {
-      // invalid regex
+      return []
     }
   }
 
-  return dr_.tracks.filter(track => {
-    if (stateFilter.value !== null && DeltaTrackState[track.state] !== stateFilter.value) return false
+  const entries: { path: string, track: DeltaTrack }[] = []
+  for (const track of byState) {
+    if (track.a) entries.push({ path: track.a, track })
+    if (track.b && track.b !== track.a) entries.push({ path: track.b, track })
+  }
 
-    if (query) {
-      const paths = [track.a, track.b].filter(p => p !== '')
-
-      if (findRegex.value) {
-        if (!regex) return false
-        if (!paths.some(p => regex.test(p))) return false
-      } else {
-        const lowerQuery = query.toLowerCase()
-        if (!paths.some(p => p.toLowerCase().includes(lowerQuery))) return false
-      }
-    }
-
-    return true
-  })
+  const seen = new Set<DeltaTrack>()
+  const ranked: DeltaTrack[] = []
+  for (const { track } of pathSearch(entries, search)) {
+    if (seen.has(track)) continue
+    seen.add(track)
+    ranked.push(track)
+  }
+  return ranked
 })
 
-const categoriesUnordered = computed<Map<DeltaProviderCategory | typeof symUncategorized, DeltaTrack[]>>(() => {
+const searchRank = computed(() => {
+  const rank = new Map<DeltaTrack, number>()
+  if (!debouncedPathFilter.value.trim()) return rank
+  tracksFilteredByStateAndPath.value.forEach((track, i) => rank.set(track, i))
+  return rank
+})
+
+const unfilteredCategories = computed<Map<DeltaProviderCategory | typeof symUncategorized, DeltaTrack[]>>(() => {
   const dr_ = dr.value
   const prov = provider.value
   if (!dr_ || !prov) return new Map()
   return Map.groupBy(
-    tracksFilteredByStateAndPath.value,
+    dr_.tracks,
     track => getTrackCategory(prov, dr_, track) ?? symUncategorized
   )
+})
+
+const categoriesUnordered = computed<Map<DeltaProviderCategory | typeof symUncategorized, DeltaTrack[]>>(() => {
+  const kept = new Set(tracksFilteredByStateAndPath.value)
+  const out = new Map<DeltaProviderCategory | typeof symUncategorized, DeltaTrack[]>()
+  for (const [category, tracks] of unfilteredCategories.value) {
+    out.set(category, tracks.filter(track => kept.has(track)))
+  }
+  return out
 })
 const categories = computed(() => {
   const arr = Array.from(categoriesUnordered.value.entries()).sort((a, b) => {
@@ -149,8 +169,8 @@ const selectedCategory = ref<string>(param('category') ?? '')
 watch(categories, newCategories => {
   if (!dr.value) return;
 
-  const match = newCategories.find(([k, v]) =>
-    v.length > 0 && k.toLowerCase() === selectedCategory.value.toLowerCase())
+  const match = newCategories.find(([k]) =>
+    k.toLowerCase() === selectedCategory.value.toLowerCase())
   selectedCategory.value = match ? match[0] : defaultCategory.value
 })
 
@@ -159,8 +179,8 @@ watch(() => param('category'), value => {
     if (selectedCategory.value !== 'Overview') selectedCategory.value = 'Overview'
     return
   }
-  const match = categories.value.find(([ name, tracks ]) =>
-    tracks.length > 0 && name.toLowerCase() === value.toLowerCase())
+  const match = categories.value.find(([ name ]) =>
+    name.toLowerCase() === value.toLowerCase())
   if (match && match[0] !== selectedCategory.value) selectedCategory.value = match[0]
 })
 
@@ -215,7 +235,31 @@ const pathFilter = ref<string>(param('search') ?? '')
 const debouncedPathFilter = ref<string>(pathFilter.value)
 let debounceTimer: ReturnType<typeof setTimeout> | undefined
 
-const sortBy = ref<'state_file_path' | 'file_path' | 'size' | 'abs_size'>(param('sortBy') ?? 'state_file_path')
+type SortBy = 'state_file_path' | 'file_path' | 'size' | 'abs_size' | 'closest_match'
+const defaultSortBy = (searching: boolean): SortBy => searching ? 'closest_match' : 'state_file_path'
+const sortBy = ref<SortBy>(param('sortBy') as SortBy ?? defaultSortBy(!!param('search')))
+let sortBeforeSearch: SortBy | null = null
+
+watch(() => debouncedPathFilter.value.trim(), (query, previous) => {
+  if (query && !previous) {
+    if (sortBy.value !== 'closest_match') sortBeforeSearch = sortBy.value
+    sortBy.value = 'closest_match'
+  } else if (!query && previous) {
+    if (sortBy.value === 'closest_match') sortBy.value = sortBeforeSearch ?? 'state_file_path'
+    sortBeforeSearch = null
+  }
+})
+
+const sortOptions = computed(() => {
+  const options = [
+    { label: 'Change type', value: 'state_file_path' },
+    { label: 'File path', value: 'file_path' },
+    { label: 'Size difference', value: 'size' },
+    { label: 'Absolute size difference', value: 'abs_size' },
+  ]
+  if (sortBy.value === 'closest_match') options.unshift({ label: 'Closest match', value: 'closest_match' })
+  return options
+})
 const sortDir = ref<'asc' | 'desc'>(param('sortDir') ?? 'asc')
 
 watch(pathFilter, (newVal) => {
@@ -223,6 +267,22 @@ watch(pathFilter, (newVal) => {
   debounceTimer = setTimeout(() => {
     debouncedPathFilter.value = newVal
   }, 250)
+})
+
+const pathHighlight = computed<string | RegExp | null>(() => {
+  const query = debouncedPathFilter.value.trim()
+  if (!query) return null
+  if (!findRegex.value) return query
+  try {
+    return new RegExp(query, 'gi')
+  } catch {
+    return null
+  }
+})
+provide('path-highlight', pathHighlight)
+
+watch([debouncedPathFilter, stateFilter], () => {
+  window.scrollTo({ top: 0, behavior: 'instant' })
 })
 
 function onKeydown(event: KeyboardEvent) {
@@ -247,6 +307,10 @@ onBeforeUnmount(() => {
 
 const baseSortFunc = computed<(a: DeltaTrack, b: DeltaTrack) => number>(() => {
   switch (sortBy.value) {
+    case 'closest_match': {
+      const rank = searchRank.value
+      return (a, b) => (rank.get(a) ?? 0) - (rank.get(b) ?? 0) || a.state - b.state || naturalCompare(a.id, b.id)
+    }
     case 'state_file_path': return (a, b) => a.state - b.state || naturalCompare(a.id, b.id)
     case 'file_path': return (a, b) => naturalCompare(a.id, b.id)
     case 'size': return (a, b) => a.sizeDiff - b.sizeDiff
@@ -274,6 +338,9 @@ const drFilteredSorted = computed<DeltaResult | undefined>(() => {
   }
 })
 
+const categoryIsEmpty = computed(() =>
+  selectedCategory.value !== 'Overview' && drFilteredSorted.value?.tracks.length === 0)
+
 const urlState = computed(() => {
   const query: Record<string, string> = {}
 
@@ -295,7 +362,7 @@ const urlState = computed(() => {
   if (focusedTrack.value) query.file = focusedTrack.value
   if (focusedTab.value) query.tab = focusedTab.value
 
-  if (sortBy.value !== 'state_file_path') query.sortBy = sortBy.value
+  if (sortBy.value !== defaultSortBy(!!debouncedPathFilter.value)) query.sortBy = sortBy.value
   if (sortDir.value !== 'asc') query.sortDir = sortDir.value
 
   return query
@@ -439,43 +506,26 @@ onMounted(() => {
                   <CardSectionHeader text="Sort" />
                   <Row>
                     <NSelect
-                      style="flex: 2; overflow: hidden; user-select: none;"
-                      :consistent-menu-width="false"
-                      v-model:value="sortBy"
-                      :options="[
-                        {
-                          label: 'State > file path',
-                          value: 'state_file_path',
-                        },
-                        {
-                          label: 'File path',
-                          value: 'file_path',
-                        },
-                        {
-                          label: 'Size difference',
-                          value: 'size',
-                        },
-                        {
-                          label: 'Absolute size difference',
-                          value: 'abs_size',
-                        },
-                      ]"
-                    />
-                    <NSelect
                       style="flex: 1; overflow: hidden; user-select: none;"
                       :consistent-menu-width="false"
-                      v-model:value="sortDir"
-                      :options="[
-                        {
-                          label: 'Ascending',
-                          value: 'asc',
-                        },
-                        {
-                          label: 'Descending',
-                          value: 'desc',
-                        },
-                      ]"
+                      v-model:value="sortBy"
+                      :options="sortOptions"
                     />
+                    <Tooltip>
+                      <template #trigger="{ props: tip }">
+                        <button
+                          v-bind="tip"
+                          type="button"
+                          class="sort-dir"
+                          :class="{ asc: sortDir === 'asc' }"
+                          @click="sortDir = sortDir === 'asc' ? 'desc' : 'asc'"
+                        >
+                          <NIcon :size="28" :component="ArrowSortDownLines20Regular" class="down" />
+                          <NIcon :size="28" :component="ArrowSortDownLines20Regular" class="up" />
+                        </button>
+                      </template>
+                      {{ sortDir === 'asc' ? 'Ascending' : 'Descending' }}
+                    </Tooltip>
                   </Row>
                 </template>
                 <CardSectionHeader text="Categories" />
@@ -489,7 +539,7 @@ onMounted(() => {
                     >
                       <template #default="{ item: [ name, tracks ] }">
                         <CategoryTab
-                          v-if="tracks.length > 0 || name === 'Overview'"
+                          v-if="tracks.length > 0 || name === 'Overview' || name === selectedCategory"
                           :count="tracks.length"
                           :name
                           :selected="selectedCategory === name"
@@ -570,7 +620,10 @@ onMounted(() => {
                 :key="selectedCategory"
                 style="container-type: inline-size;"
               >
-                <TreeList :dr="drFilteredSorted ?? dr" />
+                <Col v-if="categoryIsEmpty" align="center" class="category-empty">
+                  <Dim>No files in this category match the filter</Dim>
+                </Col>
+                <TreeList v-else :dr="drFilteredSorted ?? dr" />
               </div>
             </Transition>
           </div>
@@ -598,6 +651,50 @@ onMounted(() => {
 </template>
 
 <style lang="scss" scoped>
+
+.category-empty {
+  padding: 64px 20px;
+  text-align: center;
+  font-size: 16px;
+}
+
+.sort-dir {
+  display: grid;
+  align-self: center;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-5);
+  cursor: pointer;
+  user-select: none;
+  transition: color 200ms;
+
+  > * {
+    grid-area: 1 / 1;
+    transition: opacity 300ms, transform 300ms;
+  }
+
+  .up {
+    opacity: 0;
+    transform: scaleY(-1) rotate(180deg);
+  }
+
+  &:hover {
+    color: var(--color-accent);
+  }
+
+  &.asc {
+    .down {
+      opacity: 0;
+      transform: rotate(180deg);
+    }
+
+    .up {
+      opacity: 1;
+      transform: scaleY(-1);
+    }
+  }
+}
 
 .transition-container {
   display: grid;

@@ -1,6 +1,8 @@
 <script setup lang="tsx">
 import type { ComponentOrStaticRenderableContent, Renderable } from '@/types'
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import type { ComputedRef } from 'vue'
+import { inject, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { matchRanges } from '@/util/path.ts'
 import Content from '@/components/Content.vue'
 import Dim from './Dim.vue'
 import Tooltip from './Tooltip.vue'
@@ -11,7 +13,14 @@ const props = defineProps<{
   code?: boolean
 }>()
 
-function renderPathSlice(path: string, start: number, end: number): ComponentOrStaticRenderableContent[] {
+const highlight = inject<ComputedRef<string | RegExp | null> | null>('path-highlight', null)
+
+function renderPathSlice(
+  path: string,
+  start: number,
+  end: number,
+  hits: [number, number][],
+): ComponentOrStaticRenderableContent[] {
   if (start >= end) return []
 
   const lastSlash = path.lastIndexOf('/')
@@ -19,31 +28,39 @@ function renderPathSlice(path: string, start: number, end: number): ComponentOrS
   const dirEnd = lastSlash + 1
   const extStart = lastDot > dirEnd ? lastDot : path.length
 
+  const points = new Set([start, end])
+  for (const point of [dirEnd, extStart]) {
+    if (point > start && point < end) points.add(point)
+  }
+  for (const [from, to] of hits) {
+    if (from > start && from < end) points.add(from)
+    if (to > start && to < end) points.add(to)
+  }
+  const bounds = [...points].sort((a, b) => a - b)
+
   const sliceNodes: ComponentOrStaticRenderableContent[] = []
 
-  const dirStart = Math.max(start, 0)
-  const dirStop = Math.min(end, dirEnd)
-  if (dirStart < dirStop) {
-    sliceNodes.push(<Dim>{path.slice(dirStart, dirStop)}</Dim>)
+  for (let i = 0; i < bounds.length - 1; i++) {
+    const from = bounds[i]
+    const to = bounds[i + 1]
+    if (from === to) continue
+
+    const text = path.slice(from, to)
+    const node = to <= dirEnd || from >= extStart ? <Dim>{text}</Dim> : text
+
+    if (hits.some(([hitFrom, hitTo]) => from >= hitFrom && to <= hitTo)) {
+      sliceNodes.push(<span class="search-hit">{node}</span>)
+    } else {
+      sliceNodes.push(node)
+    }
   }
 
-  const nameStart = Math.max(start, dirEnd)
-  const nameStop = Math.min(end, extStart)
-  if (nameStart < nameStop) {
-    sliceNodes.push(path.slice(nameStart, nameStop))
-  }
-
-  const extStartPos = Math.max(start, extStart)
-  const extStop = Math.min(end, path.length)
-  if (extStartPos < extStop) {
-    sliceNodes.push(<Dim>{path.slice(extStartPos, extStop)}</Dim>)
-  }
-
-  sliceNodes.push(<>&lrm;</>)
+  sliceNodes.push(<span class="lrm">&lrm;</span>)
   return sliceNodes
 }
 
 function markPathChanges(fromPath: string, toPath: string): Renderable {
+  const hits = matchRanges(toPath, highlight?.value ?? null)
   const tokenize = (text: string): string[] => text.match(/[a-zA-Z0-9]+|[^a-zA-Z0-9\s]+|\s+/g) || []
 
   const origTokens = tokenize(fromPath)
@@ -128,7 +145,7 @@ function markPathChanges(fromPath: string, toPath: string): Renderable {
     if (/^\s+$/.test(buffer)) {
       nodes.push(
         <mark key={markKey++}>
-          {renderPathSlice(toPath, bufferStart, bufferEnd)}
+          {renderPathSlice(toPath, bufferStart, bufferEnd, hits)}
         </mark>
       )
       buffer = ''
@@ -146,17 +163,17 @@ function markPathChanges(fromPath: string, toPath: string): Renderable {
     const coreEnd = leadingEnd + coreContent.length
 
     if (leadingSpace) {
-      nodes.push(...renderPathSlice(toPath, bufferStart, leadingEnd))
+      nodes.push(...renderPathSlice(toPath, bufferStart, leadingEnd, hits))
     }
     if (coreContent) {
       nodes.push(
         <mark key={markKey++}>
-          {renderPathSlice(toPath, leadingEnd, coreEnd)}
+          {renderPathSlice(toPath, leadingEnd, coreEnd, hits)}
         </mark>
       )
     }
     if (trailingSpace) {
-      nodes.push(...renderPathSlice(toPath, coreEnd, bufferEnd))
+      nodes.push(...renderPathSlice(toPath, coreEnd, bufferEnd, hits))
     }
 
     buffer = ''
@@ -171,7 +188,7 @@ function markPathChanges(fromPath: string, toPath: string): Renderable {
       bufferEnd = tokenRanges[k].end
     } else {
       flushBuffer()
-      nodes.push(...renderPathSlice(toPath, tokenRanges[k].start, tokenRanges[k].end))
+      nodes.push(...renderPathSlice(toPath, tokenRanges[k].start, tokenRanges[k].end, hits))
     }
   }
   flushBuffer()
@@ -270,6 +287,53 @@ function nextTickCheck() {
   font-weight: 500;
   font-size: 15px;
   display: block;
+
+  & :deep(.lrm) {
+    user-select: none;
+  }
+
+  & :deep(.search-hit) {
+    color: var(--color-6);
+    --color-dim: var(--color-5);
+    border-radius: 3px;
+    background-color: rgb(from var(--color-accent) r g b / 0.4);
+    padding: 0 2px;
+    margin: 0 -2px;
+  }
+
+  & :deep(:is(mark, .search-hit):has(+ :is(mark, .search-hit))),
+  & :deep(:is(mark, .search-hit):has(+ .lrm + :is(mark, .search-hit))),
+  & :deep(mark > .search-hit:last-child),
+  & :deep(mark > .search-hit:has(+ .lrm:last-child)) {
+    padding-right: 0;
+    margin-right: 0;
+  }
+
+  & :deep(:is(mark, .search-hit) + :is(mark, .search-hit)),
+  & :deep(:is(mark, .search-hit) + .lrm + :is(mark, .search-hit)),
+  & :deep(mark > .search-hit:first-child) {
+    padding-left: 0;
+    margin-left: 0;
+  }
+
+  & :deep(.search-hit:has(+ :is(mark, .search-hit))),
+  & :deep(.search-hit:has(+ .lrm + :is(mark, .search-hit))),
+  & :deep(mark > .search-hit:last-child),
+  & :deep(mark > .search-hit:has(+ .lrm:last-child)),
+  & :deep(mark:has(+ mark)),
+  & :deep(mark:has(+ .lrm + mark)) {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  & :deep(:is(mark, .search-hit) + .search-hit),
+  & :deep(:is(mark, .search-hit) + .lrm + .search-hit),
+  & :deep(mark + mark),
+  & :deep(mark + .lrm + mark),
+  & :deep(mark > .search-hit:first-child) {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+  }
 
   & :deep(mark) {
     color: var(--color-6);
