@@ -222,7 +222,7 @@ const JSON_PATH = /\.(json|mcmeta)$/
 
 const provider: DeltaProvider<MCJEVersionContent> = {
   name: 'Java Edition',
-  custom: {
+  upload: {
     accept: '.jar,.zip',
     options: [
       {

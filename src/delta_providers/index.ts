@@ -37,14 +37,14 @@ export interface DeltaProvider<T> {
   /** The display name of the provider */
   name: string
   /**
-   * Options for controlling how the Custom provider will use this provider as
+   * Options for controlling how the Upload provider will use this provider as
    * a comparator. If absent, the provider will not be available as a
-   * comparator for the Custom provider.
+   * comparator for the Upload provider.
    */
-  custom?: {
+  upload?: {
     /**
      * Comma-separated list of unique file type specifiers that the provider
-     * can work with. Used by the Custom provider to filter uploaded files.
+     * can work with. Used by the Upload provider to filter uploaded files.
      */
     accept?: string
     /** Options that will add URL query arguments */
@@ -52,7 +52,7 @@ export interface DeltaProvider<T> {
       label: string
       tooltip: Renderable
       queryParam: string
-      type: 'bool' // additions need implementation in CustomSelector.vue
+      type: 'bool' // additions need implementation in UploadSelector.vue
       default: boolean
     }[]
     /** Pre-processing step done before comparison */
@@ -89,4 +89,4 @@ export interface DeltaProvider<T> {
 }
 
 await import('./mcje')
-await import('./custom')
+await import('./upload')

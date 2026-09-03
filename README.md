@@ -9,7 +9,7 @@ The [Minecraft Version Diff comparison tool](https://cccode.pages.dev/version-di
 ## Key Features
 
 - **Version Comparison:** Pick any two Minecraft versions (releases or snapshots) to generate a detailed breakdown of all asset and data changes.
-- **Custom Upload Comparison:** Upload two custom `.zip`, `.mcpack`, or `.jar` files to compare asset differences directly between resource packs, data packs, or mods.
+- **Custom Upload Comparison:** Upload two custom `.zip` or `.jar` files to compare asset differences directly between resource packs, data packs, or mods.
 - **Asset & Data Inspection:**
   - **Textures:** Visual side-by-side comparison of textures, with options to toggle specific color channels and preview animations.
   - **Models:** Interactive 3D previews of block and item models.

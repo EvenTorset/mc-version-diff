@@ -13,11 +13,12 @@ import { deleteUserFile, readUserFile, writeUserFile } from '@/util/userFiles'
 import Notify from '@/notify'
 import { errorMessage } from '@/util/errorMessage'
 import { selectedComparator } from './selectedComparator'
+import { UPLOAD_VERSION_A_KEY, UPLOAD_VERSION_B_KEY, readFilesMeta, writeFilesMeta } from './filesMeta'
 
 let restoring = true
 
 const providerOptions = computed(() => Array.from(listDeltaProviders()
-  .filter(p => p.provider.custom)
+  .filter(p => p.provider.upload)
   .map(p => {
     return {
       label: p.provider.name,
@@ -37,11 +38,11 @@ const compareLink = computed<string | RouteLocationAsRelativeGeneric | RouteLoca
   return {
     name: 'delta',
     params: {
-      provider: 'custom',
+      provider: 'upload',
       a: selectedComparator.value,
-      b: 'null'
+      b: '-'
     },
-    query: Object.fromEntries(comparatorProvider.value.custom?.options?.map((o, i) => {
+    query: Object.fromEntries(comparatorProvider.value.upload?.options?.map((o, i) => {
       switch (o.type) {
         case 'bool': return optionValues[i] ? [
           o.queryParam,
@@ -61,40 +62,22 @@ function toUploadFileInfo(file: File, name = file.name): UploadFileInfo {
   }
 }
 
-interface FilesMeta {
-  provider: string
-  aName?: string
-  bName?: string
-}
-
-const FILES_META_KEY = '__custom_files_meta'
-
-function readFilesMeta(): FilesMeta | null {
-  const raw = localStorage.getItem(FILES_META_KEY)
-  if (!raw) return null
-  try {
-    return JSON.parse(raw)
-  } catch {
-    return null
-  }
-}
-
-function writeFilesMeta(meta: FilesMeta) {
-  localStorage.setItem(FILES_META_KEY, JSON.stringify(meta))
-}
-
 async function saveFile(list: UploadFileInfo[], contentName: string, slot: 'a' | 'b') {
   if (restoring) return;
   try {
     const content = await list[0]?.file?.arrayBuffer()
     const meta = readFilesMeta() ?? { provider: selectedComparator.value }
     meta.provider = selectedComparator.value
+    const nameKey = slot === 'a' ? 'aName' : 'bName'
+    const sizeKey = slot === 'a' ? 'aSize' : 'bSize'
     if (content) {
       await writeUserFile(contentName, content)
-      meta[slot === 'a' ? 'aName' : 'bName'] = list[0].name
+      meta[nameKey] = list[0].name
+      meta[sizeKey] = content.byteLength
     } else {
       await deleteUserFile(contentName)
-      delete meta[slot === 'a' ? 'aName' : 'bName']
+      delete meta[nameKey]
+      delete meta[sizeKey]
     }
     writeFilesMeta(meta)
   } catch (err: any) {
@@ -107,8 +90,8 @@ async function saveFile(list: UploadFileInfo[], contentName: string, slot: 'a' |
   }
 }
 
-watch(fileListA, list => saveFile(list, '__custom_version_a', 'a'))
-watch(fileListB, list => saveFile(list, '__custom_version_b', 'b'))
+watch(fileListA, list => saveFile(list, UPLOAD_VERSION_A_KEY, 'a'))
+watch(fileListB, list => saveFile(list, UPLOAD_VERSION_B_KEY, 'b'))
 
 watch(selectedComparator, () => {
   if (restoring) return;
@@ -122,8 +105,8 @@ onMounted(async () => {
     selectedComparator.value = meta.provider
   }
   const [fileA, fileB] = await Promise.all([
-    readUserFile('__custom_version_a'),
-    readUserFile('__custom_version_b'),
+    readUserFile(UPLOAD_VERSION_A_KEY),
+    readUserFile(UPLOAD_VERSION_B_KEY),
   ])
   if (fileA) fileListA.value = [toUploadFileInfo(fileA, meta?.aName ?? fileA.name)]
   if (fileB) fileListB.value = [toUploadFileInfo(fileB, meta?.bName ?? fileB.name)]
@@ -164,7 +147,7 @@ async function swapFiles() {
       </Row>
       <Row gap="16px">
         <NUpload
-          :accept="comparatorProvider.custom?.accept"
+          :accept="comparatorProvider.upload?.accept"
           :file-list="fileListA"
           @update:file-list="list => fileListA = list.slice(-1)"
           :file-list-style="{
@@ -220,7 +203,7 @@ async function swapFiles() {
           Swap files
         </Tooltip>
         <NUpload
-          :accept="comparatorProvider.custom?.accept"
+          :accept="comparatorProvider.upload?.accept"
           :file-list="fileListB"
           @update:file-list="list => fileListB = list.slice(-1)"
           :file-list-style="{
@@ -260,10 +243,10 @@ async function swapFiles() {
           </NUploadDragger>
         </NUpload>
       </Row>
-      <template v-if="comparatorProvider.custom?.options">
+      <template v-if="comparatorProvider.upload?.options">
         <h3 style="margin-left: 0;">Options</h3>
         <Col align="stretch" style="align-self: flex-start;">
-          <template v-for="option, i in comparatorProvider.custom?.options">
+          <template v-for="option, i in comparatorProvider.upload?.options">
             <Tooltip v-if="option.type === 'bool'">
               <template #trigger="{ props }">
                 <Row
@@ -303,6 +286,7 @@ async function swapFiles() {
 </template>
 
 <style lang="scss">
+
 .swap-toggle {
   position: relative;
   min-width: 32px;
@@ -345,4 +329,5 @@ async function swapFiles() {
     }
   }
 }
+
 </style>
