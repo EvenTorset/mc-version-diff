@@ -66,7 +66,7 @@ function genNaiveTheme(): GlobalThemeOverrides {
       optionTextColorActive: getCSSVar('--color-6'),
     },
     Upload: {
-      draggerColor: getCSSVar('--color-2'),
+      draggerColor: getCSSVar('--color-0'),
       draggerBorder: '1px dashed var(--color-3)',
     },
     Checkbox: {

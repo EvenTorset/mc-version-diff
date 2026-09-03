@@ -2,7 +2,7 @@
 import Col from '@/components/Col.vue'
 import Row from '@/components/Row.vue'
 import { ArrowRight16Filled, ArrowSwap24Regular, ArrowUpload24Regular, Attach24Regular, Dismiss24Filled, FolderZip24Regular } from '@vicons/fluent'
-import { NButton, NCard, NIcon, NSelect, NSwitch, NUpload, NUploadDragger, type UploadFileInfo } from 'naive-ui'
+import { NButton, NCard, NCheckbox, NIcon, NSelect, NSwitch, NUpload, NUploadDragger, type UploadFileInfo } from 'naive-ui'
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { getDeltaProvider, listDeltaProviders } from '../registry'
 import Spacer from '@/components/Spacer.vue'
@@ -14,6 +14,7 @@ import Notify from '@/notify'
 import { errorMessage } from '@/util/errorMessage'
 import { selectedComparator } from './selectedComparator'
 import { UPLOAD_VERSION_A_KEY, UPLOAD_VERSION_B_KEY, readFilesMeta, writeFilesMeta } from './filesMeta'
+import CardSectionHeader from '@/components/CardSectionHeader.vue'
 
 let restoring = true
 
@@ -253,23 +254,12 @@ const arrowHover = ref(false)
         </NUpload>
       </Row>
       <template v-if="comparatorProvider.upload?.options">
-        <h3 style="margin-left: 0;">Options</h3>
+        <CardSectionHeader text="Options" style="margin-left: -12px;" />
         <Col align="stretch" style="align-self: flex-start;">
           <template v-for="option, i in comparatorProvider.upload?.options">
             <Tooltip v-if="option.type === 'bool'">
               <template #trigger="{ props }">
-                <Row
-                  v-bind="props"
-                  :style="{
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                  }"
-                  @click="optionValues[i] = !optionValues[i]"
-                >
-                  {{ option.label }}
-                  <Spacer bridge />
-                  <NSwitch :value="optionValues[i]" :default-value="option.default" />
-                </Row>
+                <NCheckbox v-bind="props" v-model:checked="optionValues[i]">{{ option.label }}</NCheckbox>
               </template>
               <Content :content="option.tooltip" />
             </Tooltip>
