@@ -5,13 +5,13 @@ import VersionDiffLogo from '@/components/VersionDiffLogo.vue'
 import type { DeltaProvider, DeltaProviderCategory, DeltaResult, DeltaTrack } from '@/delta_providers'
 import { getDeltaProvider } from '@/delta_providers/registry'
 import { getTrackCategory } from '@/delta_providers/category'
-import { NButton, NCard, NCheckbox, NInput, NRadio, NRadioGroup, NSelect, NSpin, type InputInst } from 'naive-ui'
+import { NButton, NCard, NCheckbox, NIcon, NInput, NRadio, NRadioGroup, NSelect, NSpin, type InputInst } from 'naive-ui'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Row from '@/components/Row.vue'
 import TreeList from '@/components/TreeList.vue'
 import { createProgressList } from '@/components/progressList'
-import { Eraser20Filled, TextPeriodAsterisk20Filled } from '@vicons/fluent'
+import { ArrowSortDownLines20Regular, Eraser20Filled, TextPeriodAsterisk20Filled } from '@vicons/fluent'
 import '@/viewers'
 import { prefetchTextViews } from '@/components/lazyText'
 import { prefetchRenderers } from '@/components/lazyRenderers'
@@ -477,26 +477,26 @@ onMounted(() => {
                   <CardSectionHeader text="Sort" />
                   <Row>
                     <NSelect
-                      style="flex: 2; overflow: hidden; user-select: none;"
+                      style="flex: 1; overflow: hidden; user-select: none;"
                       :consistent-menu-width="false"
                       v-model:value="sortBy"
                       :options="sortOptions"
                     />
-                    <NSelect
-                      style="flex: 1; overflow: hidden; user-select: none;"
-                      :consistent-menu-width="false"
-                      v-model:value="sortDir"
-                      :options="[
-                        {
-                          label: 'Ascending',
-                          value: 'asc',
-                        },
-                        {
-                          label: 'Descending',
-                          value: 'desc',
-                        },
-                      ]"
-                    />
+                    <Tooltip>
+                      <template #trigger="{ props: tip }">
+                        <button
+                          v-bind="tip"
+                          type="button"
+                          class="sort-dir"
+                          :class="{ asc: sortDir === 'asc' }"
+                          @click="sortDir = sortDir === 'asc' ? 'desc' : 'asc'"
+                        >
+                          <NIcon :size="28" :component="ArrowSortDownLines20Regular" class="down" />
+                          <NIcon :size="28" :component="ArrowSortDownLines20Regular" class="up" />
+                        </button>
+                      </template>
+                      {{ sortDir === 'asc' ? 'Ascending' : 'Descending' }}
+                    </Tooltip>
                   </Row>
                 </template>
                 <CardSectionHeader text="Categories" />
@@ -619,6 +619,44 @@ onMounted(() => {
 </template>
 
 <style lang="scss" scoped>
+
+.sort-dir {
+  display: grid;
+  align-self: center;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-5);
+  cursor: pointer;
+  user-select: none;
+  transition: color 200ms;
+
+  > * {
+    grid-area: 1 / 1;
+    transition: opacity 300ms, transform 300ms;
+  }
+
+  .up {
+    opacity: 0;
+    transform: scaleY(-1) rotate(180deg);
+  }
+
+  &:hover {
+    color: var(--color-accent);
+  }
+
+  &.asc {
+    .down {
+      opacity: 0;
+      transform: rotate(180deg);
+    }
+
+    .up {
+      opacity: 1;
+      transform: scaleY(-1);
+    }
+  }
+}
 
 .transition-container {
   display: grid;
