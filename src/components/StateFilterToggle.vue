@@ -44,11 +44,12 @@ const dim = computed(() => props.name !== value.value && value.value !== null)
   transition:
     --intr-gradient-start_internal 200ms,
     --intr-gradient-end_internal 200ms,
-    --intr-gradient-size 750ms,
+    --intr-gradient-size 300ms,
     --intr-gradient-x 200ms,
     --intr-gradient-y 200ms,
     box-shadow 200ms,
     text-shadow 200ms,
+    background-color 200ms,
     color 200ms;
   border-radius: 6px;
   color: var(--color-5);
@@ -94,12 +95,14 @@ const dim = computed(() => props.name !== value.value && value.value !== null)
     }
 
     &:hover {
-      --intr-gradient-size: 100% 110%;
-      --intr-gradient-end-alpha: 0.25;
-      color: var(--color-7);
+      --intr-color: oklch(from var(--color-accent) l calc(c * 1.3) h / 0.6);
+      --intr-gradient-start: var(--intr-color);
+      --intr-gradient-end-alpha: 0.15;
+      --intr-gradient-size: 100% 100%;
+      background-color: transparent !important;
 
       &::after {
-        border-color: rgb(from var(--color-accent) r g b / 0.6);
+        border-color: rgb(from var(--intr-color) calc(1.2 * r) calc(1.2 * g) calc(1.2 * b) / 0.2);
       }
     }
   }
