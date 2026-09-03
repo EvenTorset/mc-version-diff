@@ -22,10 +22,10 @@ const stateSummary = computed(() => {
   const counts: Record<string, number> = { Added: 0, Edited: 0, Moved: 0, Removed: 0 }
   for (const track of props.dr.tracks) counts[DeltaTrackState[track.state]]++
   return [
-    { name: 'Added', count: counts.Added, color: 'var(--color-success)' },
-    { name: 'Edited', count: counts.Edited, color: 'var(--color-accent)', borderAlpha: 0.7 },
-    { name: 'Moved', count: counts.Moved, color: 'var(--color-5)' },
-    { name: 'Removed', count: counts.Removed, color: 'var(--color-danger)' },
+    { state: DeltaTrackState.Added, count: counts.Added },
+    { state: DeltaTrackState.Edited, count: counts.Edited },
+    { state: DeltaTrackState.Moved, count: counts.Moved },
+    { state: DeltaTrackState.Removed, count: counts.Removed },
   ]
 })
 
@@ -62,20 +62,20 @@ const categories = computed(() => {
       <h3>Changes</h3>
       <Row class="states" gap="10px" align="stretch" wrap>
         <NCard
-          v-for="state of stateSummary"
-          :key="state.name"
+          v-for="{ state, count } of stateSummary"
+          :key="DeltaTrackState[state]"
           class="state"
           :class="{
-            empty: state.count === 0,
-            selected: activeState === state.name,
-            dim: activeState !== null && activeState !== state.name,
+            empty: count === 0,
+            selected: activeState === DeltaTrackState[state],
+            dim: activeState !== null && activeState !== DeltaTrackState[state],
           }"
           size="small"
-          @click="state.count > 0 && toggleState(state.name)"
+          @click="count > 0 && toggleState(DeltaTrackState[state])"
         >
           <Col>
-            <div class="state-count">{{ state.count }}</div>
-            <TrackTag :color="state.color" :border-alpha="state.borderAlpha">{{ state.name }}</TrackTag>
+            <div class="state-count">{{ count }}</div>
+            <TrackTag :state full-width />
           </Col>
         </NCard>
       </Row>

@@ -1,15 +1,66 @@
 <script setup lang="ts">
-defineProps<{
-  color: string
-  borderAlpha?: number
+import { DeltaTrackState } from '@/delta_providers/states'
+import { maxWidthQuery, useBreakpoint } from '@/util/useBreakpoint'
+import { Add16Filled, Delete16Filled, Edit16Filled, Location16Filled } from '@vicons/fluent'
+import { computed, mergeProps } from 'vue'
+import Tooltip from './Tooltip.vue'
+
+const props = defineProps<{
+  state: DeltaTrackState
+  fullWidth?: boolean
 }>()
+
+const isNarrow = useBreakpoint(maxWidthQuery('1100px'))
+
+const config = computed(() => ({
+  [DeltaTrackState.Added]: {
+    text: 'Added',
+    icon: Add16Filled,
+    color: 'var(--color-success)',
+  },
+  [DeltaTrackState.Edited]: {
+    text: 'Edited',
+    icon: Edit16Filled,
+    color: 'var(--color-accent)',
+    borderAlpha: 0.7,
+  },
+  [DeltaTrackState.Moved]: {
+    text: 'Moved',
+    icon: Location16Filled,
+    color: 'var(--color-5)',
+  },
+  [DeltaTrackState.Removed]: {
+    text: 'Removed',
+    icon: Delete16Filled,
+    color: 'var(--color-danger)',
+  },
+}[props.state]))
 </script>
 
 <template>
-  <span class="track-tag" :style="{
-    '--tag-color': color,
-    '--tag-border-alpha': borderAlpha ?? 0.4,
-  }"><slot></slot></span>
+  <div
+    v-if="fullWidth || !isNarrow"
+    class="track-tag"
+    :style="{
+      '--tag-color': config.color,
+      '--tag-border-alpha': config.borderAlpha ?? 0.4,
+    }"
+  >{{ config.text }}</div>
+  <Tooltip v-else>
+    <template #trigger="{ props }">
+      <div
+        v-bind="mergeProps(props, $attrs)"
+        class="track-tag narrow"
+        :style="{
+          '--tag-color': config.color,
+          '--tag-border-alpha': config.borderAlpha ?? 0.4,
+        }"
+      >
+        <component :is="config.icon" />
+      </div>
+    </template>
+    {{ config.text }}
+  </Tooltip>
 </template>
 
 <style>
@@ -32,6 +83,19 @@ defineProps<{
   border: 1px solid rgb(from var(--tag-color) r g b / var(--tag-border-alpha));
   color: oklch(from var(--tag-color) calc(l * 1.3) calc(c * 0.7) h);
   cursor: pointer;
+
+  &.narrow {
+    min-width: 28px;
+    max-width: 28px;
+    height: 28px;
+    border-radius: 14px;
+    margin-left: -6px;
+
+    &>svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
 }
 
 </style>
