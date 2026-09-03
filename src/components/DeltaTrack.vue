@@ -77,7 +77,10 @@ watch(expanded, async (isExpanded) => {
   isInitialAutoExpanded.value = false
   restoredFocus = false
 
-  if (!isExpanded) return;
+  if (!isExpanded) {
+    scrollCollapsedIntoView()
+    return;
+  }
   holdFocus(props.track.id)
   shouldRenderContent.value = true
   view.value = await renderView()
@@ -126,6 +129,19 @@ function scrollExpandedIntoView() {
       behavior: 'smooth',
     })
   }
+}
+
+function scrollCollapsedIntoView() {
+  const el = deltaTrack.value
+  if (!el) return;
+
+  const rect = el.getBoundingClientRect()
+  if (rect.top >= 0) return;
+
+  window.scrollTo({
+    top: window.scrollY + rect.top,
+    behavior: 'instant',
+  })
 }
 
 async function download(version: 'a' | 'b') {
