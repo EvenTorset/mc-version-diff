@@ -44,6 +44,7 @@ const deltaTrack = ref<HTMLDivElement>()
 const interacted = ref(false)
 const expanded = ref(initExpanded)
 const isInitialAutoExpanded = ref(initExpanded)
+const isInitialRender = ref(initExpanded)
 const shouldRenderContent = ref(initExpanded)
 
 const viewer = computed(() => getViewer(props.dr, props.track))
@@ -97,6 +98,7 @@ onMounted(async () => {
   if (expanded.value) {
     view.value = await renderView()
   }
+  isInitialRender.value = false
 })
 
 const SCROLL_MARGIN = 4
@@ -281,7 +283,7 @@ async function copy(version: 'a' | 'b') {
     >
       <AnimatedHeight
         :show="expanded"
-        immediate-init
+        :immediate-init="isInitialRender"
         @end="handleAnimationEnd"
       >
         <Content :content="view"/>
