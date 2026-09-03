@@ -97,7 +97,7 @@ defineEmits<{
         </template>
         Swap sides
       </Tooltip>
-      <NIcon v-else :size="24" :component="ArrowRight24Regular" />
+      <NIcon v-else :size="32" :component="ArrowRight24Regular" style="padding: 4px;" />
       <template v-for="line of between">
         <Dim v-if="typeof line === 'string'" :key="line" class="apart">{{ line }}</Dim>
         <Content v-else :content="line" />

@@ -6,30 +6,32 @@ import DeltaSummary from '@/components/DeltaSummary.vue'
 import VersionCompare, { type CompareSide } from '@/components/VersionCompare.vue'
 import type { Renderable } from '@/types.ts'
 import { readFilesMeta } from './filesMeta'
+import { useRoute, useRouter } from 'vue-router'
 
 const props = defineProps<{
   dr: DeltaResult
 }>()
 
-type Side = {
-  name: string
-  size: number | null
-}
+const router = useRouter()
+const route = useRoute()
 
-const sideA = ref<Side>({ name: 'Version A', size: null })
-const sideB = ref<Side>({ name: 'Version B', size: null })
+const sideASize = ref<number | null>(null)
+const sideBSize = ref<number | null>(null)
 
 function load() {
   const meta = readFilesMeta()
-  sideA.value = { name: meta?.aName ?? 'Version A', size: meta?.aSize ?? null }
-  sideB.value = { name: meta?.bName ?? 'Version B', size: meta?.bSize ?? null }
+  const [ aSize, bSize ] = route.params.b === 'swap'
+    ? [ meta?.bSize, meta?.aSize ]
+    : [ meta?.aSize, meta?.bSize ]
+  sideASize.value = aSize ?? null
+  sideBSize.value = bSize ?? null
 }
 
 onMounted(load)
 
 watch(() => [ props.dr.a, props.dr.b ], load)
 
-function toSide({ size }: Side): CompareSide {
+function toSide(size: number | null): CompareSide {
   return {
     facts: [
       ...size !== null ? [ { label: 'Size', value: formatBytes(size) } ] : [],
@@ -38,13 +40,13 @@ function toSide({ size }: Side): CompareSide {
   }
 }
 
-const sides = computed(() => [ toSide(sideA.value), toSide(sideB.value) ])
+const sides = computed(() => [ toSide(sideASize.value), toSide(sideBSize.value) ])
 
 const between = computed(() => {
   const rows: Renderable[] = []
 
-  const sizeA = sideA.value.size
-  const sizeB = sideB.value.size
+  const sizeA = sideASize.value
+  const sizeB = sideBSize.value
   if (sizeA !== null && sizeB !== null) {
     const delta = sizeB - sizeA
     rows.push(delta === 0 ? 'same size' : `${delta > 0 ? '+' : '-'}${formatBytes(Math.abs(delta))}`)
@@ -52,13 +54,21 @@ const between = computed(() => {
 
   return rows
 })
+
+function swap() {
+  router.push({ name: 'delta', params: {
+    provider: route.params.provider,
+    a: route.params.a,
+    b: route.params.b === 'swap' ? undefined : 'swap'
+  } })
+}
 </script>
 
 <template>
   <div class="overview">
-    <VersionCompare :sides="sides" :between="between">
+    <VersionCompare :sides="sides" :between="between" swappable @swap="swap">
       <template #picker="{ index }">
-        <h3>{{ index === 0 ? sideA.name : sideB.name }}</h3>
+        <h3>{{ index === 0 ? dr.a : dr.b }}</h3>
       </template>
     </VersionCompare>
 

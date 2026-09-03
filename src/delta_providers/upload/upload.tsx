@@ -17,7 +17,7 @@ registerDeltaProvider('upload', {
     if (!provider) return []
     return resolveStaticOrSync(provider.categories)
   },
-  async fetch(comparatorName, _b, progressDisplay) {
+  async fetch(comparatorName, swap, progressDisplay) {
     const provider = getDeltaProvider(comparatorName)
     if (!provider?.upload) {
       throw new Error(`Invalid delta provider name: '${comparatorName}'`)
@@ -33,24 +33,30 @@ registerDeltaProvider('upload', {
     }
 
     const meta = readFilesMeta()
+    const [ aName, bName, fileA, fileB ] = swap === 'swap'
+      ? [meta?.bName, meta?.aName, contentB, contentA]
+      : [meta?.aName, meta?.bName, contentA, contentB]
     return provider.upload.preprocess(
-      meta?.aName ?? 'Version A',
-      meta?.bName ?? 'Version B',
-      new Uint8Array(await contentA.arrayBuffer()),
-      new Uint8Array(await contentB.arrayBuffer()),
+      aName ?? 'Version A',
+      bName ?? 'Version B',
+      new Uint8Array(await fileA.arrayBuffer()),
+      new Uint8Array(await fileB.arrayBuffer()),
       progressDisplay
     )
   },
-  compare(_a, _b, contentA, contentB, progressDisplay) {
-    const provider = getDeltaProvider(selectedComparator.value)
+  compare(comparatorName, swap, contentA, contentB, progressDisplay) {
+    const provider = getDeltaProvider(comparatorName)
     if (!provider?.upload) {
-      throw new Error(`Invalid delta provider name: '${selectedComparator.value}'`)
+      throw new Error(`Invalid delta provider name: '${comparatorName}'`)
     }
 
     const meta = readFilesMeta()
+    const [ aName, bName ] = swap === 'swap' // content is already swapped when fetching
+      ? [ meta?.bName, meta?.aName ]
+      : [ meta?.aName, meta?.bName ]
     return provider.compare(
-      meta?.aName ?? 'Version A',
-      meta?.bName ?? 'Version B',
+      aName ?? 'Version A',
+      bName ?? 'Version B',
       contentA,
       contentB,
       progressDisplay

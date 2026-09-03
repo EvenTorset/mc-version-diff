@@ -27,9 +27,33 @@ const providerOptions = computed(() => Array.from(listDeltaProviders()
   })
 ))
 
+const swap = ref(false)
 const comparatorProvider = computed(() => getDeltaProvider(selectedComparator.value)!)
 const fileListA = ref<UploadFileInfo[]>([])
 const fileListB = ref<UploadFileInfo[]>([])
+
+const displayListA = computed({
+  get: () => (swap.value ? fileListB.value : fileListA.value),
+  set: val => {
+    if (swap.value) {
+      fileListB.value = val
+    } else {
+      fileListA.value = val
+    }
+  }
+})
+
+const displayListB = computed({
+  get: () => (swap.value ? fileListA.value : fileListB.value),
+  set: val => {
+    if (swap.value) {
+      fileListA.value = val
+    } else {
+      fileListB.value = val
+    }
+  }
+})
+
 const optionValues = reactive<any[]>([])
 const compareLink = computed<string | RouteLocationAsRelativeGeneric | RouteLocationAsPathGeneric | null>(() => {
   if (!fileListA.value?.length || !fileListB.value?.length) {
@@ -40,6 +64,7 @@ const compareLink = computed<string | RouteLocationAsRelativeGeneric | RouteLoca
     params: {
       provider: 'upload',
       a: selectedComparator.value,
+      b: swap.value ? 'swap' : undefined,
     },
     query: Object.fromEntries(comparatorProvider.value.upload?.options?.map((o, i) => {
       switch (o.type) {
@@ -115,21 +140,6 @@ onMounted(async () => {
 
 const arrowHover = ref(false)
 
-async function swapFiles() {
-  const [infoA, infoB] = [fileListA.value[0], fileListB.value[0]]
-  const [contentA, contentB] = await Promise.all([
-    infoA?.file?.arrayBuffer(),
-    infoB?.file?.arrayBuffer(),
-  ])
-
-  fileListA.value = infoB && contentB
-    ? [{ ...infoB, file: new File([contentB], infoB.name) }]
-    : []
-  fileListB.value = infoA && contentA
-    ? [{ ...infoA, file: new File([contentA], infoA.name) }]
-    : []
-}
-
 </script>
 
 <template>
@@ -147,26 +157,26 @@ async function swapFiles() {
       <Row gap="16px">
         <NUpload
           :accept="comparatorProvider.upload?.accept"
-          :file-list="fileListA"
-          @update:file-list="list => fileListA = list.slice(-1)"
+          :file-list="displayListA"
+          @update:file-list="list => displayListA = list.slice(-1)"
           :file-list-style="{
             display: 'none'
           }"
         >
           <NUploadDragger style="position: relative;">
             <NButton
-              v-if="fileListA?.length"
+              v-if="displayListA?.length"
               circle
               class="icon danger"
               size="small"
               style="position: absolute; top: 8px; right: 8px;"
-              @click.stop="fileListA = []"
+              @click.stop="displayListA = []"
             >
               <template #icon>
                 <NIcon :component="Dismiss24Filled" />
               </template>
             </NButton>
-            <Col v-if="!fileListA?.length">
+            <Col v-if="!displayListA?.length">
               <NIcon :component="ArrowUpload24Regular" :size="48" />
               <h3 style="margin-top: 4px;">Version A</h3>
               <p style="margin-top: 0;">Click here or drag and drop a file to upload</p>
@@ -174,14 +184,14 @@ async function swapFiles() {
             <Col v-else>
               <NIcon
                 :component="
-                  /\.(zip|jar)$/.test(fileListA[0].name)
+                  /\.(zip|jar)$/.test(displayListA[0].name)
                     ? FolderZip24Regular
                     : Attach24Regular
                 "
                 :size="48"
               />
               <h3 style="margin-top: 4px;">Version A</h3>
-              <p style="margin-top: 0;">{{ fileListA[0].name }}</p>
+              <p style="margin-top: 0;">{{ displayListA[0].name }}</p>
             </Col>
           </NUploadDragger>
         </NUpload>
@@ -193,7 +203,7 @@ async function swapFiles() {
               :class="{ hover: arrowHover }"
               @mouseenter="arrowHover = true"
               @mouseleave="arrowHover = false"
-              @click="swapFiles"
+              @click="swap = !swap"
             >
               <NIcon :component="ArrowRight16Filled" :size="32" class="swap-icon arrow" />
               <NIcon :component="ArrowSwap24Regular" :size="32" class="swap-icon swap" />
@@ -203,26 +213,26 @@ async function swapFiles() {
         </Tooltip>
         <NUpload
           :accept="comparatorProvider.upload?.accept"
-          :file-list="fileListB"
-          @update:file-list="list => fileListB = list.slice(-1)"
+          :file-list="displayListB"
+          @update:file-list="list => displayListB = list.slice(-1)"
           :file-list-style="{
             display: 'none'
           }"
         >
           <NUploadDragger style="position: relative;">
             <NButton
-              v-if="fileListB?.length"
+              v-if="displayListB?.length"
               circle
               class="icon danger"
               size="small"
               style="position: absolute; top: 8px; right: 8px;"
-              @click.stop="fileListB = []"
+              @click.stop="displayListB = []"
             >
               <template #icon>
                 <NIcon :component="Dismiss24Filled" />
               </template>
             </NButton>
-            <Col v-if="!fileListB?.length">
+            <Col v-if="!displayListB?.length">
               <NIcon :component="ArrowUpload24Regular" :size="48" />
               <h3 style="margin-top: 4px;">Version B</h3>
               <p style="margin-top: 0;">Click here or drag and drop a file to upload</p>
@@ -230,14 +240,14 @@ async function swapFiles() {
             <Col v-else>
               <NIcon
                 :component="
-                  /\.(zip|jar)$/.test(fileListB[0].name)
+                  /\.(zip|jar)$/.test(displayListB[0].name)
                     ? FolderZip24Regular
                     : Attach24Regular
                 "
                 :size="48"
               />
               <h3 style="margin-top: 4px;">Version B</h3>
-              <p style="margin-top: 0;">{{ fileListB[0].name }}</p>
+              <p style="margin-top: 0;">{{ displayListB[0].name }}</p>
             </Col>
           </NUploadDragger>
         </NUpload>
