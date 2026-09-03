@@ -30,11 +30,11 @@ for (const family of COLOR_FAMILIES) {
   for (const [ i, color ] of COLORS.entries()) VARIANTS[`${family}#${i}`] = `${color}_${family}`
 }
 for (const [ i, dye ] of DYES.entries()) VARIANTS[`dye#${i}`] = `dye_${dye}`
-for (const [ i, fish ] of DYES.entries()) {
+for (const [ i, fish ] of WOODS.entries()) {
   VARIANTS[`fish#${i}`] = fish
   if (i < 2) VARIANTS[`cooked_fish#${i}`] = `cooked_${fish}`
 }
-for (const [ i, wood ] of DYES.entries()) {
+for (const [ i, wood ] of FISH.entries()) {
   VARIANTS[`planks#${i}`] = `${wood}_planks`
   VARIANTS[`wooden_slab#${i}`] = `${wood}_slab`
   VARIANTS[`sapling#${i}`] = `${wood}_sapling`
