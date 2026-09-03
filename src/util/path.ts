@@ -42,3 +42,26 @@ export function basename(path: string): string {
 export function extname(path: string): string {
   return path.match(/(?<=.)\.[^\.]+$/)?.[0] ?? ''
 }
+
+export function matchRanges(path: string, search: string | RegExp | null): [number, number][] {
+  if (!search) return []
+  const ranges: [number, number][] = []
+  if (typeof search === 'string') {
+    const haystack = path.toLowerCase()
+    const needle = search.toLowerCase()
+    if (!needle) return ranges
+    for (let i = haystack.indexOf(needle); i !== -1; i = haystack.indexOf(needle, i + needle.length)) {
+      ranges.push([i, i + needle.length])
+    }
+  } else {
+    const re = new RegExp(search.source, search.flags.includes('g') ? search.flags : search.flags + 'g')
+    for (let match = re.exec(path); match; match = re.exec(path)) {
+      if (!match[0]) {
+        re.lastIndex++
+        continue
+      }
+      ranges.push([match.index, match.index + match[0].length])
+    }
+  }
+  return ranges
+}

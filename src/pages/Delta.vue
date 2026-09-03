@@ -6,7 +6,7 @@ import type { DeltaProvider, DeltaProviderCategory, DeltaResult, DeltaTrack } fr
 import { getDeltaProvider } from '@/delta_providers/registry'
 import { getTrackCategory } from '@/delta_providers/category'
 import { NButton, NCard, NCheckbox, NIcon, NInput, NRadio, NRadioGroup, NSelect, NSpin, type InputInst } from 'naive-ui'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, provide, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Row from '@/components/Row.vue'
 import TreeList from '@/components/TreeList.vue'
@@ -258,6 +258,18 @@ watch(pathFilter, (newVal) => {
     debouncedPathFilter.value = newVal
   }, 250)
 })
+
+const pathHighlight = computed<string | RegExp | null>(() => {
+  const query = debouncedPathFilter.value.trim()
+  if (!query) return null
+  if (!findRegex.value) return query
+  try {
+    return new RegExp(query, 'gi')
+  } catch {
+    return null
+  }
+})
+provide('path-highlight', pathHighlight)
 
 function onKeydown(event: KeyboardEvent) {
   if (
