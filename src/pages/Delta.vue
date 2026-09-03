@@ -528,7 +528,7 @@ onMounted(() => {
                     </Tooltip>
                   </Row>
                 </template>
-                <CardSectionHeader text="Categories" />
+                <CardSectionHeader :text="`Categories${stateFilter || debouncedPathFilter ? ' (Filtered)' : ''}`" />
                 <Col align="stretch" gap="0">
                   <AnimatedHeight style="overflow: visible;">
                     <TransitionList
