@@ -95,9 +95,9 @@ onBeforeUnmount(() => {
     <h1 :style="{
       fontWeight: `${200 * weight}`
     }">Version Diff</h1>
-    <sub :style="{
+    <span :style="{
       fontWeight: `${500 * weight}`
-    }">By CCCode</sub>
+    }">A Minecraft version comparison tool</span>
   </div>
 </template>
 
@@ -111,14 +111,14 @@ onBeforeUnmount(() => {
   width: fit-content;
   height: fit-content;
 
-  svg {
+  &>svg {
     fill: var(--color-accent);
     width: 5em;
     height: 5em;
     margin: 0 -1.41em 0 0;
   }
 
-  h1 {
+  &>h1 {
     color: var(--color-6);
     font-size: 3em;
     text-shadow: 0 3px var(--color-1);
@@ -128,10 +128,10 @@ onBeforeUnmount(() => {
     white-space: nowrap;
   }
 
-  sub {
+  &>span {
     position: absolute;
     left: 5.9375em;
-    bottom: 0.1em;
+    bottom: 0;
     font-size: 0.8em;
     color: var(--color-4);
     user-select: none;
