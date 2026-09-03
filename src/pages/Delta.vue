@@ -539,6 +539,7 @@ onMounted(() => {
                     >
                       <template #default="{ item: [ name, tracks ] }">
                         <CategoryTab
+                          v-if="tracks.length > 0 || name === 'Overview' || name === selectedCategory"
                           :count="tracks.length"
                           :name
                           :selected="selectedCategory === name"
