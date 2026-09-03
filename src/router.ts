@@ -3,8 +3,8 @@ import { getDiffSuggestions, loadMCJEManifest } from './delta_providers/mcje/ver
 import { URL_BASE } from '@/../urlBase'
 
 const routes: RouteRecordRaw[] = [
+  { name: 'delta', path: '/:provider/:a/:b?', component: () => import('@/pages/Delta.vue') },
   { name: 'home', path: '/:provider?', component: () => import('@/pages/Home.vue') },
-  { name: 'delta', path: '/!/:provider/:a/:b', component: () => import('@/pages/Delta.vue') },
 ]
 
 export const router = createRouter({

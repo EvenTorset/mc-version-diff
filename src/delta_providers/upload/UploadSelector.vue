@@ -40,7 +40,6 @@ const compareLink = computed<string | RouteLocationAsRelativeGeneric | RouteLoca
     params: {
       provider: 'upload',
       a: selectedComparator.value,
-      b: '-'
     },
     query: Object.fromEntries(comparatorProvider.value.upload?.options?.map((o, i) => {
       switch (o.type) {
