@@ -422,6 +422,9 @@ watch(categories, () => {
 onMounted(() => {
   nextTick(updateCountWidth)
 })
+
+const autoToggle = ref<'none' | 'expand' | 'collapse'>('none')
+provide('autoToggle', autoToggle)
 </script>
 
 <template>
@@ -549,6 +552,19 @@ onMounted(() => {
                     </TransitionList>
                   </AnimatedHeight>
                 </Col>
+                <CardSectionHeader text="View" />
+                <Row>
+                  <NButton
+                    style="flex: 1;"
+                    :class="autoToggle === 'expand' ? 'selected accent' : ''"
+                    @click="autoToggle = autoToggle === 'expand' ? 'none' : 'expand'"
+                  >Expand all</NButton>
+                  <NButton
+                    style="flex: 1;"
+                    :class="autoToggle === 'collapse' ? 'selected accent' : ''"
+                    @click="autoToggle = autoToggle === 'collapse' ? 'none' : 'collapse'"
+                  >Collapse all</NButton>
+                </Row>
                 <Transition name="pass-up-fade">
                   <div v-if="imageDisplayOptions.length > 0">
                     <TransitionList :items="imageDisplayOptions" :style="{

@@ -4,7 +4,7 @@ import FilePath from '@/components/FilePath.vue'
 import { ArrowDownload24Regular, ArrowTurnRight20Filled, ChevronDown20Filled, Copy24Regular } from '@vicons/fluent'
 import IconButton from './IconButton.vue'
 import TrackTag from './TrackTag.vue'
-import { onMounted, ref, shallowRef, watch } from 'vue'
+import { inject, onMounted, ref, shallowRef, watch, type Ref } from 'vue'
 import AnimatedHeight from './AnimatedHeight.vue'
 import Content from '@/components/Content.vue'
 import { getViewer } from '@/viewers/registry.ts'
@@ -32,12 +32,14 @@ const copyFunc = computed(() => getCopier(props.track))
 
 let restoredFocus = isInitialFocus(props.track.id)
 
-const initExpanded = restoredFocus || (
+const autoToggle = inject<Ref<'none' | 'expand' | 'collapse'>>('autoToggle')
+const initExpanded = restoredFocus || autoToggle?.value === 'expand' || (
   (
     props.track.state === DeltaTrackState.Added
     || props.track.state === DeltaTrackState.Edited
   )
   && (category.value?.expand ?? false)
+  && autoToggle?.value !== 'collapse'
 )
 
 const deltaTrack = ref<HTMLDivElement>()
@@ -49,6 +51,14 @@ const shouldRenderContent = ref(initExpanded)
 
 const viewer = computed(() => getViewer(props.dr, props.track))
 const view = shallowRef<Renderable>()
+
+watch(() => autoToggle?.value, t => {
+  if (t === 'expand') {
+    expanded.value = true
+  } else if (t === 'collapse') {
+    expanded.value = false
+  }
+})
 
 function defaultViewer() {
   return <Dim style="padding: 4px;"><i>No viewer is registered for this file type.</i></Dim>
@@ -108,7 +118,7 @@ const SCROLL_MARGIN = 4
 
 function scrollExpandedIntoView() {
   const el = deltaTrack.value
-  if (!el) return;
+  if (!el || autoToggle?.value === 'expand') return;
 
   const rect = el.getBoundingClientRect()
   const viewportHeight = window.innerHeight
@@ -173,6 +183,13 @@ async function copy(version: 'a' | 'b') {
     console.error(err)
   }
 }
+
+function toggle() {
+  if (autoToggle) {
+    autoToggle.value = 'none'
+  }
+  expanded.value = !expanded.value
+}
 </script>
 
 <template>
@@ -185,7 +202,7 @@ async function copy(version: 'a' | 'b') {
     @focusin="interacted = true"
   >
     <div class="delta-track-bar">
-      <IconButton @click="expanded = !expanded" style="align-self: flex-start;">
+      <IconButton @click="toggle" style="align-self: flex-start;">
         <ChevronDown20Filled :style="{
           transition: 'rotate .2s',
           rotate: expanded ? '180deg' : '0deg'
@@ -195,7 +212,7 @@ async function copy(version: 'a' | 'b') {
       <Col
         v-if="track.state === DeltaTrackState.Moved"
         align="flex-end"
-        @click="expanded = !expanded"
+        @click="toggle"
         style="cursor: pointer;"
       >
         <TrackTag :state="DeltaTrackState.Moved" />
@@ -204,7 +221,7 @@ async function copy(version: 'a' | 'b') {
       <TrackTag
         v-else
         :state="track.state"
-        @click="expanded = !expanded"
+        @click="toggle"
       />
 
       <Col v-if="track.state === DeltaTrackState.Moved" align="stretch" style="overflow: hidden;">
@@ -224,7 +241,7 @@ async function copy(version: 'a' | 'b') {
           minWidth: 'fit-content',
         }"
       />
-      <div class="delta-track-spacer" @click="expanded = !expanded"></div>
+      <div class="delta-track-spacer" @click="toggle"></div>
       <div v-if="interacted" class="delta-track-action-buttons">
         <Tooltip v-if="
           copyFunc && (
