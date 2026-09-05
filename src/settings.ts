@@ -1,4 +1,5 @@
 import { reactive } from 'vue'
+import type { Shell } from './util/moveScriptGen'
 
 export const SETTINGS_STORAGE_KEY = 'mc-version-diff-settings'
 
@@ -9,6 +10,8 @@ export type SettingsType = {
   cacheSizeMax: number
   enableCopyStatusButton: boolean
   favoriteCategory: Record<string, string>
+  chosenExecType: 'command' | 'script'
+  chosenShell: Shell
 }
 
 export const Settings = reactive<SettingsType>({
@@ -18,6 +21,8 @@ export const Settings = reactive<SettingsType>({
   cacheSizeMax: 157286400,
   enableCopyStatusButton: false,
   favoriteCategory: {},
+  chosenExecType: 'script',
+  chosenShell: 'cmd',
 })
 
 export function loadSettings() {
@@ -28,4 +33,6 @@ export function loadSettings() {
   Settings.cacheSizeMax = Number((so?.cacheSizeMax ?? Settings.cacheSizeMax))
   Settings.enableCopyStatusButton = !!(so?.enableCopyStatusButton ?? Settings.enableCopyStatusButton)
   Settings.favoriteCategory = so?.favoriteCategory ?? Settings.favoriteCategory
+  Settings.chosenExecType = so?.chosenExecType ?? Settings.chosenExecType
+  Settings.chosenShell = so?.chosenShell ?? Settings.chosenShell
 }

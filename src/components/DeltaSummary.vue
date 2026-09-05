@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { NCard } from 'naive-ui'
+import { NButton, NCard } from 'naive-ui'
 import type { DeltaResult } from '@/delta_providers'
 import { DeltaTrackState } from '@/delta_providers/states'
 import AnimatedHeight from './AnimatedHeight.vue'
@@ -10,6 +10,13 @@ import Meter from './Meter.vue'
 import Row from './Row.vue'
 import TrackTag from './TrackTag.vue'
 import TransitionList from './TransitionList.vue'
+import { Settings } from '@/settings.ts'
+import { naturalCompare } from '@/util/sort.ts'
+import { copyToClipboard } from '@/util/clipboard.ts'
+import Notify from '@/notify.tsx'
+import { errorMessage } from '@/util/errorMessage.ts'
+import Tooltip from './Tooltip.vue'
+import Dim from './Dim.vue'
 
 const props = defineProps<{
   dr: DeltaResult
@@ -48,6 +55,34 @@ const categories = computed(() => {
   const most = rows[0]?.[1] ?? 1
   return rows.map(([ name, count ]) => ({ name, count, share: Math.round((count / most) * 100) }))
 })
+
+const hasMovedFiles = computed(() => props.dr.tracks.some(t => t.state === DeltaTrackState.Moved))
+const hasActions = computed(() => Settings.enableCopyStatusButton || hasMovedFiles.value)
+
+async function copySpreadsheet() {
+  try {
+    const content = (await Promise.all(
+      props.dr.tracks
+        .filter(t => (
+          t.state === DeltaTrackState.Added
+          || t.state === DeltaTrackState.Edited
+        ) && t.b.endsWith('.png'))
+        .sort((a, b) => naturalCompare(a.id, b.id))
+        .map(async t => [
+          (await props.dr.getEntry(props.dr.b, t.b)).toBase64({ alphabet: 'base64url' }),
+          t.b.replace(/^assets\/minecraft\/textures\//, '')
+        ].join('\t'))
+    )).join('\n')
+    await copyToClipboard(new TextEncoder().encode(content), 'text/plain')
+    Notify.success({
+      content: 'Copied!',
+      duration: 1000,
+    })
+  } catch (err) {
+    console.error(err)
+    Notify.error(errorMessage(err))
+  }
+}
 </script>
 
 <template>
@@ -97,6 +132,26 @@ const categories = computed(() => {
           </template>
         </TransitionList>
       </AnimatedHeight>
+    </div>
+
+    <div v-if="hasActions">
+      <h3>Actions</h3>
+      <Row>
+        <RouterLink
+          v-if="hasMovedFiles"
+          :to="{ query: { ...$route.query, category: 'generate-move-script' } }"
+        >
+          <NButton>Generate move script</NButton>
+        </RouterLink>
+        <Tooltip v-if="Settings.enableCopyStatusButton">
+          <template #trigger="{ props }">
+            <NButton v-bind="props" @click="copySpreadsheet">Copy spreadsheet</NButton>
+          </template>
+          <h3>Copy spreadsheet</h3>
+          <p>Copies the added and edited textures as tab-separated values.</p>
+          <Dim tag='p'>[ Dokucraft ]</Dim>
+        </Tooltip>
+      </Row>
     </div>
   </template>
 </template>

@@ -173,6 +173,10 @@ h2 {
   font-weight: 400;
   font-size: 1.75rem;
   margin-bottom: 0.25rem;
+
+  &:first-child {
+    margin-top: 0;
+  }
 }
 
 h3 {

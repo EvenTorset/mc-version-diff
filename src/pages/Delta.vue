@@ -34,6 +34,7 @@ import { errorMessage } from '@/util/errorMessage'
 import { naturalCompare } from '@/util/sort'
 import { pathSearch } from 'path-search-sort'
 import CardSectionHeader from '@/components/CardSectionHeader.vue'
+import MoveScriptGenerator from '@/components/MoveScriptGenerator.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -167,7 +168,7 @@ const defaultCategory = computed(() => {
 
 const selectedCategory = ref<string>(param('category') ?? '')
 watch(categories, newCategories => {
-  if (!dr.value) return;
+  if (!dr.value || param('category') === 'generate-move-script') return;
 
   const match = newCategories.find(([k]) =>
     k.toLowerCase() === selectedCategory.value.toLowerCase())
@@ -177,6 +178,10 @@ watch(categories, newCategories => {
 watch(() => param('category'), value => {
   if (!value) {
     if (selectedCategory.value !== 'Overview') selectedCategory.value = 'Overview'
+    return
+  }
+  if (value === 'generate-move-script') {
+    selectedCategory.value = 'generate-move-script'
     return
   }
   const match = categories.value.find(([ name ]) =>
@@ -339,7 +344,7 @@ const drFilteredSorted = computed<DeltaResult | undefined>(() => {
 })
 
 const categoryIsEmpty = computed(() =>
-  selectedCategory.value !== 'Overview' && drFilteredSorted.value?.tracks.length === 0)
+  selectedCategory.value !== 'Overview' && selectedCategory.value !== 'generate-move-script' && drFilteredSorted.value?.tracks.length === 0)
 
 const urlState = computed(() => {
   const query: Record<string, string> = {}
@@ -631,6 +636,7 @@ provide('autoToggle', autoToggle)
                   </Suspense>
                 </Row>
               </Col>
+              <MoveScriptGenerator v-else-if="selectedCategory === 'generate-move-script'" :dr />
               <div
                 v-else
                 :key="selectedCategory"
