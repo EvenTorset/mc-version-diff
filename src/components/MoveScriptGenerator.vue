@@ -263,18 +263,35 @@ code {
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 8px;
+  counter-reset: explanation;
 
-  tr:nth-child(even) {
-    background-color: var(--color-1);
+  tr {
+    counter-increment: explanation;
+  }
+
+  td:first-child::before {
+    content: counter(explanation);
+    display: inline-block;
+    width: 1.5em;
+    margin-right: 12px;
+    text-align: right;
+    color: var(--color-3);
+    user-select: none;
   }
 
   td {
-    padding: 6px 10px;
+    padding: 7px 0;
     vertical-align: top;
+    border-top: 1px solid var(--color-2);
+  }
+
+  tr:first-child td {
+    border-top: none;
   }
 
   td:first-child {
     width: 1%;
+    padding-right: 24px;
     white-space: nowrap;
     color: var(--color-6);
   }
