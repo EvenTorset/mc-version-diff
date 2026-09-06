@@ -177,7 +177,7 @@ watch(categories, newCategories => {
 
 watch(() => param('category'), value => {
   if (!value) {
-    if (selectedCategory.value !== 'Overview') selectedCategory.value = 'Overview'
+    if (selectedCategory.value !== defaultCategory.value) selectedCategory.value = defaultCategory.value
     return
   }
   if (value === 'generate-move-script') {
@@ -349,7 +349,7 @@ const categoryIsEmpty = computed(() =>
 const urlState = computed(() => {
   const query: Record<string, string> = {}
 
-  if (selectedCategory.value) {
+  if (selectedCategory.value && selectedCategory.value !== defaultCategory.value) {
     query.category = selectedCategory.value.toLowerCase()
   }
   if (debouncedPathFilter.value) query.search = debouncedPathFilter.value
