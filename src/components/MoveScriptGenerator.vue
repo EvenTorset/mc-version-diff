@@ -89,60 +89,156 @@ async function copy() {
     </template>
     <h3>{{ Settings.chosenExecType === 'script' ? 'Script' : 'Command' }} Explanation</h3>
     <template v-if="Settings.chosenShell === 'bash' && Settings.chosenExecType === 'script'">
-      <ul>
-        <li><code>#!/usr/bin/env bash</code>: Specifies that the script should be executed using the Bash shell environment.</li>
-        <li><code>if [ -f "old/path" ]; then</code>: Checks if the source file exists before trying to move it.</li>
-        <li><code>mkdir -p "new/folder"</code>: Creates the destination directory if it does not already exist.</li>
-        <li><code>&&</code>: Makes the following command only run if the previous command finished successfully.</li>
-        <li><code>mv "old" "new"</code>: Moves the file from its source path to its destination path.</li>
-        <li><code>2>/dev/null</code>: Suppresses error messages so missing files or minor issues are ignored silently.</li>
-      </ul>
+      <table class="explanation">
+        <tr>
+          <td><code>#!/usr/bin/env bash</code></td>
+          <td>Specifies that the script should be executed using the Bash shell environment.</td>
+        </tr>
+        <tr>
+          <td><code>if [ -f "old/path" ]; then</code></td>
+          <td>Checks if the source file exists before trying to move it.</td>
+        </tr>
+        <tr>
+          <td><code>mkdir -p "new/folder"</code></td>
+          <td>Creates the destination directory if it does not already exist.</td>
+        </tr>
+        <tr>
+          <td><code>&&</code></td>
+          <td>Makes the following command only run if the previous command finished successfully.</td>
+        </tr>
+        <tr>
+          <td><code>mv "old" "new"</code></td>
+          <td>Moves the file from its source path to its destination path.</td>
+        </tr>
+        <tr>
+          <td><code>2>/dev/null</code></td>
+          <td>Suppresses error messages so missing files or minor issues are ignored silently.</td>
+        </tr>
+      </table>
     </template>
     <template v-if="Settings.chosenShell === 'bash' && Settings.chosenExecType === 'command'">
-      <ul>
-        <li><code>[ -f "old/path" ]</code>: Checks if the source file exists before trying to move it.</li>
-        <li><code>&&</code>: Makes the following command only run if the previous command finished successfully.</li>
-        <li><code>mkdir -p "new/folder"</code>: Creates the destination directory if it does not already exist.</li>
-        <li><code>mv "old" "new"</code>: Moves the file from its source path to its destination path.</li>
-        <li><code>2>/dev/null</code>: Suppresses error messages so missing files or minor issues are ignored silently.</li>
-        <li><code>;</code>: Separates individual commands so multiple can be run from a single line.</li>
-      </ul>
+      <table class="explanation">
+        <tr>
+          <td><code>[ -f "old/path" ]</code></td>
+          <td>Checks if the source file exists before trying to move it.</td>
+        </tr>
+        <tr>
+          <td><code>&&</code></td>
+          <td>Makes the following command only run if the previous command finished successfully.</td>
+        </tr>
+        <tr>
+          <td><code>mkdir -p "new/folder"</code></td>
+          <td>Creates the destination directory if it does not already exist.</td>
+        </tr>
+        <tr>
+          <td><code>mv "old" "new"</code></td>
+          <td>Moves the file from its source path to its destination path.</td>
+        </tr>
+        <tr>
+          <td><code>2>/dev/null</code></td>
+          <td>Suppresses error messages so missing files or minor issues are ignored silently.</td>
+        </tr>
+        <tr>
+          <td><code>;</code></td>
+          <td>Separates individual commands so multiple can be run from a single line.</td>
+        </tr>
+      </table>
     </template>
     <template v-if="Settings.chosenShell === 'powershell' && Settings.chosenExecType === 'script'">
-      <ul>
-        <li><code>if (Test-Path -LiteralPath "old\path")</code>: Checks if the source file exists before trying to move it.</li>
-        <li><code>New-Item -ItemType Directory -Force -Path "new\folder"</code>: Creates the destination directory if it does not already exist.</li>
-        <li><code>| Out-Null</code>: Suppresses directory creation confirmation messages from printing to the console.</li>
-        <li><code>Move-Item -LiteralPath "old" -Destination "new"</code>: Moves the file from its source path to its destination path.</li>
-        <li><code>-ErrorAction SilentlyContinue</code>: Suppresses error messages so missing files or minor issues are ignored silently.</li>
-      </ul>
+      <table class="explanation">
+        <tr>
+          <td><code>if (Test-Path -LiteralPath "old\path")</code></td>
+          <td>Checks if the source file exists before trying to move it.</td>
+        </tr>
+        <tr>
+          <td><code>New-Item -ItemType Directory -Force -Path "new\folder"</code></td>
+          <td>Creates the destination directory if it does not already exist.</td>
+        </tr>
+        <tr>
+          <td><code>| Out-Null</code></td>
+          <td>Suppresses directory creation confirmation messages from printing to the console.</td>
+        </tr>
+        <tr>
+          <td><code>Move-Item -LiteralPath "old" -Destination "new"</code></td>
+          <td>Moves the file from its source path to its destination path.</td>
+        </tr>
+        <tr>
+          <td><code>-ErrorAction SilentlyContinue</code></td>
+          <td>Suppresses error messages so missing files or minor issues are ignored silently.</td>
+        </tr>
+      </table>
     </template>
     <template v-if="Settings.chosenShell === 'powershell' && Settings.chosenExecType === 'command'">
-      <ul>
-        <li><code>if (Test-Path -LiteralPath "old\path")</code>: Checks if the source file exists before trying to move it.</li>
-        <li><code>New-Item -ItemType Directory -Force -Path "new\folder"</code>: Creates the destination directory if it does not already exist.</li>
-        <li><code>| Out-Null</code>: Suppresses directory creation confirmation messages from printing to the console.</li>
-        <li><code>Move-Item -LiteralPath "old" -Destination "new"</code>: Moves the file from its source path to its destination path.</li>
-        <li><code>-ErrorAction SilentlyContinue</code>: Suppresses error messages so missing files or minor issues are ignored silently.</li>
-        <li><code>;</code>: Separates individual commands so multiple can be run from a single line.</li>
-      </ul>
+      <table class="explanation">
+        <tr>
+          <td><code>if (Test-Path -LiteralPath "old\path")</code></td>
+          <td>Checks if the source file exists before trying to move it.</td>
+        </tr>
+        <tr>
+          <td><code>New-Item -ItemType Directory -Force -Path "new\folder"</code></td>
+          <td>Creates the destination directory if it does not already exist.</td>
+        </tr>
+        <tr>
+          <td><code>| Out-Null</code></td>
+          <td>Suppresses directory creation confirmation messages from printing to the console.</td>
+        </tr>
+        <tr>
+          <td><code>Move-Item -LiteralPath "old" -Destination "new"</code></td>
+          <td>Moves the file from its source path to its destination path.</td>
+        </tr>
+        <tr>
+          <td><code>-ErrorAction SilentlyContinue</code></td>
+          <td>Suppresses error messages so missing files or minor issues are ignored silently.</td>
+        </tr>
+        <tr>
+          <td><code>;</code></td>
+          <td>Separates individual commands so multiple can be run from a single line.</td>
+        </tr>
+      </table>
     </template>
     <template v-if="Settings.chosenShell === 'cmd' && Settings.chosenExecType === 'script'">
-      <ul>
-        <li><code>@echo off</code>: Prevents Command Prompt from printing every line of the script to the screen while executing.</li>
-        <li><code>mkdir "new\folder" 2>nul</code>: Creates the destination directory if it does not already exist.</li>
-        <li><code>&</code>: Separates individual commands so multiple can be run from a single line.</li>
-        <li><code>move /Y "old" "new"</code>: Moves the file from its source path to its destination path.</li>
-        <li><code>>nul 2>&1</code>: Suppresses output and error messages so operations are completed silently.</li>
-      </ul>
+      <table class="explanation">
+        <tr>
+          <td><code>@echo off</code></td>
+          <td>Prevents Command Prompt from printing every line of the script to the screen while executing.</td>
+        </tr>
+        <tr>
+          <td><code>mkdir "new\folder" 2>nul</code></td>
+          <td>Creates the destination directory if it does not already exist.</td>
+        </tr>
+        <tr>
+          <td><code>&</code></td>
+          <td>Separates individual commands so multiple can be run from a single line.</td>
+        </tr>
+        <tr>
+          <td><code>move /Y "old" "new"</code></td>
+          <td>Moves the file from its source path to its destination path.</td>
+        </tr>
+        <tr>
+          <td><code>>nul 2>&1</code></td>
+          <td>Suppresses output and error messages so operations are completed silently.</td>
+        </tr>
+      </table>
     </template>
     <template v-if="Settings.chosenShell === 'cmd' && Settings.chosenExecType === 'command'">
-      <ul>
-        <li><code>mkdir "new\folder" 2>nul</code>: Creates the destination directory if it does not already exist.</li>
-        <li><code>move /Y "old" "new"</code>: Moves the file from its source path to its destination path.</li>
-        <li><code>>nul 2>&1</code>: Suppresses output and error messages so operations are completed silently.</li>
-        <li><code>&</code>: Separates individual commands so multiple can be run from a single line.</li>
-      </ul>
+      <table class="explanation">
+        <tr>
+          <td><code>mkdir "new\folder" 2>nul</code></td>
+          <td>Creates the destination directory if it does not already exist.</td>
+        </tr>
+        <tr>
+          <td><code>move /Y "old" "new"</code></td>
+          <td>Moves the file from its source path to its destination path.</td>
+        </tr>
+        <tr>
+          <td><code>>nul 2>&1</code></td>
+          <td>Suppresses output and error messages so operations are completed silently.</td>
+        </tr>
+        <tr>
+          <td><code>&</code></td>
+          <td>Separates individual commands so multiple can be run from a single line.</td>
+        </tr>
+      </table>
     </template>
     <h3>{{ Settings.chosenExecType === 'script' ? 'Script' : 'Command' }}</h3>
     <NButton v-if="Settings.chosenExecType === 'script'" class="accent" @click="download">Download</NButton>
@@ -161,6 +257,40 @@ code {
   margin: 0 -1px;
   border: 1px solid var(--color-2);
   border-radius: 3px;
+}
+
+.explanation {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+
+  tr:nth-child(even) {
+    background-color: var(--color-1);
+  }
+
+  td {
+    padding: 6px 10px;
+    vertical-align: top;
+  }
+
+  td:first-child {
+    width: 1%;
+    white-space: nowrap;
+    color: var(--color-6);
+  }
+
+  code {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+  }
+}
+
+@media (max-width: 700px) {
+  .explanation td:first-child {
+    white-space: normal;
+  }
 }
 
 .delta-page-content {
