@@ -52,7 +52,7 @@ async function copy() {
     <p>This tool generates a script or command line that you can run from a data/resource pack's root directory to easily move all of the files that need to be moved in order to update the pack.</p>
     <p>You can select different options below to read more about them.</p>
     <h3>Type</h3>
-    <Row>
+    <Row class="radio-row">
       <NRadioGroup v-model:value="Settings.chosenExecType">
         <NRadio value="script">Script</NRadio>
         <NRadio value="command">Command</NRadio>
@@ -65,7 +65,7 @@ async function copy() {
     </template>
     <p v-else>Commands can be copied to the clipboard and pasted into a terminal. Note that it must be run from the root directory of a pack.</p>
     <h3>{{ Settings.chosenExecType === 'script' ? 'Script' : 'Command' }} Format</h3>
-    <Row>
+    <Row class="radio-row">
       <NRadioGroup v-model:value="Settings.chosenShell">
         <NRadio value="cmd">Command Prompt</NRadio>
         <NRadio value="powershell">PowerShell</NRadio>
@@ -257,6 +257,11 @@ code {
   margin: 0 -1px;
   border: 1px solid var(--color-2);
   border-radius: 3px;
+}
+
+.radio-row {
+  margin-left: -8px;
+  padding-top: 4px;
 }
 
 .explanation {
