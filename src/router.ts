@@ -1,9 +1,10 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { getDiffSuggestions, loadMCJEManifest } from './delta_providers/mcje/version_manifest'
 import { URL_BASE } from '@/../urlBase'
+import DeltaRoute from '@/pages/DeltaRoute.vue'
 
 const routes: RouteRecordRaw[] = [
-  { name: 'delta', path: '/:provider/:a/:b?', component: () => import('@/pages/Delta.vue') },
+  { name: 'delta', path: '/:provider/:a/:b?', component: DeltaRoute },
   { name: 'home', path: '/:provider?', component: () => import('@/pages/Home.vue') },
 ]
 
