@@ -51,6 +51,7 @@ const shouldRenderContent = ref(initExpanded)
 
 const viewer = computed(() => getViewer(props.dr, props.track))
 const view = shallowRef<Renderable>()
+const heightDuration = computed(() => autoToggle?.value === 'expand' || autoToggle?.value === 'collapse' ? 0 : 200)
 
 watch(() => autoToggle?.value, t => {
   if (t === 'expand') {
@@ -306,6 +307,7 @@ function toggle() {
     >
       <AnimatedHeight
         :show="expanded"
+        :duration="heightDuration"
         :immediate-init="isInitialRender"
         @end="handleAnimationEnd"
       >

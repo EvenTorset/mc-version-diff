@@ -38,6 +38,7 @@ function setHeight(targetHeight: number) {
     return;
   }
 
+  el.style.transition = `height ${props.duration}ms ease`
   el.style.height = `${currentHeight}px`
   void el.offsetHeight // Force reflow
 
@@ -60,6 +61,7 @@ function collapse() {
   }
 
   const startHeight = content.value?.getBoundingClientRect().height ?? currentHeight
+  el.style.transition = `height ${props.duration}ms ease`
   el.style.height = `${startHeight}px`
 
   void el.offsetHeight // Force reflow
@@ -80,6 +82,7 @@ function expand() {
     return;
   }
 
+  el.style.transition = `height ${props.duration}ms ease`
   if (el.style.height === '' || el.style.height === '0px') {
     el.style.height = '0px'
     void el.offsetHeight // Force reflow
