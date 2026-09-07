@@ -2,7 +2,8 @@ import { registerDeltaProvider } from '@/delta_providers/registry'
 import { getTrackCategory } from '@/delta_providers/category'
 import type { DeltaProvider, DeltaResult, DeltaTrack } from '@/delta_providers'
 import { useRoute } from 'vue-router'
-import { getVersion, getVersionList, loadMCJEManifest, type MCJEVersionDetails } from '@/delta_providers/mcje/version_manifest'
+import { getVersion, type MCJEVersionDetails } from '@/delta_providers/mcje/version_manifest'
+import { assets } from '@/delta_providers/mcje/assets'
 import { readZip, type RawBytes } from 'minecraft-asset-loader'
 import type { RehashPayloadItem, RehashWorkerMessage } from '@/util/rehash.worker'
 import RehashWorker from '@/util/rehash.worker?worker'
@@ -134,7 +135,7 @@ async function getJAR(
   const progressBarId = progressDisplay.addItem(progressBar.render)
 
   let details: MCJEVersionDetails | null = null
-  let files: { path: string, size: number, crc?: number, read(): Promise<Uint8Array>, raw(): Promise<RawBytes> }[]
+  let files: MCJEEntry[]
 
   if (content) {
     progressBar.progHandler.setMessage('Reading file...')
@@ -153,19 +154,10 @@ async function getJAR(
     })
 
     progressBar.progHandler.setMessage('Reading JAR file...')
-    files = await version.list()
+    files = await version.list() as MCJEEntry[]
   }
 
-  const entries = new Map<string, MCJEEntry>()
-  for (const file of files) {
-    entries.set(file.path, {
-      path: file.path,
-      size: file.size,
-      crc: file.crc ?? 0,
-      read: () => file.read(),
-      raw: () => file.raw(),
-    })
-  }
+  const entries = new Map(files.map(file => [file.path, file]))
   await readPackFormats(id, entries)
 
   if (rehash) {
@@ -231,8 +223,7 @@ const provider: DeltaProvider<MCJEVersionContent> = {
     ],
     versionPicker: () => defineAsyncComponent(() => import('./MCJEVersionPicker.vue')),
     async defaultVersion() {
-      await loadMCJEManifest()
-      return getVersionList().find(v => v.type === 'release')?.id ?? ''
+      return (await assets().manifest.version('release'))?.id ?? ''
     },
     load(source, progressDisplay) {
       const loc = new URL(location.href)
@@ -575,4 +566,4 @@ const provider: DeltaProvider<MCJEVersionContent> = {
 }
 registerDeltaProvider('mcje', provider)
 
-loadMCJEManifest()?.catch(() => {})
+assets().manifest.versions().catch(() => {})

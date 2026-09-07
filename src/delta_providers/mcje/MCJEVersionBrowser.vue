@@ -9,18 +9,13 @@ export const VERSION_MODES: { value: VersionMode, label: string }[] = [
 </script>
 
 <script setup lang="ts">
-import {
-  getMainVersions,
-  getReleaseVersions,
-  getVersionList,
-  loadMCJEManifest,
-  type MCJEManifestVersion,
-} from '@/delta_providers/mcje/version_manifest.ts'
-import { NList, NListItem, NProgress } from 'naive-ui'
+import type { MCJEManifestVersion } from '@/delta_providers/mcje/version_manifest.ts'
+import { assets } from '@/delta_providers/mcje/assets'
+import { VersionType } from 'minecraft-asset-loader'
+import { NList, NListItem, NSkeleton } from 'naive-ui'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useVirtualizer } from '@tanstack/vue-virtual'
 import MCJEVersionDisplay from '@/delta_providers/mcje/MCJEVersionDisplay.vue'
-import { ProgressHandler } from '@/util/progress.ts'
 import Col from '@/components/Col.vue'
 
 const props = withDefaults(defineProps<{
@@ -40,7 +35,7 @@ const emit = defineEmits<{
 
 const ROW_HEIGHT = 60
 
-const loadingProgress = ref(0)
+const loading = ref(true)
 const allVersions = ref<MCJEManifestVersion[]>([])
 const releasesOnly = ref<MCJEManifestVersion[]>([])
 const mainVersions = ref<MCJEManifestVersion[]>([])
@@ -132,12 +127,13 @@ function toggle(version: MCJEManifestVersion) {
 
 onMounted(async () => {
   try {
-    await loadMCJEManifest(new ProgressHandler(p => {
-      loadingProgress.value = Number((p.ratio * 100).toFixed(1))
-    }))
-    allVersions.value = getVersionList()
-    releasesOnly.value = getReleaseVersions()
-    mainVersions.value = getMainVersions()
+    const manifest = assets().manifest
+    ;[ allVersions.value, releasesOnly.value, mainVersions.value ] = await Promise.all([
+      manifest.versions(),
+      manifest.versions(VersionType.RELEASE),
+      manifest.versions(VersionType.MAIN),
+    ])
+    loading.value = false
   } catch {
     // Errors with loading the manifest will be handled by the selector component.
   }
@@ -159,12 +155,12 @@ onBeforeUnmount(() => {
 
 <template>
   <Col align="stretch" class="browser">
-    <NProgress
-      v-if="loadingProgress < 100"
-      type="circle"
-      processing
-      :percentage="loadingProgress"
-    ></NProgress>
+    <div v-if="loading" class="list-container">
+      <div v-for="i in 12" :key="i" class="skeleton-row" :style="{ height: `${ROW_HEIGHT}px` }">
+        <NSkeleton text :width="`${70 + (i * 37) % 50}px`" />
+        <NSkeleton text width="72px" />
+      </div>
+    </div>
     <div v-else ref="parentRef" class="list-container" :key="versionMode + debouncedFilter">
       <div v-if="selectedList.length > 0" class="pinned">
         <NList hoverable clickable :show-divider="false">
@@ -280,6 +276,14 @@ onBeforeUnmount(() => {
   overflow-y: auto;
   border-bottom-left-radius: 6px;
   border-bottom-right-radius: 6px;
+}
+
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  padding: 0 12px 0 16px;
 }
 
 

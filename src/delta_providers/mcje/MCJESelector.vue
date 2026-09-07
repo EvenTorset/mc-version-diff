@@ -3,7 +3,7 @@ import MCJEVersionsList from '@/delta_providers/mcje/MCJEVersionsList.vue'
 import Row from '@/components/Row.vue'
 import Spacer from '@/components/Spacer.vue'
 import MCJEVersionDisplay from '@/delta_providers/mcje/MCJEVersionDisplay.vue'
-import { getDiffSuggestions, loadMCJEManifest, type MCJEManifestVersion } from '@/delta_providers/mcje/version_manifest'
+import { getDiffSuggestions, type MCJEManifestVersion } from '@/delta_providers/mcje/version_manifest'
 import { ArrowLeft24Regular, ArrowRight24Regular } from '@vicons/fluent'
 import { NAlert, NButton, NCard, NIcon, NSkeleton } from 'naive-ui'
 import { computed, ref } from 'vue'
@@ -32,8 +32,7 @@ function deselect(id: string) {
 
 onMounted(async () => {
   try {
-    await loadMCJEManifest()
-    const suggestions = getDiffSuggestions()
+    const suggestions = await getDiffSuggestions()
     diffSuggestions.value.push(['Latest version', suggestions.latestVersion])
     if (suggestions.sinceRelease !== null) {
       diffSuggestions.value.push(['Since release', suggestions.sinceRelease])

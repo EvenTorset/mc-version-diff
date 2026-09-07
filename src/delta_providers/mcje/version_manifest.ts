@@ -1,5 +1,4 @@
 import { VersionType, type ManifestVersion, type VersionDetails } from 'minecraft-asset-loader'
-import type { ProgressHandler } from '@/util/progress'
 import type { VersionPair } from '@/types'
 import { assets } from './assets'
 
@@ -29,62 +28,27 @@ export type MCJEVersionDetails = VersionDetails & {
   type: string
 }
 
-let versions: MCJEManifestVersion[] | null = null
-let loading: Promise<void> | null = null
-
-export function loadMCJEManifest(progHandler?: ProgressHandler): Promise<void> {
-  if (versions) {
-    progHandler?.update(1, 1, 1)
-    return Promise.resolve()
-  }
-  progHandler?.update(0, 0, 0)
-  loading ??= assets().manifest.versions().then(list => {
-    versions = list
-  }).finally(() => {
-    loading = null
-  })
-  return loading.then(() => progHandler?.update(1, 1, 1))
-}
-
-export function getVersionList(): MCJEManifestVersion[] {
-  if (!versions) throw new Error('MCJE manifest not loaded before getting version list')
-  return versions
-}
-
-export function getReleaseVersions(): MCJEManifestVersion[] {
-  return getVersionList().filter(v => v.type === 'release')
-}
-
-export function getMainVersions(): MCJEManifestVersion[] {
-  return VersionType.MAIN(getVersionList())
-}
-
 export async function getVersion(id: string): Promise<MCJEManifestVersion | null> {
-  await loadMCJEManifest()
   const manifest = assets().manifest
   const found = await manifest.version(id)
   if (found) return found
   await manifest.update().catch(() => {})
-  versions = await manifest.versions()
   return manifest.version(id)
 }
 
-export async function getVersionDetails(version: MCJEManifestVersion | string, progHandler?: ProgressHandler): Promise<MCJEVersionDetails> {
-  progHandler?.update(0, 0, 0)
+export async function getVersionDetails(version: MCJEManifestVersion | string): Promise<MCJEVersionDetails> {
   const entry = typeof version === 'string' ? await getVersion(version) : version
   if (!entry) throw new Error(`Unknown version "${version}"`)
-  const details = await entry.details() as MCJEVersionDetails
-  progHandler?.update(1, 1, 1)
-  return details
+  return await entry.details() as MCJEVersionDetails
 }
 
-export function getDiffSuggestions(): {
+export async function getDiffSuggestions(): Promise<{
     latestVersion: [MCJEManifestVersion, MCJEManifestVersion]
     sinceRelease: [MCJEManifestVersion, MCJEManifestVersion] | null
     majorRelease: [MCJEManifestVersion, MCJEManifestVersion] | null
     releasePatches: [MCJEManifestVersion, MCJEManifestVersion] | null
-} {
-  const all = getVersionList()
+}> {
+  const all = await assets().manifest.versions()
 
   const currentRelease = all.find(e => e.type === 'release') ?? null
   const currentReleaseExceptLatest = all.slice(1).find(e => e.type === 'release') ?? null
@@ -137,8 +101,7 @@ function samePair(x: VersionPair | null, y: VersionPair | null) {
 }
 
 export async function getSurroundingDeltas(a: string, b: string) {
-  await loadMCJEManifest()
-  return surroundingIn(getVersionList(), a, b)
+  return surroundingIn(await assets().manifest.versions(), a, b)
 }
 
 function cycleRelease(versions: MCJEManifestVersion[], id: string) {
@@ -154,15 +117,14 @@ export async function getRelatedDeltas(a: string, b: string): Promise<{
   groups: RelatedDeltaGroup[]
   links: RelatedDeltaLink[]
 }> {
-  await loadMCJEManifest()
-
-  const all = getVersionList()
+  const manifest = assets().manifest
+  const all = await manifest.versions()
   const groups: RelatedDeltaGroup[] = []
 
   for (const [ label, versions ] of [
     [ 'version', all ],
-    [ 'release', getReleaseVersions() ],
-    [ 'main release', getMainVersions() ],
+    [ 'release', await manifest.versions(VersionType.RELEASE) ],
+    [ 'main release', await manifest.versions(VersionType.MAIN) ],
   ] as const) {
     const found = surroundingIn(versions, a, b)
     const prev = groups.some(g => samePair(g.prev, found.prev)) ? null : found.prev
