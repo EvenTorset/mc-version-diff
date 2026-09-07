@@ -119,8 +119,14 @@ const hasLabels = computed(() =>
             <Dim v-if="currentOption(ingredientOf(i)!)" tag="div">
               <NamespacedPath :value="currentOption(ingredientOf(i)!)!" />
             </Dim>
+            <Dim v-if="ingredientOf(i)!.components && Object.keys(ingredientOf(i)!.components!).length > 0" tag="div">
+              {{ Object.keys(ingredientOf(i)!.components!).length }} component(s)
+            </Dim>
             <template v-if="ingredientOf(i)!.tag">
-              <div class="tip-tag"><Dim>#</Dim><NamespacedPath :value="ingredientOf(i)!.tag!" /></div>
+              <div
+                class="tip-tag"
+                style="font-family: var(--monospace-font-family); color: var(--color-5);"
+              ><Dim>#</Dim><NamespacedPath :value="ingredientOf(i)!.tag!" /></div>
               <Dim tag="div">Tag group · {{ ingredientOf(i)!.options.length }} options</Dim>
             </template>
           </Tooltip>
@@ -146,8 +152,14 @@ const hasLabels = computed(() =>
             <Dim v-if="currentOption(ingredientOf(i)!)" tag="div">
               <NamespacedPath :value="currentOption(ingredientOf(i)!)!" />
             </Dim>
+            <Dim v-if="ingredientOf(i)!.components && Object.keys(ingredientOf(i)!.components!).length > 0" tag="div">
+              {{ Object.keys(ingredientOf(i)!.components!).length }} component(s)
+            </Dim>
             <template v-if="ingredientOf(i)!.tag">
-              <div class="tip-tag"><Dim>#</Dim><NamespacedPath :value="ingredientOf(i)!.tag!" /></div>
+              <div
+                class="tip-tag"
+                style="font-family: var(--monospace-font-family); color: var(--color-5);"
+              ><Dim>#</Dim><NamespacedPath :value="ingredientOf(i)!.tag!" /></div>
               <Dim tag="div">Tag group · {{ ingredientOf(i)!.options.length }} options</Dim>
             </template>
           </Tooltip>
@@ -166,6 +178,9 @@ const hasLabels = computed(() =>
           </template>
           <div>{{ itemName(dr, version, recipe.result.id, recipe.result.components) }}</div>
           <Dim tag="div"><NamespacedPath :value="recipe.result.id" /></Dim>
+          <Dim v-if="recipe.result.components && Object.keys(recipe.result.components).length > 0" tag="div">
+            {{ Object.keys(recipe.result.components).length }} component(s)
+          </Dim>
         </Tooltip>
       </template>
     </div>
@@ -278,7 +293,7 @@ const hasLabels = computed(() =>
     position: absolute;
     inset: 0;
     border: 1px solid var(--color-3);
-    border-radius: 4px;
+    border-radius: 5px;
     pointer-events: none;
   }
 
@@ -296,7 +311,7 @@ const hasLabels = computed(() =>
 }
 
 .tip-tag {
-  margin-top: 6px;
+  margin-top: 12px;
 }
 
 .slot-tag {

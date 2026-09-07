@@ -24,7 +24,7 @@ const path = computed(() => {
 </script>
 
 <template>
-  <span>
+  <span style="font-family: var(--monospace-font-family);">
     <Dim>{{ namespace }}</Dim>
     <span>{{ path }}</span>
   </span>
