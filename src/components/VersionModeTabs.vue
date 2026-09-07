@@ -40,7 +40,7 @@ const value = defineModel<T>({ required: true })
     user-select: none;
 
     &:hover {
-      color: var(--color-5);
+      color: var(--color-6);
     }
   }
 
