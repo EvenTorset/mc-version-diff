@@ -34,5 +34,5 @@ self.onmessage = async (event: MessageEvent<PackWorkerInput>) => {
     postMessage({ type: 'progress', done: entries.length, total: files.length } satisfies PackWorkerMessage)
   }
   const bytes = assemble(entries)
-  postMessage({ type: 'result', bytes } satisfies PackWorkerMessage, [bytes.buffer])
+  postMessage({ type: 'result', bytes } satisfies PackWorkerMessage, { transfer: [bytes.buffer] })
 }
