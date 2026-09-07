@@ -221,7 +221,10 @@ export async function fromFiles(files: Record<string, Uint8Array | ArrayBuffer |
     const bufferData = typeof data === 'string' ? te.encode(data) : data
     entries.push(await createFileEntry(name, bufferData))
   }
+  return assemble(entries)
+}
 
+export function assemble(entries: FileEntry[]): Uint8Array<ArrayBuffer> {
   let o = 0
   for (const { entry, header } of entries) {
     const dv = new DataView(header.buffer, header.byteOffset, header.byteLength)
@@ -254,32 +257,7 @@ export async function fromEntries(entries: ParsedZIPFileEntry[]): Promise<Uint8A
   for (const entry of entries) {
     built.push(await createFileEntry(entry.path, entry))
   }
-
-  let o = 0
-  for (const { entry, header } of built) {
-    const dv = new DataView(header.buffer, header.byteOffset, header.byteLength)
-    dv.setUint32(42, o, true)
-    o += entry.byteLength
-  }
-
-  const content = concatUint8Arrays(built.map(e => e.entry))
-  const cenDir = concatUint8Arrays(built.map(e => e.header))
-
-  const eocd = new Uint8Array([
-    0x50, 0x4b, 0x05, 0x06,
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00,
-  ])
-  const eocdDV = new DataView(eocd.buffer)
-  eocdDV.setUint16(8, built.length, true)
-  eocdDV.setUint16(10, built.length, true)
-  eocdDV.setUint32(12, cenDir.byteLength, true)
-  eocdDV.setUint32(16, content.byteLength, true)
-
-  return concatUint8Arrays([ content, cenDir, eocd ])
+  return assemble(built)
 }
 
 /**

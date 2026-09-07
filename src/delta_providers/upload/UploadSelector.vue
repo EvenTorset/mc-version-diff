@@ -97,11 +97,12 @@ const compareLink = computed<string | RouteLocationAsRelativeGeneric | RouteLoca
   }
 })
 
-function toUploadFileInfo(file: File, name = file.name): UploadFileInfo {
+function toUploadFileInfo(file: File, name = file.name, folder = false): UploadFileInfo {
   return {
     id: name,
     name,
     status: 'finished',
+    type: folder ? 'folder' : null,
     file,
   }
 }
@@ -119,14 +120,17 @@ async function saveFile(list: UploadFileInfo[], contentName: string, slot: 'a' |
     const meta = currentMeta()
     const nameKey = slot === 'a' ? 'aName' : 'bName'
     const sizeKey = slot === 'a' ? 'aSize' : 'bSize'
+    const folderKey = slot === 'a' ? 'aFolder' : 'bFolder'
     if (content) {
       await writeUserFile(contentName, content)
       meta[nameKey] = list[0].name
       meta[sizeKey] = content.byteLength
+      meta[folderKey] = list[0].type === 'folder'
     } else {
       await deleteUserFile(contentName)
       delete meta[nameKey]
       delete meta[sizeKey]
+      delete meta[folderKey]
     }
     writeFilesMeta(meta)
   } catch (err: any) {
@@ -180,8 +184,8 @@ onMounted(async () => {
     readUserFile(UPLOAD_VERSION_A_KEY),
     readUserFile(UPLOAD_VERSION_B_KEY),
   ])
-  if (fileA) fileListA.value = [toUploadFileInfo(fileA, meta?.aName ?? fileA.name)]
-  if (fileB) fileListB.value = [toUploadFileInfo(fileB, meta?.bName ?? fileB.name)]
+  if (fileA) fileListA.value = [toUploadFileInfo(fileA, meta?.aName ?? fileA.name, meta?.aFolder)]
+  if (fileB) fileListB.value = [toUploadFileInfo(fileB, meta?.bName ?? fileB.name, meta?.bFolder)]
   if (meta?.aVersion) {
     compareMode.value = 'version'
     version.value = meta.aVersion
