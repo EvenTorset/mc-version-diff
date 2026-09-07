@@ -1,8 +1,6 @@
 import MinecraftAssets from 'minecraft-asset-loader'
 import { Settings } from '@/settings'
-import { clearDirectory, getDirectory, getDirectorySize } from '@/util/opfs'
-
-const CACHE_DIR = 'minecraft-asset-loader'
+import { clearDirectory } from '@/util/opfs'
 
 let instance: MinecraftAssets | null = null
 let instanceCacheSize = 0
@@ -20,7 +18,8 @@ export async function clearCache(): Promise<void> {
 }
 
 export async function getCacheSize(): Promise<{ size: number, count: number }> {
-  return getDirectorySize(await getDirectory(CACHE_DIR))
+  const stats = await assets().cacheStats()
+  return { size: stats?.size ?? 0, count: stats?.files ?? 0 }
 }
 
 for (const dir of ['download_cache', 'meta']) clearDirectory(dir)

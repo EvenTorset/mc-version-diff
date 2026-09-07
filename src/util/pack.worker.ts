@@ -1,4 +1,4 @@
-import { assemble, storedEntry, type StoredEntry } from './zip'
+import { writeZip } from 'minecraft-asset-loader'
 import { naturalCompare } from './sort'
 
 export interface PackWorkerFile {
@@ -14,8 +14,6 @@ export type PackWorkerMessage =
   | { type: 'progress', done: number, total: number }
   | { type: 'result', bytes: Uint8Array<ArrayBuffer> }
 
-const BATCH = 256
-
 const received: PackWorkerFile[] = []
 
 self.onmessage = async (event: MessageEvent<PackWorkerInput>) => {
@@ -24,15 +22,19 @@ self.onmessage = async (event: MessageEvent<PackWorkerInput>) => {
     return
   }
   const files = received.sort((a, b) => naturalCompare(a.path, b.path))
-  const entries: StoredEntry[] = []
-  for (let i = 0; i < files.length; i += BATCH) {
-    const batch = files.slice(i, i + BATCH)
-    const buffers = await Promise.all(batch.map(f => f.file.arrayBuffer()))
-    for (let j = 0; j < batch.length; j++) {
-      entries.push(storedEntry(batch[j].path, new Uint8Array(buffers[j])))
-    }
-    postMessage({ type: 'progress', done: entries.length, total: files.length } satisfies PackWorkerMessage)
-  }
-  const bytes = assemble(entries)
+  let lastPercent = -1
+  const bytes = await writeZip(files.map(f => ({
+    path: f.path,
+    read: async () => new Uint8Array(await f.file.arrayBuffer()),
+  })), {
+    compress: false,
+    concurrency: 256,
+    onProgress: (done, total) => {
+      const percent = Math.floor(done / total * 100)
+      if (percent === lastPercent) return;
+      lastPercent = percent
+      postMessage({ type: 'progress', done, total } satisfies PackWorkerMessage)
+    },
+  }) as Uint8Array<ArrayBuffer>
   postMessage({ type: 'result', bytes } satisfies PackWorkerMessage, { transfer: [bytes.buffer] })
 }
