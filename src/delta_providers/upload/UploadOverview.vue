@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import type { DeltaResult } from '@/delta_providers'
 import { formatBytes } from '@/util/bytes'
 import DeltaSummary from '@/components/DeltaSummary.vue'
+import SamePack from '@/components/SamePack.vue'
 import VersionCompare, { type CompareSide } from '@/components/VersionCompare.vue'
 import type { Renderable } from '@/types.ts'
 import { readFilesMeta } from './filesMeta'
@@ -72,7 +73,8 @@ function swap() {
       </template>
     </VersionCompare>
 
-    <DeltaSummary :dr="dr" />
+    <SamePack v-if="dr.tracks.length === 0" :dr="dr" />
+    <DeltaSummary v-else :dr="dr" />
   </div>
 </template>
 
