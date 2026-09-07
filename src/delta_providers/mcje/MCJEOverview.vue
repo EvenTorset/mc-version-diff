@@ -18,7 +18,7 @@ import DeltaSummary from '@/components/DeltaSummary.vue'
 import RelatedDeltas from '@/components/RelatedDeltas.vue'
 import VersionCompare, { type CompareSide } from '@/components/VersionCompare.vue'
 import { ArrowDownload16Filled, Open16Filled } from '@vicons/fluent'
-import { getMcjeChangelogUrl } from '@/util/download.ts'
+import { getMcjeChangelogUrl } from './changelog'
 import type { Renderable } from '@/types.ts'
 
 const props = defineProps<{

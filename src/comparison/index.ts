@@ -93,7 +93,7 @@ class WorkerPool {
 
       let total = 0
       for (const { task } of batch) {
-        total += task.a.compressedContent.byteLength + task.b.compressedContent.byteLength
+        total += task.a.bytes.byteLength + task.b.bytes.byteLength
       }
 
       const data = new Uint8Array(total)
@@ -105,23 +105,23 @@ class WorkerPool {
         this.pendingTasks.set(id, { resolve, reject })
 
         const aOffset = offset
-        data.set(task.a.compressedContent, offset)
-        offset += task.a.compressedContent.byteLength
+        data.set(task.a.bytes, offset)
+        offset += task.a.bytes.byteLength
 
         const bOffset = offset
-        data.set(task.b.compressedContent, offset)
-        offset += task.b.compressedContent.byteLength
+        data.set(task.b.bytes, offset)
+        offset += task.b.bytes.byteLength
 
         tasks.push({
           id,
           kind: task.kind,
           littleEndian: task.kind === 'nbt' ? task.littleEndian : undefined,
           aOffset,
-          aLength: task.a.compressedContent.byteLength,
-          aMethod: task.a.compressionMethod,
+          aLength: task.a.bytes.byteLength,
+          aMethod: task.a.compression ? 8 : 0,
           bOffset,
-          bLength: task.b.compressedContent.byteLength,
-          bMethod: task.b.compressionMethod,
+          bLength: task.b.bytes.byteLength,
+          bMethod: task.b.compression ? 8 : 0,
         })
       }
 

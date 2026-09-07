@@ -1,38 +1,17 @@
-import { ref } from 'vue'
-import { download } from '@/util/download'
-import { ProgressHandler } from '@/util/progress'
-import { clearDirectory, getDirectory } from '@/util/opfs'
+import { VersionType, type ManifestVersion, type VersionDetails } from 'minecraft-asset-loader'
+import type { ProgressHandler } from '@/util/progress'
 import type { VersionPair } from '@/types'
+import { assets } from './assets'
 
-const mcjeManifestUrl = 'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json'
-const manifestCacheFile = 'mcje_version_manifest.json'
+export type MCJEManifestVersion = ManifestVersion
 
-export type MCJEManifestVersion = {
-  id: string
-  type: 'release' | 'snapshot' | 'old_beta' | 'old_alpha'
-  url: string
-  time: string
-  releaseTime: string
-}
-export type MCJEManifest = {
-  /** Unreliable. Don't use this. */
-  latest: {
-    release: string
-    snapshot: string
-  }
-  versions: MCJEManifestVersion[]
-}
 export type MCJEVersionDownloads = {
   sha1: string
   size: number
   url: string
 }
-export type MCJEVersionDetails = {
-  arguments: {
-    'default-user-jvm': any[]
-    game: any[]
-    jvm: any[]
-  }
+
+export type MCJEVersionDetails = VersionDetails & {
   assetIndex: {
     id: string
     sha1: string
@@ -41,167 +20,86 @@ export type MCJEVersionDetails = {
     url: string
   }
   assets: string
-  complianceLevel: number
   downloads: {
     client: MCJEVersionDownloads
     server?: MCJEVersionDownloads
   }
-  id: string
-  javaVersion: {
-    component: string
-    majorVersion: number
-  }
-  libraries: any[]
-  logging: any
-  mainClass: string
-  minimumLauncherVersion: number
   releaseTime: string
   time: string
   type: string
 }
 
-// 13w24a, the 1.6 snapshot that moved the game's files into assets/. Older
-// versions are texture packs, with the files at the root of the JAR instead
-const legacyAssetsDate = new Date('2013-06-13T15:32:23+00:00')
+let versions: MCJEManifestVersion[] | null = null
+let loading: Promise<void> | null = null
 
-export function usesLegacyAssets(releaseTime: string) {
-  return new Date(releaseTime) < legacyAssetsDate
-}
-
-let downloadPromise: Promise<void> | null = null
-let mcjeManifest: MCJEManifest | null = null
-const detailsCache: Record<string, MCJEVersionDetails> = {}
-
-export const mcjeVersions = ref<string[]>([])
-
-let progHandlers: ProgressHandler[] = []
-const allProgHandlers = new ProgressHandler(p => {
-  for (const progHandler of progHandlers) {
-    progHandler.update(p.ratio, p.current, p.total)
-  }
-})
-
-let refreshPromise: Promise<void> | null = null
-
-function refreshManifest(progHandler?: ProgressHandler): Promise<void> {
-  return refreshPromise = download(mcjeManifestUrl, progHandler).then(async res => {
-    applyManifest(await res.json())
-    writeCachedJson(manifestCacheFile, mcjeManifest)
-  })
-}
-
-function applyManifest(manifest: MCJEManifest) {
-  mcjeManifest = manifest
-  mcjeVersions.value = manifest.versions.map(ver => ver.id)
-}
-
-function detailsCacheName(url: string): string | null {
-  const hash = url.match(/\/packages\/([0-9a-f]{8,})\//)?.[1]
-  return hash ? `details_${hash}.json` : null
-}
-
-async function readCachedJson<T>(name: string): Promise<T | null> {
-  try {
-    const dir = await getDirectory('meta')
-    const handle = await dir.getFileHandle(name)
-    return JSON.parse(await (await handle.getFile()).text())
-  } catch {
-    return null
-  }
-}
-
-async function writeCachedJson(name: string, value: unknown): Promise<void> {
-  try {
-    const dir = await getDirectory('meta')
-    const handle = await dir.getFileHandle(name, { create: true })
-    const writable = await handle.createWritable()
-    await writable.write(JSON.stringify(value))
-    await writable.close()
-  } catch {
-  }
-}
-
-export function loadMCJEManifest(progHandler?: ProgressHandler) {
-  if (mcjeManifest !== null) {
+export function loadMCJEManifest(progHandler?: ProgressHandler): Promise<void> {
+  if (versions) {
     progHandler?.update(1, 1, 1)
-    return;
+    return Promise.resolve()
   }
-  if (progHandler) progHandlers.push(progHandler)
-  if (downloadPromise !== null) {
-    return downloadPromise
-  }
-  downloadPromise = (async () => {
-    refreshManifest(allProgHandlers)
-    const cached = await readCachedJson<MCJEManifest>(manifestCacheFile)
-    if (cached && mcjeManifest === null) {
-      applyManifest(cached)
-      refreshPromise!.catch(() => {})
-    } else {
-      await refreshPromise
-    }
-  })()
-  return downloadPromise
+  progHandler?.update(0, 0, 0)
+  loading ??= assets().manifest.versions().then(list => {
+    versions = list
+  }).finally(() => {
+    loading = null
+  })
+  return loading.then(() => progHandler?.update(1, 1, 1))
 }
 
-async function findVersion(id: string): Promise<MCJEManifestVersion | null> {
+export function getVersionList(): MCJEManifestVersion[] {
+  if (!versions) throw new Error('MCJE manifest not loaded before getting version list')
+  return versions
+}
+
+export function getReleaseVersions(): MCJEManifestVersion[] {
+  return getVersionList().filter(v => v.type === 'release')
+}
+
+export function getMainVersions(): MCJEManifestVersion[] {
+  return VersionType.MAIN(getVersionList())
+}
+
+export async function getVersion(id: string): Promise<MCJEManifestVersion | null> {
   await loadMCJEManifest()
-  const lookup = () => mcjeManifest?.versions.find(v => v.id === id) ?? null
-
-  let version = lookup()
-  if (version) return version
-
-  if (refreshPromise) {
-    const failed = await refreshPromise.then(() => false, () => true)
-    version = lookup()
-    if (version || !failed) return version
-  }
-
-  await refreshManifest().catch(() => {})
-  return lookup()
+  const manifest = assets().manifest
+  const found = await manifest.version(id)
+  if (found) return found
+  await manifest.update().catch(() => {})
+  versions = await manifest.versions()
+  return manifest.version(id)
 }
 
-export function clearMetaCache(): Promise<void> {
-  return clearDirectory('meta')
-}
-
-export function getVersionList() {
-  if (mcjeManifest === null) {
-    throw new Error('MCJE manifest not loaded before getting version list')
-  }
-  return mcjeManifest.versions
+export async function getVersionDetails(version: MCJEManifestVersion | string, progHandler?: ProgressHandler): Promise<MCJEVersionDetails> {
+  progHandler?.update(0, 0, 0)
+  const entry = typeof version === 'string' ? await getVersion(version) : version
+  if (!entry) throw new Error(`Unknown version "${version}"`)
+  const details = await entry.details() as MCJEVersionDetails
+  progHandler?.update(1, 1, 1)
+  return details
 }
 
 export function getDiffSuggestions(): {
     latestVersion: [MCJEManifestVersion, MCJEManifestVersion]
     sinceRelease: [MCJEManifestVersion, MCJEManifestVersion] | null
-    // latestRelease: [MCJEManifestVersion, MCJEManifestVersion] | null
     majorRelease: [MCJEManifestVersion, MCJEManifestVersion] | null
     releasePatches: [MCJEManifestVersion, MCJEManifestVersion] | null
 } {
-  if (mcjeManifest === null) {
-    throw new Error('MCJE manifest not loaded before getting diff suggestions')
-  }
+  const all = getVersionList()
 
-  const currentRelease = mcjeManifest.versions.find(e => e.type === 'release') ?? null
-  const currentReleaseExceptLatest = mcjeManifest.versions.slice(1).find(e => e.type === 'release') ?? null
-  // const prevRelease = currentRelease
-  //   ? mcjeManifest.versions.slice(1).find(e => e.type === 'release' && e.id !== currentRelease.id) ?? null
-  //   : null
+  const currentRelease = all.find(e => e.type === 'release') ?? null
+  const currentReleaseExceptLatest = all.slice(1).find(e => e.type === 'release') ?? null
 
-  const currentMajorNum = mcjeManifest.versions.find(e => e.type === 'release')?.id.split('.').slice(0, 2).join('.') ?? null
-  const currentMajorRelease = mcjeManifest.versions.find(e => e.type === 'release' && e.id === currentMajorNum) ?? null
+  const currentMajorNum = currentRelease?.id.split('.').slice(0, 2).join('.') ?? null
+  const currentMajorRelease = all.find(e => e.type === 'release' && e.id === currentMajorNum) ?? null
   const prevMajorRelease = currentMajorNum
-    ? mcjeManifest.versions.slice(1).find(e => e.type === 'release' && !e.id.startsWith(currentMajorNum)) ?? null
+    ? all.slice(1).find(e => e.type === 'release' && !e.id.startsWith(currentMajorNum)) ?? null
     : null
 
   return {
-    latestVersion: [mcjeManifest.versions[1], mcjeManifest.versions[0]],
-    sinceRelease: currentReleaseExceptLatest && mcjeManifest.versions[0].type !== 'release' && currentReleaseExceptLatest !== prevMajorRelease
-      ? [currentReleaseExceptLatest, mcjeManifest.versions[0]]
+    latestVersion: [all[1], all[0]],
+    sinceRelease: currentReleaseExceptLatest && all[0].type !== 'release' && currentReleaseExceptLatest !== prevMajorRelease
+      ? [currentReleaseExceptLatest, all[0]]
       : null,
-    // latestRelease: prevRelease !== prevMajorRelease && prevRelease && currentRelease
-    //   ? [prevRelease, currentRelease]
-    //   : null,
     majorRelease: prevMajorRelease && currentRelease
       ? [prevMajorRelease, currentRelease]
       : null,
@@ -209,65 +107,6 @@ export function getDiffSuggestions(): {
       ? [currentMajorRelease, currentRelease]
       : null,
   }
-}
-
-export async function getVersionDetails(version: MCJEManifestVersion | string, progHandler?: ProgressHandler): Promise<MCJEVersionDetails> {
-  if (typeof version === 'string') {
-    await loadMCJEManifest(progHandler)
-    const ver = await findVersion(version)
-    if (ver) {
-      version = ver
-    } else {
-      throw new Error('Failed to find version details')
-    }
-  }
-  if (version.url in detailsCache) {
-    return detailsCache[version.url]
-  }
-
-  const cacheName = detailsCacheName(version.url)
-  if (cacheName) {
-    const cached = await readCachedJson<MCJEVersionDetails>(cacheName)
-    if (cached) return detailsCache[version.url] = cached
-  }
-
-  const details: MCJEVersionDetails = await download(version.url, progHandler).then(e => e.json())
-  if (cacheName) writeCachedJson(cacheName, details)
-  return detailsCache[version.url] = details
-}
-
-export async function getVersion(id: string): Promise<MCJEManifestVersion | null> {
-  return findVersion(id)
-}
-
-const MAIN_EXTRA = new Set([
-  '1.20.4', '1.20.6',
-  '1.21.3', '1.21.4', '1.21.5', '1.21.8', '1.21.10', '1.21.11',
-])
-
-export function getReleaseVersions(): MCJEManifestVersion[] {
-  return getVersionList().filter(v => v.type === 'release')
-}
-
-export function getMainVersions(): MCJEManifestVersion[] {
-  const all = getVersionList()
-  const releases = all.filter(v => v.type === 'release')
-  const lines = new Set<string>()
-  const picked: MCJEManifestVersion[] = []
-
-  for (const release of releases) {
-    const line = release.id.split('.').slice(0, 2).join('.')
-    const latestOfLine = !lines.has(line)
-    lines.add(line)
-    if (latestOfLine || MAIN_EXTRA.has(release.id)) picked.push(release)
-  }
-
-  const snapshot = all.find(v => v.type === 'snapshot')
-  if (snapshot && (!releases[0] || snapshot.releaseTime > releases[0].releaseTime)) {
-    picked.unshift(snapshot)
-  }
-
-  return picked
 }
 
 export interface RelatedDeltaGroup {

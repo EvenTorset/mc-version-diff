@@ -1,4 +1,4 @@
-import { assemble, createFileEntry, type FileEntry } from './zip'
+import { assemble, storedEntry, type StoredEntry } from './zip'
 import { naturalCompare } from './sort'
 
 export interface PackWorkerFile {
@@ -24,12 +24,12 @@ self.onmessage = async (event: MessageEvent<PackWorkerInput>) => {
     return
   }
   const files = received.sort((a, b) => naturalCompare(a.path, b.path))
-  const entries: FileEntry[] = []
+  const entries: StoredEntry[] = []
   for (let i = 0; i < files.length; i += BATCH) {
     const batch = files.slice(i, i + BATCH)
     const buffers = await Promise.all(batch.map(f => f.file.arrayBuffer()))
     for (let j = 0; j < batch.length; j++) {
-      entries.push(await createFileEntry(batch[j].path, buffers[j], 'store'))
+      entries.push(storedEntry(batch[j].path, new Uint8Array(buffers[j])))
     }
     postMessage({ type: 'progress', done: entries.length, total: files.length } satisfies PackWorkerMessage)
   }

@@ -1,9 +1,9 @@
-import { crc32, decompressBuffer } from '@/util/zip'
+import { crc32, inflateRaw } from '@/util/zip'
 
 export type RehashPayloadItem = {
   key: string
-  compressedContent: Uint8Array<ArrayBuffer>
-  compressionMethod: number
+  bytes: Uint8Array
+  compression: string | null
 }
 
 export type RehashWorkerMessage =
@@ -17,16 +17,7 @@ self.onmessage = async (event: MessageEvent<RehashPayloadItem[]>) => {
 
   for (let i = 0; i < total; i++) {
     const item = items[i]
-
-    let decompressed: Uint8Array
-    if (item.compressionMethod === 0) {
-      decompressed = item.compressedContent
-    } else {
-      const buffer = await decompressBuffer(item.compressedContent)
-      decompressed = new Uint8Array(buffer)
-    }
-
-    results[item.key] = crc32(decompressed)
+    results[item.key] = crc32(item.compression ? await inflateRaw(item.bytes) : item.bytes)
 
     if (i % 25 === 0 || i === total - 1) {
       self.postMessage({

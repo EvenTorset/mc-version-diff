@@ -9,8 +9,8 @@ const STRIDE = 8
 const KIND = { png: 0, nbt: 1, structure: 2, json: 3 } as const
 
 export type CompareItem = {
-  compressedContent: Uint8Array<ArrayBuffer>
-  compressionMethod: number
+  bytes: Uint8Array
+  compression: string | null
 }
 
 export type CompareTask =
