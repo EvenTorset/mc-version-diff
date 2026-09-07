@@ -1,6 +1,11 @@
 import type { ProgressList } from '@/components/progressList'
 import type { DeltaTrackState } from './states'
 import type { Renderable, StaticOrSync } from '@/types'
+import type { Component } from 'vue'
+
+export type UploadSource =
+  | { name: string, content: Uint8Array<ArrayBuffer> }
+  | { version: string }
 
 export type DeltaTrack = {
   id: string
@@ -55,17 +60,9 @@ export interface DeltaProvider<T> {
       type: 'bool' // additions need implementation in UploadSelector.vue
       default: boolean
     }[]
-    /** Pre-processing step done before comparison */
-    preprocess(
-      a: string,
-      b: string,
-      contentA: Uint8Array<ArrayBuffer>,
-      contentB: Uint8Array<ArrayBuffer>,
-      progressDisplay: ProgressList
-    ): Promise<{
-      contentA: T
-      contentB: T
-    }>
+    versionPicker?: () => Component
+    defaultVersion?: () => Promise<string> | string
+    load(source: UploadSource, progressDisplay: ProgressList): Promise<T>
   }
   /** A list of categories to show in the delta sidebar */
   categories: StaticOrSync<DeltaProviderCategory[]>

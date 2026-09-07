@@ -4,6 +4,7 @@ export interface FilesMeta {
   bName?: string
   aSize?: number
   bSize?: number
+  aVersion?: string
 }
 
 export const UPLOAD_VERSION_A_KEY = '__upload_version_a'

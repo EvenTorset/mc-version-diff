@@ -4,7 +4,31 @@ import { resolveStaticOrSync } from '@/util/resolveToStatic.ts'
 import { readUserFile } from '@/util/userFiles.ts'
 import { selectedComparator } from './selectedComparator.ts'
 import UploadOverview from './UploadOverview.vue'
-import { readFilesMeta, UPLOAD_VERSION_A_KEY, UPLOAD_VERSION_B_KEY } from './filesMeta.ts'
+import { readFilesMeta, UPLOAD_VERSION_A_KEY, UPLOAD_VERSION_B_KEY, type FilesMeta } from './filesMeta.ts'
+import type { UploadSource } from '../index.ts'
+
+type Slot = 'a' | 'b'
+
+function slots(swap: string): [Slot, Slot] {
+  return swap === 'swap' ? ['b', 'a'] : ['a', 'b']
+}
+
+function slotVersion(meta: FilesMeta | null, slot: Slot) {
+  return slot === 'a' ? meta?.aVersion : undefined
+}
+
+function sideName(meta: FilesMeta | null, slot: Slot) {
+  const name = slot === 'a' ? meta?.aName : meta?.bName
+  return slotVersion(meta, slot) || name || (slot === 'a' ? 'Version A' : 'Version B')
+}
+
+async function sideSource(meta: FilesMeta | null, slot: Slot): Promise<UploadSource> {
+  const version = slotVersion(meta, slot)
+  if (version) return { version }
+  const file = await readUserFile(slot === 'a' ? UPLOAD_VERSION_A_KEY : UPLOAD_VERSION_B_KEY)
+  if (!file) throw new Error('Both sides need a file or a version to compare')
+  return { name: sideName(meta, slot), content: new Uint8Array(await file.arrayBuffer()) }
+}
 
 registerDeltaProvider('upload', {
   name: 'Upload',
@@ -24,25 +48,17 @@ registerDeltaProvider('upload', {
     }
     selectedComparator.value = comparatorName
 
-    const [ contentA, contentB ] = await Promise.all([
-      readUserFile(UPLOAD_VERSION_A_KEY),
-      readUserFile(UPLOAD_VERSION_B_KEY),
-    ])
-    if (contentA === null || contentB === null) {
-      throw new Error('Two files are required for a comparison')
-    }
-
     const meta = readFilesMeta()
-    const [ aName, bName, fileA, fileB ] = swap === 'swap'
-      ? [meta?.bName, meta?.aName, contentB, contentA]
-      : [meta?.aName, meta?.bName, contentA, contentB]
-    return provider.upload.preprocess(
-      aName ?? 'Version A',
-      bName ?? 'Version B',
-      new Uint8Array(await fileA.arrayBuffer()),
-      new Uint8Array(await fileB.arrayBuffer()),
-      progressDisplay
-    )
+    const [ first, second ] = slots(swap)
+    const [ sourceA, sourceB ] = await Promise.all([
+      sideSource(meta, first),
+      sideSource(meta, second),
+    ])
+    const [ contentA, contentB ] = await Promise.all([
+      provider.upload.load(sourceA, progressDisplay),
+      provider.upload.load(sourceB, progressDisplay),
+    ])
+    return { contentA, contentB }
   },
   compare(comparatorName, swap, contentA, contentB, progressDisplay) {
     const provider = getDeltaProvider(comparatorName)
@@ -51,12 +67,10 @@ registerDeltaProvider('upload', {
     }
 
     const meta = readFilesMeta()
-    const [ aName, bName ] = swap === 'swap' // content is already swapped when fetching
-      ? [ meta?.bName, meta?.aName ]
-      : [ meta?.aName, meta?.bName ]
+    const [ first, second ] = slots(swap)
     return provider.compare(
-      aName ?? 'Version A',
-      bName ?? 'Version B',
+      sideName(meta, first),
+      sideName(meta, second),
       contentA,
       contentB,
       progressDisplay

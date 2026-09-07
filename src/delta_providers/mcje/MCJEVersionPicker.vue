@@ -49,7 +49,8 @@ function onSelect(version: MCJEManifestVersion) {
     title="Versions"
     v-model:open="open"
     v-model:filter="filter"
-    :label="modelValue"
+    :label="modelValue || undefined"
+    :placeholder="modelValue ? undefined : 'Choose a version'"
   >
     <template #tabs>
       <VersionModeTabs v-model="mode" :options="VERSION_MODES" />
