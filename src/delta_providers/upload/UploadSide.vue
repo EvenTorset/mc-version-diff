@@ -50,25 +50,24 @@ const mode = defineModel<string | null>('mode', { default: null })
         </Col>
       </NUploadDragger>
     </NUpload>
-    <div class="corner">
-      <NButton
-        v-if="version === null && fileList.length"
-        circle
-        class="icon danger"
-        size="small"
-        @click="fileList = []"
-      >
-        <template #icon>
-          <NIcon :component="Dismiss24Filled" />
-        </template>
-      </NButton>
-      <VersionModeTabs
-        v-if="modes && mode !== null"
-        :model-value="mode"
-        :options="modes"
-        @update:model-value="(value: string) => mode = value"
-      />
-    </div>
+    <VersionModeTabs
+      v-if="modes && mode !== null"
+      class="corner left"
+      :model-value="mode"
+      :options="modes"
+      @update:model-value="(value: string) => mode = value"
+    />
+    <NButton
+      v-if="version === null && fileList.length"
+      circle
+      class="icon danger corner right"
+      size="small"
+      @click="fileList = []"
+    >
+      <template #icon>
+        <NIcon :component="Dismiss24Filled" />
+      </template>
+    </NButton>
   </div>
 </template>
 
@@ -109,10 +108,14 @@ const mode = defineModel<string | null>('mode', { default: null })
 .corner {
   position: absolute;
   top: 8px;
-  right: 8px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+
+  &.left {
+    left: 8px;
+  }
+
+  &.right {
+    right: 8px;
+  }
 }
 
 </style>
