@@ -3,7 +3,8 @@ import type { DeltaResult, DeltaTrack } from '@/delta_providers'
 import { StructureViewerEmbed, type CompareResult, type CompareView, type CompareViewArgs } from '@/util/structureViewer'
 import { deltaVirtualHandler } from '@/util/virtualHandler'
 import { NSpin } from 'naive-ui'
-import { onMounted, onBeforeUnmount, ref, watch, Transition } from 'vue'
+import { nextTick, onBeforeUnmount, ref, watch, Transition } from 'vue'
+import { useIframeBudget } from '@/util/iframeBudget'
 
 const structureViewerUrl = 'https://structure-viewer.ewanhowell.com/?minimal&manual&nosky&background=transparent'
 
@@ -20,7 +21,9 @@ const emit = defineEmits<{
 }>()
 
 const doneLoading = ref(false)
+const container = ref<HTMLElement>()
 const iframeRef = ref<HTMLIFrameElement>()
+const active = useIframeBudget(container)
 let embed: StructureViewerEmbed | undefined
 
 function compareView(): CompareViewArgs {
@@ -38,60 +41,77 @@ function fileName(path: string) {
   return path.slice(path.lastIndexOf('/') + 1)
 }
 
-onMounted(async () => {
+async function load() {
   if (!iframeRef.value) return;
 
-  embed = new StructureViewerEmbed(iframeRef.value)
+  const current = embed = new StructureViewerEmbed(iframeRef.value)
 
   if (props.version) {
     const version = props.dr[props.version]
     const path = props.track[props.version]!
 
-    embed.registerHandler('custom', deltaVirtualHandler(props.dr, version))
-    await embed.ready()
+    current.registerHandler('custom', deltaVirtualHandler(props.dr, version))
+    await current.ready()
 
-    await embed.send('loadPacks', {
+    await current.send('loadPacks', {
       packs: [{ handler: 'custom', name: version }]
     })
 
-    await embed.send('loadStructure', {
+    await current.send('loadStructure', {
       data: await props.dr.getEntry(version, path),
       name: fileName(path),
     })
   } else {
-    embed.registerHandler('a', deltaVirtualHandler(props.dr, props.dr.a))
-    embed.registerHandler('b', deltaVirtualHandler(props.dr, props.dr.b))
-    await embed.ready()
+    current.registerHandler('a', deltaVirtualHandler(props.dr, props.dr.a))
+    current.registerHandler('b', deltaVirtualHandler(props.dr, props.dr.b))
+    await current.ready()
 
-    await embed.send('loadPacks', { packs: [{ handler: 'a', name: props.dr.a }] })
-    await embed.send('loadComparePacks', { packs: [{ handler: 'b', name: props.dr.b }] })
+    await current.send('loadPacks', { packs: [{ handler: 'a', name: props.dr.a }] })
+    await current.send('loadComparePacks', { packs: [{ handler: 'b', name: props.dr.b }] })
 
     const [ left, right ] = await Promise.all([
       props.dr.getEntry(props.dr.a, props.track.a),
       props.dr.getEntry(props.dr.b, props.track.b),
     ])
 
-    const comparison = await embed.send('compare', {
+    const comparison = await current.send('compare', {
       left: { data: left, name: fileName(props.track.a) },
       right: { data: right, name: fileName(props.track.b) },
       labels: [props.dr.a, props.dr.b],
       ...compareView(),
     })
+    if (embed !== current) return;
     emit('counts', comparison.counts)
   }
 
-  doneLoading.value = true
+  if (embed === current) doneLoading.value = true
+}
+
+function unload() {
+  embed?.destroy()
+  embed = undefined
+  doneLoading.value = false
+}
+
+watch(active, async isActive => {
+  if (isActive) {
+    await nextTick()
+    load()
+  } else {
+    unload()
+  }
 })
 
-onBeforeUnmount(() => embed?.destroy())
+onBeforeUnmount(unload)
 </script>
 
 <template>
-  <div class="iframe-container" :style="{
+  <div ref="container" class="iframe-container" :style="{
     height: '80vh',
     minHeight: '500px',
   }">
     <iframe
+      v-if="active"
       ref="iframeRef"
       :src="structureViewerUrl"
       width="100%"

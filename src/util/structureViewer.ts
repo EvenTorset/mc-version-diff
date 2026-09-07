@@ -198,7 +198,7 @@ export class StructureViewerEmbed {
 
   #handleMessage(event: MessageEvent) {
     const data = event.data
-    if (data?.source !== SOURCE) return;
+    if (data?.source !== SOURCE || event.source !== this.#frame.contentWindow) return;
 
     if (typeof data.reply === "number") {
       const settle = this.#pending.get(data.reply)
