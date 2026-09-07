@@ -33,7 +33,11 @@ const copyFunc = computed(() => getCopier(props.track))
 let restoredFocus = isInitialFocus(props.track.id)
 
 const autoToggle = inject<Ref<'none' | 'expand' | 'collapse'>>('autoToggle')
-const initExpanded = restoredFocus || autoToggle?.value === 'expand' || (
+const treeList = inject<{
+  setTrackExpanded: (t: DeltaTrack, expanded: boolean) => void
+  wasTrackExpanded: (t: DeltaTrack) => boolean
+} | undefined>('tree-list-mount', undefined)
+const initExpanded = restoredFocus || treeList?.wasTrackExpanded(props.track) || autoToggle?.value === 'expand' || (
   (
     props.track.state === DeltaTrackState.Added
     || props.track.state === DeltaTrackState.Edited
@@ -45,6 +49,7 @@ const initExpanded = restoredFocus || autoToggle?.value === 'expand' || (
 const deltaTrack = ref<HTMLDivElement>()
 const interacted = ref(false)
 const expanded = ref(initExpanded)
+watch(expanded, v => treeList?.setTrackExpanded(props.track, v), { immediate: true })
 const isInitialAutoExpanded = ref(initExpanded)
 const isInitialRender = ref(initExpanded)
 const shouldRenderContent = ref(initExpanded)

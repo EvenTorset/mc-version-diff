@@ -30,7 +30,7 @@ function triggerMount() {
 function triggerRetire(event: Event) {
   const el = leafRef.value
   const height = (event as CustomEvent<number>).detail
-  if (!el || !height || el.querySelector('.delta-track.expanded')) return
+  if (!el || !height) return
   retiredHeight.value = `${height}px`
   retireTrack(props.track)
 }

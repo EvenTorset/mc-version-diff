@@ -1,5 +1,4 @@
 import * as monaco from 'monaco-editor'
-import { loader } from '@guolao/vue-monaco-editor'
 
 import JSONWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker'
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
@@ -39,5 +38,3 @@ monaco.editor.defineTheme('custom-theme', {
     'textLink.activeForeground': getCSSVar('--color-7'),
   }
 })
-
-loader.config({ monaco })
