@@ -324,11 +324,12 @@ body {
 }
 
 .n-card-header {
-  padding: 4px 4px 4px 12px !important;
+  padding: 4px !important;
   font-size: 12px !important;
   line-height: 22px;
 
   &>.n-card-header__main {
+    padding-left: 8px;
     font-weight: 600 !important;
     color: var(--color-4) !important;
   }
@@ -413,6 +414,23 @@ body {
 .n-radio__dot-wrapper + .n-radio__label,
 .n-checkbox-box-wrapper + .n-checkbox__label {
   padding-left: 0;
+}
+
+.n-base-selection,
+.n-base-select-option,
+.n-radio,
+.n-radio-button,
+.n-checkbox,
+.n-button,
+.n-switch,
+.n-tabs-nav {
+  user-select: none;
+}
+
+.n-base-selection-input,
+.n-input,
+.n-input-number {
+  user-select: auto;
 }
 
 .n-tabs-tab {

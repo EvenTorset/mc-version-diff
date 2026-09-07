@@ -2,7 +2,7 @@ import { registerDeltaProvider } from '@/delta_providers/registry'
 import { getTrackCategory } from '@/delta_providers/category'
 import type { DeltaProvider, DeltaResult, DeltaTrack } from '@/delta_providers'
 import { useRoute } from 'vue-router'
-import { getVersionDetails, loadMCJEManifest, usesLegacyAssets, type MCJEVersionDetails } from '@/delta_providers/mcje/version_manifest'
+import { getVersionDetails, getVersionList, loadMCJEManifest, usesLegacyAssets, type MCJEVersionDetails } from '@/delta_providers/mcje/version_manifest'
 import { getCachedFile, readCachedBuffer, writeCachedBuffer } from '@/util/download'
 import { fetchJarWithout } from '@/util/rangedJar'
 import zip, { type ParsedZIP, type ParsedZIPFileEntry } from '@/util/zip'
@@ -252,18 +252,18 @@ const provider: DeltaProvider<MCJEVersionContent> = {
         </>,
       },
     ],
-    async preprocess(a, b, contentA, contentB, progressDisplay) {
+    versionPicker: () => defineAsyncComponent(() => import('./MCJEVersionPicker.vue')),
+    async defaultVersion() {
+      await loadMCJEManifest()
+      return getVersionList().find(v => v.type === 'release')?.id ?? ''
+    },
+    load(source, progressDisplay) {
       const loc = new URL(location.href)
       const rehash = loc.searchParams.get('rehash') === 'true'
       const legacy = loc.searchParams.get('legacy') === 'true'
-      const [jarA, jarB] = await Promise.all([
-        getJAR(a, progressDisplay, rehash, contentA, legacy),
-        getJAR(b, progressDisplay, rehash, contentB, legacy),
-      ])
-      return {
-        contentA: jarA,
-        contentB: jarB,
-      }
+      return 'version' in source
+        ? getJAR(source.version, progressDisplay, rehash)
+        : getJAR(source.name, progressDisplay, rehash, source.content, legacy)
     },
   },
   categories: [
