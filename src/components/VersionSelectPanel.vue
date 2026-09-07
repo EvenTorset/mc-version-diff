@@ -45,6 +45,32 @@ defineProps<{
   padding: 0 !important;
 }
 
+.panel.popover :deep(.n-card-header) {
+  flex-wrap: wrap;
+  column-gap: 8px;
+
+  .n-card-header__main {
+    flex: 0 0 auto;
+    min-width: auto;
+    white-space: nowrap;
+  }
+
+  .n-card-header__extra {
+    flex: 1 0 auto;
+    display: flex;
+  }
+
+  .mode-group,
+  .n-radio-group {
+    flex: 1;
+    display: flex;
+  }
+
+  .n-radio-button {
+    flex: 1;
+  }
+}
+
 .panel-body {
   flex: 1;
   min-height: 0;
