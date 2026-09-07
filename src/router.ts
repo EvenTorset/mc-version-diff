@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
-import { getDiffSuggestions } from './delta_providers/mcje/version_manifest'
+import { getDiffSuggestions } from './delta_providers/manifest'
+import { javaEdition } from './delta_providers/mcje/edition'
 import { URL_BASE } from '@/../urlBase'
 import DeltaRoute from '@/pages/DeltaRoute.vue'
 
@@ -36,7 +37,7 @@ router.beforeEach(async to => {
     // case 'latest-release':
     case 'major-release':
     case 'patches':
-      const suggestion = (await getDiffSuggestions())[({
+      const suggestion = (await getDiffSuggestions(javaEdition))[({
         'latest': 'latestVersion',
         'since-release': 'sinceRelease',
         // 'latest-release': 'latestRelease',

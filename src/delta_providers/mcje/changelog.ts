@@ -1,4 +1,4 @@
-const CORS = 'https://cors.dokucraft.co.uk:2096/'
+import { CORS } from '../assets'
 const ARTICLE_URL = 'https://www.minecraft.net/en-us/article/'
 const STORAGE_KEY = 'mc-version-diff-changelogs'
 

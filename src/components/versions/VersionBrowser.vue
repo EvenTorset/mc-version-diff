@@ -9,13 +9,12 @@ export const VERSION_MODES: { value: VersionMode, label: string }[] = [
 </script>
 
 <script setup lang="ts">
-import type { MCJEManifestVersion } from '@/delta_providers/mcje/version_manifest.ts'
-import { assets } from '@/delta_providers/mcje/assets'
-import { VersionType } from 'minecraft-asset-loader'
+import { VersionType, type ManifestVersion } from 'minecraft-asset-loader'
 import { NList, NListItem, NSkeleton } from 'naive-ui'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useVirtualizer } from '@tanstack/vue-virtual'
-import MCJEVersionDisplay from '@/delta_providers/mcje/MCJEVersionDisplay.vue'
+import VersionDisplay from './VersionDisplay.vue'
+import { useEdition } from './edition'
 import Col from '@/components/Col.vue'
 
 const props = withDefaults(defineProps<{
@@ -29,31 +28,33 @@ const props = withDefaults(defineProps<{
 })
 
 const emit = defineEmits<{
-  select: [version: MCJEManifestVersion]
-  deselect: [version: MCJEManifestVersion]
+  select: [version: ManifestVersion]
+  deselect: [version: ManifestVersion]
 }>()
+
+const edition = useEdition()
 
 const ROW_HEIGHT = 60
 
 const loading = ref(true)
-const allVersions = ref<MCJEManifestVersion[]>([])
-const releasesOnly = ref<MCJEManifestVersion[]>([])
-const mainVersions = ref<MCJEManifestVersion[]>([])
+const allVersions = ref<ManifestVersion[]>([])
+const releasesOnly = ref<ManifestVersion[]>([])
+const mainVersions = ref<ManifestVersion[]>([])
 const debouncedFilter = ref<string>('')
 
 const versionMode = defineModel<VersionMode>('mode', { default: 'main' })
 const filter = defineModel<string>('filter', { default: '' })
-const selectedVersions = defineModel<Set<MCJEManifestVersion>>({ default: () => new Set() })
+const selectedVersions = defineModel<Set<ManifestVersion>>({ default: () => new Set() })
 
-const listForMode = computed<MCJEManifestVersion[]>(() => {
+const listForMode = computed<ManifestVersion[]>(() => {
   if (versionMode.value === 'all') return allVersions.value
   if (versionMode.value === 'releases') return releasesOnly.value
   return mainVersions.value
 })
 
-function matching(list: MCJEManifestVersion[], query: string) {
-  const starts: MCJEManifestVersion[] = []
-  const contains: MCJEManifestVersion[] = []
+function matching(list: ManifestVersion[], query: string) {
+  const starts: ManifestVersion[] = []
+  const contains: ManifestVersion[] = []
   for (const version of list) {
     if (version.id.startsWith(query)) starts.push(version)
     else if (version.id.includes(query)) contains.push(version)
@@ -63,13 +64,13 @@ function matching(list: MCJEManifestVersion[], query: string) {
 
 const selectedIds = computed(() => new Set([ ...selectedVersions.value ].map(v => v.id)))
 
-const selectedList = computed<MCJEManifestVersion[]>(() => {
+const selectedList = computed<ManifestVersion[]>(() => {
   const pinned = allVersions.value.filter(v => selectedIds.value.has(v.id))
   if (props.keepPinnedWhileFiltering || !debouncedFilter.value) return pinned
   return matching(pinned, debouncedFilter.value)
 })
 
-const versions = computed<MCJEManifestVersion[]>(() =>
+const versions = computed<ManifestVersion[]>(() =>
   matching(listForMode.value, debouncedFilter.value).filter(v => !selectedIds.value.has(v.id)))
 
 const otherMatches = computed(() => {
@@ -102,7 +103,7 @@ const full = computed(() => props.max > 1 && selectedVersions.value.size >= prop
 
 const disabledIds = computed(() => new Set(props.disabledVersions))
 
-function toggle(version: MCJEManifestVersion) {
+function toggle(version: ManifestVersion) {
   if (disabledIds.value.has(version.id)) return
   if (props.max === 1) {
     selectedVersions.value = new Set([ version ])
@@ -127,7 +128,7 @@ function toggle(version: MCJEManifestVersion) {
 
 onMounted(async () => {
   try {
-    const manifest = assets().manifest
+    const manifest = edition.assets.manifest
     ;[ allVersions.value, releasesOnly.value, mainVersions.value ] = await Promise.all([
       manifest.versions(),
       manifest.versions(VersionType.RELEASE),
@@ -168,9 +169,9 @@ onBeforeUnmount(() => {
             <NListItem
               :style="{ height: `${ROW_HEIGHT}px` }"
               @click="toggle(version)"
-              class="mcje-version-list-item selected"
+              class="version-list-item selected"
             >
-              <MCJEVersionDisplay
+              <VersionDisplay
                 :version="version"
                 tooltip-side="right"
                 :style="{
@@ -208,10 +209,10 @@ onBeforeUnmount(() => {
                     transform: `translateY(${virtualRow.start - pinnedHeight}px)`,
                   }"
                   @click="toggle(versions[virtualRow.index])"
-                  class="mcje-version-list-item"
+                  class="version-list-item"
                   :class="{ disabled: full || disabledIds.has(versions[virtualRow.index].id) }"
                 >
-                  <MCJEVersionDisplay
+                  <VersionDisplay
                     :version="versions[virtualRow.index]"
                     tooltip-side="right"
                     :style="{
@@ -292,7 +293,7 @@ onBeforeUnmount(() => {
 <style lang="scss">
 @use '@/util/gradients.scss' as gradients;
 
-.mcje-version-list-item {
+.version-list-item {
   @include gradients.interactive-surface;
   --intr-gradient-x: 100%;
   background-color: transparent !important;
@@ -352,7 +353,7 @@ onBeforeUnmount(() => {
   }
 }
 
-.n-list .mcje-version-list-item.disabled {
+.n-list .version-list-item.disabled {
   cursor: not-allowed;
 
   .n-list-item__main {

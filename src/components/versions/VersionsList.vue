@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import type { MCJEManifestVersion } from '@/delta_providers/mcje/version_manifest.ts'
-import MCJEVersionBrowser, { VERSION_MODES, type VersionMode } from './MCJEVersionBrowser.vue'
+import type { ManifestVersion } from 'minecraft-asset-loader'
+import VersionBrowser, { VERSION_MODES, type VersionMode } from './VersionBrowser.vue'
 import VersionModeTabs from '@/components/VersionModeTabs.vue'
 import VersionSelect from '@/components/VersionSelect.vue'
 
-const selectedVersions = defineModel<Set<MCJEManifestVersion>>({ default: () => new Set() })
+const selectedVersions = defineModel<Set<ManifestVersion>>({ default: () => new Set() })
 
 const mode = ref<VersionMode>('main')
 const filter = ref('')
@@ -17,7 +17,7 @@ const select = ref<InstanceType<typeof VersionSelect> | null>(null)
     <template #tabs>
       <VersionModeTabs v-model="mode" :options="VERSION_MODES" />
     </template>
-    <MCJEVersionBrowser
+    <VersionBrowser
       v-model="selectedVersions"
       v-model:mode="mode"
       v-model:filter="filter"
