@@ -30,14 +30,12 @@ const props = defineProps<{
 const category = computed(() => props.dr.getCategory(props.track))
 const copyFunc = computed(() => getCopier(props.track))
 
-let restoredFocus = isInitialFocus(props.track.id)
-
 const autoToggle = inject<Ref<'none' | 'expand' | 'collapse'>>('autoToggle')
 const treeList = inject<{
   setTrackExpanded: (t: DeltaTrack, expanded: boolean) => void
   wasTrackExpanded: (t: DeltaTrack) => boolean
 } | undefined>('tree-list-mount', undefined)
-const initExpanded = restoredFocus || treeList?.wasTrackExpanded(props.track) || autoToggle?.value === 'expand' || (
+const initExpanded = isInitialFocus(props.track.id) || treeList?.wasTrackExpanded(props.track) || autoToggle?.value === 'expand' || (
   (
     props.track.state === DeltaTrackState.Added
     || props.track.state === DeltaTrackState.Edited
@@ -48,6 +46,8 @@ const initExpanded = restoredFocus || treeList?.wasTrackExpanded(props.track) ||
 
 const deltaTrack = ref<HTMLDivElement>()
 const interacted = ref(false)
+let expandedManually = false
+let interactedThisSession = false
 const expanded = ref(initExpanded)
 watch(expanded, v => treeList?.setTrackExpanded(props.track, v), { immediate: true })
 const isInitialAutoExpanded = ref(initExpanded)
@@ -60,6 +60,7 @@ const heightDuration = computed(() => autoToggle?.value === 'expand' || autoTogg
 
 watch(() => autoToggle?.value, t => {
   if (t === 'expand') {
+    expandedManually = false
     expanded.value = true
   } else if (t === 'collapse') {
     expanded.value = false
@@ -91,12 +92,12 @@ watch(() => props.track, () => {
 
 watch(expanded, async (isExpanded) => {
   isInitialAutoExpanded.value = false
-  restoredFocus = false
 
   if (!isExpanded) {
     scrollCollapsedIntoView()
     return;
   }
+  interactedThisSession = false
   holdFocus(props.track.id)
   shouldRenderContent.value = true
   view.value = await renderView()
@@ -105,12 +106,16 @@ watch(expanded, async (isExpanded) => {
 function handleAnimationEnd() {
   if (!expanded.value) {
     shouldRenderContent.value = false
-  } else {
-    if (!isInitialAutoExpanded.value && !restoredFocus) {
-      scrollExpandedIntoView()
-    }
-    isInitialAutoExpanded.value = false
+    return;
   }
+
+  if (interactedThisSession || expandedManually) {
+    scrollExpandedIntoView()
+  }
+}
+
+function markContentInteraction() {
+  interactedThisSession = true
 }
 
 onMounted(async () => {
@@ -124,7 +129,7 @@ const SCROLL_MARGIN = 4
 
 function scrollExpandedIntoView() {
   const el = deltaTrack.value
-  if (!el || autoToggle?.value === 'expand') return;
+  if (!el) return;
 
   const rect = el.getBoundingClientRect()
   const viewportHeight = window.innerHeight
@@ -193,6 +198,9 @@ async function copy(version: 'a' | 'b') {
 function toggle() {
   if (autoToggle) {
     autoToggle.value = 'none'
+  }
+  if (!expanded.value) {
+    expandedManually = true
   }
   expanded.value = !expanded.value
 }
@@ -309,6 +317,8 @@ function toggle() {
       :style="{
         minHeight: (expanded && isInitialAutoExpanded) ? `${viewer?.predictedHeight ?? 0}px` : undefined
       }"
+      @pointerdown.capture="markContentInteraction"
+      @keydown.capture="markContentInteraction"
     >
       <AnimatedHeight
         :show="expanded"
