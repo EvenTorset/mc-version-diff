@@ -4,6 +4,8 @@ export interface FilesMeta {
   bName?: string
   aSize?: number
   bSize?: number
+  aFolder?: boolean
+  bFolder?: boolean
   aVersion?: string
 }
 
