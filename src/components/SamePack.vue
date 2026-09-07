@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import type { DeltaResult } from '@/delta_providers'
-import templateUrl from '@/assets/same_pack.jpg'
-import overlayUrl from '@/assets/same_pack_overlay.png'
-import defaultPackUrl from '@/assets/default_pack.png'
+import templateUrl from '@/assets/same_pack.avif'
+import overlayUrl from '@/assets/same_pack_overlay.avif'
+import defaultPackUrl from '@/assets/default_pack.avif'
 import { popupable } from '@/util/popupable'
 
 const props = defineProps<{
