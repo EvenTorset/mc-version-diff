@@ -6,7 +6,8 @@ import DeltaSummary from '@/components/DeltaSummary.vue'
 import SamePack from '@/components/SamePack.vue'
 import VersionCompare, { type CompareSide } from '@/components/VersionCompare.vue'
 import type { Renderable } from '@/types.ts'
-import { readFilesMeta } from './filesMeta'
+import { readFilesMeta, UPLOAD_VERSION_A_KEY, UPLOAD_VERSION_B_KEY } from './filesMeta'
+import { readUserFile } from '@/util/userFiles'
 import { useRoute, useRouter } from 'vue-router'
 
 const props = defineProps<{
@@ -18,14 +19,27 @@ const route = useRoute()
 
 const sideASize = ref<number | null>(null)
 const sideBSize = ref<number | null>(null)
+const samePack = ref(false)
 
-function load() {
+async function sameBytes() {
+  const [ a, b ] = await Promise.all([ readUserFile(UPLOAD_VERSION_A_KEY), readUserFile(UPLOAD_VERSION_B_KEY) ])
+  if (!a || !b || a.size !== b.size) return false
+  const [ x, y ] = await Promise.all([ a.arrayBuffer(), b.arrayBuffer() ])
+  const ub = new Uint8Array(y)
+  return new Uint8Array(x).every((v, i) => v === ub[i])
+}
+
+async function load() {
   const meta = readFilesMeta()
   const [ aSize, bSize ] = route.params.b === 'swap'
     ? [ meta?.bSize, meta?.aSize ]
     : [ meta?.aSize, meta?.bSize ]
   sideASize.value = aSize ?? null
   sideBSize.value = bSize ?? null
+  samePack.value = false
+  if (props.dr.tracks.length === 0 && !meta?.aVersion && aSize === bSize) {
+    samePack.value = await sameBytes()
+  }
 }
 
 onMounted(load)
@@ -73,7 +87,7 @@ function swap() {
       </template>
     </VersionCompare>
 
-    <SamePack v-if="dr.tracks.length === 0" :dr="dr" />
+    <SamePack v-if="samePack" :dr="dr" />
     <DeltaSummary v-else :dr="dr" />
   </div>
 </template>
