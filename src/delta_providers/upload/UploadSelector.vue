@@ -116,15 +116,18 @@ async function saveFile(list: UploadFileInfo[], contentName: string, slot: 'a' |
   if (restoring) return;
   try {
     const content = await list[0]?.file?.arrayBuffer()
+    if (content) {
+      await writeUserFile(contentName, content)
+    } else {
+      await deleteUserFile(contentName)
+    }
     const meta = currentMeta()
     const nameKey = slot === 'a' ? 'aName' : 'bName'
     const sizeKey = slot === 'a' ? 'aSize' : 'bSize'
     if (content) {
-      await writeUserFile(contentName, content)
       meta[nameKey] = list[0].name
       meta[sizeKey] = content.byteLength
     } else {
-      await deleteUserFile(contentName)
       delete meta[nameKey]
       delete meta[sizeKey]
     }
