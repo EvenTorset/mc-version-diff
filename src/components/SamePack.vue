@@ -4,6 +4,7 @@ import type { DeltaResult } from '@/delta_providers'
 import templateUrl from '@/assets/same_pack.jpg'
 import overlayUrl from '@/assets/same_pack_overlay.png'
 import defaultPackUrl from '@/assets/default_pack.png'
+import { popupable } from '@/util/popupable'
 
 const props = defineProps<{
   dr: DeltaResult
@@ -133,7 +134,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <canvas ref="canvas" class="same-pack"></canvas>
+  <canvas ref="canvas" class="same-pack" v-bind="popupable({})"></canvas>
 </template>
 
 <style lang="scss" scoped>
