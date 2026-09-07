@@ -416,6 +416,23 @@ body {
   padding-left: 0;
 }
 
+.n-base-selection,
+.n-base-select-option,
+.n-radio,
+.n-radio-button,
+.n-checkbox,
+.n-button,
+.n-switch,
+.n-tabs-nav {
+  user-select: none;
+}
+
+.n-base-selection-input,
+.n-input,
+.n-input-number {
+  user-select: auto;
+}
+
 .n-tabs-tab {
   user-select: none !important;
 
