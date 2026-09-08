@@ -4,6 +4,7 @@ import { RouterView, useRoute } from 'vue-router'
 import { getCSSVar } from '@/util/getCSSVar'
 import { computed, nextTick, onMounted, ref, watch, watchEffect } from 'vue'
 import { loadSettings, Settings, SETTINGS_STORAGE_KEY } from '@/settings'
+import { assets } from '@/delta_providers/assets'
 import { NotifyProvider } from '@/notify'
 
 const route = useRoute()
@@ -81,6 +82,7 @@ let loadedSettings = false
 onMounted(async () => {
   loadSettings()
   loadedSettings = true
+  assets()
 
   Object.defineProperty(globalThis, 'toggleCopyStatusButton', {
     value: () => {
