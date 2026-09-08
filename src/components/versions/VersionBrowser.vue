@@ -16,6 +16,7 @@ import { useVirtualizer } from '@tanstack/vue-virtual'
 import VersionDisplay from './VersionDisplay.vue'
 import { useEdition } from './edition'
 import Col from '@/components/Col.vue'
+import Row from '@/components/Row.vue'
 
 const props = withDefaults(defineProps<{
   max?: number
@@ -157,10 +158,17 @@ onBeforeUnmount(() => {
 <template>
   <Col align="stretch" class="browser">
     <div v-if="loading" class="list-container">
-      <div v-for="i in 12" :key="i" class="skeleton-row" :style="{ height: `${ROW_HEIGHT}px` }">
-        <NSkeleton text :width="`${70 + (i * 37) % 50}px`" />
-        <NSkeleton text width="72px" />
-      </div>
+      <NList>
+        <NListItem v-for="i in 12" :key="i" :style="{ height: `${ROW_HEIGHT}px` }">
+          <Row gap="8px">
+            <NSkeleton width="34px" height="34px" :sharp="false" />
+            <Col align="flex-start" gap="4px">
+              <NSkeleton text :width="`${50 + (i * 37) % 50}px`" height="16px" :sharp="false" />
+              <NSkeleton text :width="`${64 + (i * 23) % 40}px`" height="14px" :sharp="false" />
+            </Col>
+          </Row>
+        </NListItem>
+      </NList>
     </div>
     <div v-else ref="parentRef" class="list-container" :key="versionMode + debouncedFilter">
       <div v-if="selectedList.length > 0" class="pinned">
@@ -278,15 +286,6 @@ onBeforeUnmount(() => {
   border-bottom-left-radius: 6px;
   border-bottom-right-radius: 6px;
 }
-
-.skeleton-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-sizing: border-box;
-  padding: 0 12px 0 16px;
-}
-
 
 </style>
 

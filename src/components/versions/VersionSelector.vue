@@ -74,10 +74,34 @@ onMounted(async () => {
       <div class="suggestions-grid">
         <template v-if="loading">
           <template v-for="i in 3" :key="`placeholder-${i}`">
-            <div class="suggestion-label" :style="{ '--row': i * 3 + 1 }">
-              <NSkeleton text width="100px" />
+            <div class="suggestion-placeholder" :style="{ '--row': (i - 1) * 3 + 1 }">
+              <div class="suggestion-button" :class="{ accent: i === 1 }"></div>
+              <div class="suggestion-cell suggestion-label">
+                <NSkeleton text width="100px" height="14px" :sharp="false" />
+              </div>
+              <div class="suggestion-cell suggestion-a">
+                <Row gap="8px">
+                  <NSkeleton width="34px" height="34px" :sharp="false" />
+                  <Col align="flex-start" gap="4px">
+                    <NSkeleton text width="80px" height="16px" :sharp="false" />
+                    <NSkeleton text width="96px" height="14px" :sharp="false" />
+                  </Col>
+                </Row>
+              </div>
+              <div class="suggestion-cell suggestion-arrow">
+                <NIcon :size="24" :component="ArrowRight24Regular" />
+              </div>
+              <div class="suggestion-cell suggestion-b">
+                <Row gap="8px">
+                  <NSkeleton width="34px" height="34px" :sharp="false" />
+                  <Col align="flex-start" gap="4px">
+                    <NSkeleton text width="80px" height="16px" :sharp="false" />
+                    <NSkeleton text width="96px" height="14px" :sharp="false" />
+                  </Col>
+                </Row>
+              </div>
             </div>
-            <NSkeleton class="suggestion-button suggestion-placeholder" :style="{ '--row': i * 3 + 1 }" />
+            <div v-if="i < 3" class="grid-gap" :style="{ '--row': (i - 1) * 3 + 1 }"></div>
           </template>
         </template>
         <template v-else v-for="diff, i in diffSuggestions">
@@ -200,7 +224,8 @@ onMounted(async () => {
   grid-row: calc(var(--row) + 2);
 }
 
-.suggestion-link {
+.suggestion-link,
+.suggestion-placeholder {
   display: contents;
 }
 
@@ -243,13 +268,6 @@ onMounted(async () => {
   grid-column: 3;
   grid-row: calc(var(--row) + 1);
   padding-right: 15px;
-}
-
-.suggestion-placeholder {
-  width: 420px;
-  max-width: 100%;
-  height: 60px;
-  border-radius: 6px;
 }
 
 .suggestion-cell {
