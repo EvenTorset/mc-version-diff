@@ -1,19 +1,20 @@
 <script setup lang="ts">
-import { NAvatar, NSkeleton, NTime } from 'naive-ui'
-import MCJEVersionNumber from '@/delta_providers/mcje/MCJEVersionNumber.vue'
+import { NAvatar, NTime } from 'naive-ui'
+import type { ManifestVersion, VersionDetails } from 'minecraft-asset-loader'
+import VersionNumber from './VersionNumber.vue'
 import releaseVersionIcon from '@/assets/release_version.webp'
 import snapshotVersionIcon from '@/assets/snapshot_version.webp'
 import Tooltip from '@/components/Tooltip.vue'
 import { mergeProps, ref, watch } from 'vue'
-import { getVersion, getVersionDetails, type MCJEManifestVersion, type MCJEVersionDetails } from '@/delta_providers/mcje/version_manifest.ts'
 import Row from '@/components/Row.vue'
 import Dim from '@/components/Dim.vue'
-import { formatBytes } from '@/util/bytes'
 import Col from '@/components/Col.vue'
 import type { TooltipSide } from '@/types'
+import { findVersion } from '@/delta_providers/manifest'
+import { useEdition } from './edition'
 
 const props = withDefaults(defineProps<{
-  version: MCJEManifestVersion | string
+  version: ManifestVersion | string
   brighter?: boolean
   tooltipSide?: TooltipSide
 }>(), {
@@ -24,14 +25,15 @@ defineOptions({
   inheritAttrs: false
 })
 
-const manVer = ref<MCJEManifestVersion | null>(null)
-const details = ref<MCJEVersionDetails | null>(null)
+const edition = useEdition()
+const manVer = ref<ManifestVersion | null>(null)
+const details = ref<VersionDetails | null>(null)
 
 watch(() => props.version, async version => {
   details.value = null
   if (typeof version === 'string') {
     manVer.value = null
-    const loaded = await getVersion(version)
+    const loaded = await findVersion(edition.assets, version)
     if (props.version === version) manVer.value = loaded
   } else {
     manVer.value = version
@@ -39,8 +41,8 @@ watch(() => props.version, async version => {
 }, { immediate: true })
 
 async function loadDetails() {
-  if (details.value === null) {
-    details.value = await getVersionDetails(props.version)
+  if (details.value === null && manVer.value) {
+    details.value = await manVer.value.details()
   }
 }
 </script>
@@ -58,7 +60,7 @@ async function loadDetails() {
           }"
         />
         <Col align="flex-start">
-          <MCJEVersionNumber :id="manVer.id" style="font-size: 16px; line-height: 1;"/>
+          <VersionNumber :id="manVer.id" style="font-size: 16px; line-height: 1;"/>
           <NTime
             :time="new Date(manVer.releaseTime)"
             :to="Date.now()"
@@ -75,20 +77,10 @@ async function loadDetails() {
         <Dim>Released:</Dim>
         <NTime :time="new Date(manVer.releaseTime)" />
       </Row>
-      <Row>
-        <Dim>Size:</Dim>
-        <template v-if="details">{{ formatBytes(details.downloads.client.size) }}</template>
-        <NSkeleton v-else text width="64px" />
-      </Row>
-      <Row>
-        <Dim>Asset index:</Dim>
-        <template v-if="details">{{ details.assets }}</template>
-        <NSkeleton v-else text width="24px" />
-      </Row>
+      <component :is="edition.tooltip" v-if="edition.tooltip" :version="manVer" :details="details" />
       <Row>
         <Dim>Type:</Dim>
-        <template v-if="details">{{ details.type }}</template>
-        <NSkeleton v-else text width="60px" />
+        {{ manVer.type }}
       </Row>
     </p>
   </Tooltip>

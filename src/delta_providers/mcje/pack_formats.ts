@@ -1,11 +1,12 @@
-import type { ParsedZIP } from '@/util/zip'
-
 export interface PackFormats {
   resource: string | null
   data: string | null
 }
 
+type Readable = { read(): Promise<Uint8Array> }
+
 const formats = new Map<string, PackFormats>()
+const decoder = new TextDecoder()
 
 function fromPackVersion(value: any): PackFormats | null {
   if (typeof value === 'number') {
@@ -26,11 +27,11 @@ function fromPackVersion(value: any): PackFormats | null {
   return null
 }
 
-async function readJson(archive: ParsedZIP, path: string): Promise<any | null> {
-  const entry = archive.files[path]
+async function readJson(entries: Map<string, Readable>, path: string): Promise<any | null> {
+  const entry = entries.get(path)
   if (!entry) return null
   try {
-    return JSON.parse(await entry.textContent)
+    return JSON.parse(decoder.decode(await entry.read()))
   } catch {
     return null
   }
@@ -40,17 +41,17 @@ export function getPackFormats(id: string): PackFormats | null {
   return formats.get(id) ?? null
 }
 
-export async function readPackFormats(id: string, archive: ParsedZIP): Promise<void> {
+export async function readPackFormats(id: string, entries: Map<string, Readable>): Promise<void> {
   if (formats.has(id)) return
 
-  const version = await readJson(archive, 'version.json')
+  const version = await readJson(entries, 'version.json')
   const fromVersion = version ? fromPackVersion(version.pack_version) : null
   if (fromVersion) {
     formats.set(id, fromVersion)
     return
   }
 
-  const packFormat = (await readJson(archive, 'pack.mcmeta'))?.pack?.pack_format
+  const packFormat = (await readJson(entries, 'pack.mcmeta'))?.pack?.pack_format
   if (typeof packFormat === 'number') {
     const both = String(packFormat)
     formats.set(id, { resource: both, data: both })

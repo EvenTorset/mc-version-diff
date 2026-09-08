@@ -1,19 +1,26 @@
 <script setup lang="ts">
-import MCJEVersionsList from '@/delta_providers/mcje/MCJEVersionsList.vue'
+import VersionsList from './VersionsList.vue'
 import Row from '@/components/Row.vue'
 import Spacer from '@/components/Spacer.vue'
-import MCJEVersionDisplay from '@/delta_providers/mcje/MCJEVersionDisplay.vue'
-import { getDiffSuggestions, loadMCJEManifest, type MCJEManifestVersion } from '@/delta_providers/mcje/version_manifest'
+import VersionDisplay from './VersionDisplay.vue'
+import VersionSummary from './VersionSummary.vue'
+import type { ManifestVersion } from 'minecraft-asset-loader'
+import { getDiffSuggestions } from '@/delta_providers/manifest'
+import { EDITION, type Edition } from './edition'
 import { ArrowLeft24Regular, ArrowRight24Regular } from '@vicons/fluent'
 import { NAlert, NButton, NCard, NIcon, NSkeleton } from 'naive-ui'
-import { computed, ref } from 'vue'
-import { onMounted } from 'vue'
+import { computed, onMounted, provide, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import Col from '@/components/Col.vue'
-import MCJEVersionSummary from './MCJEVersionSummary.vue'
 
-const diffSuggestions = ref<[string, MCJEManifestVersion[]][]>([])
-const selectedVersions = ref<Set<MCJEManifestVersion>>(new Set())
+const props = defineProps<{
+  edition: Edition
+}>()
+
+provide(EDITION, props.edition)
+
+const diffSuggestions = ref<[string, ManifestVersion[]][]>([])
+const selectedVersions = ref<Set<ManifestVersion>>(new Set())
 const ab = computed(() => {
   const [ a, b ] = Array.from(selectedVersions.value)
   return {
@@ -32,8 +39,7 @@ function deselect(id: string) {
 
 onMounted(async () => {
   try {
-    await loadMCJEManifest()
-    const suggestions = getDiffSuggestions()
+    const suggestions = await getDiffSuggestions(props.edition)
     diffSuggestions.value.push(['Latest version', suggestions.latestVersion])
     if (suggestions.sinceRelease !== null) {
       diffSuggestions.value.push(['Since release', suggestions.sinceRelease])
@@ -62,23 +68,47 @@ onMounted(async () => {
   </NAlert>
   <Row v-else align="stretch" style="height: 100%;">
     <div class="versions-list-wrapper">
-      <MCJEVersionsList v-model="selectedVersions" />
+      <VersionsList v-model="selectedVersions" />
     </div>
     <NCard v-if="selectedVersions.size === 0" class="main-panel" title="Comparison Suggestions">
       <div class="suggestions-grid">
         <template v-if="loading">
           <template v-for="i in 3" :key="`placeholder-${i}`">
-            <div class="suggestion-label" :style="{ '--row': i * 3 + 1 }">
-              <NSkeleton text width="100px" />
+            <div class="suggestion-placeholder" :style="{ '--row': (i - 1) * 3 + 1 }">
+              <div class="suggestion-button" :class="{ accent: i === 1 }"></div>
+              <div class="suggestion-cell suggestion-label">
+                <NSkeleton text width="100px" height="14px" :sharp="false" />
+              </div>
+              <div class="suggestion-cell suggestion-a">
+                <Row gap="8px">
+                  <NSkeleton width="34px" height="34px" :sharp="false" />
+                  <Col align="flex-start" gap="4px">
+                    <NSkeleton text width="80px" height="16px" :sharp="false" />
+                    <NSkeleton text width="96px" height="14px" :sharp="false" />
+                  </Col>
+                </Row>
+              </div>
+              <div class="suggestion-cell suggestion-arrow">
+                <NIcon :size="24" :component="ArrowRight24Regular" />
+              </div>
+              <div class="suggestion-cell suggestion-b">
+                <Row gap="8px">
+                  <NSkeleton width="34px" height="34px" :sharp="false" />
+                  <Col align="flex-start" gap="4px">
+                    <NSkeleton text width="80px" height="16px" :sharp="false" />
+                    <NSkeleton text width="96px" height="14px" :sharp="false" />
+                  </Col>
+                </Row>
+              </div>
             </div>
-            <NSkeleton class="suggestion-button suggestion-placeholder" :style="{ '--row': i * 3 + 1 }" />
+            <div v-if="i < 3" class="grid-gap" :style="{ '--row': (i - 1) * 3 + 1 }"></div>
           </template>
         </template>
         <template v-else v-for="diff, i in diffSuggestions">
           <RouterLink class="suggestion-link hover-parent" :style="{ '--row': i * 3 + 1 }" :to="{
             name: 'delta',
             params: {
-              provider: 'mcje',
+              provider: edition.id,
               a: diff[1][0].id,
               b: diff[1][1].id,
             }
@@ -90,13 +120,13 @@ onMounted(async () => {
             ></div>
             <div class="suggestion-cell suggestion-label">{{ diff[0] }}</div>
             <div class="suggestion-cell suggestion-a">
-              <MCJEVersionDisplay :version="diff[1][0]"/>
+              <VersionDisplay :version="diff[1][0]"/>
             </div>
             <div class="suggestion-cell suggestion-arrow">
               <NIcon :size="24" :component="ArrowRight24Regular" />
             </div>
             <div class="suggestion-cell suggestion-b">
-              <MCJEVersionDisplay :version="diff[1][1]"/>
+              <VersionDisplay :version="diff[1][1]"/>
             </div>
           </RouterLink>
           <div v-if="i < diffSuggestions.length - 1" class="grid-gap" :style="{ '--row': i * 3 + 1 }"></div>
@@ -111,9 +141,9 @@ onMounted(async () => {
     </NCard>
     <NCard v-else class="main-panel" title="Selected Versions">
       <Col v-if="selectedVersions.size === 1" justify="center" gap="40px" style="height: 100%;">
-         <MCJEVersionSummary :id="ab.a">
+         <VersionSummary :id="ab.a">
             <NButton @click="() => deselect(ab.a)">Deselect</NButton>
-         </MCJEVersionSummary>
+         </VersionSummary>
         <Row>
           <NIcon :size="24" :component="ArrowLeft24Regular" />
           <div>Select one more version from the list</div>
@@ -123,15 +153,15 @@ onMounted(async () => {
         <Col gap="20px" style="flex: 1;">
           <Row style="align-self: stretch;">
             <Spacer />
-            <MCJEVersionSummary :id="ab.a">
+            <VersionSummary :id="ab.a">
               <NButton @click="() => deselect(ab.a)">Deselect</NButton>
-            </MCJEVersionSummary>
+            </VersionSummary>
             <Spacer flex="1" max="100px" />
             <NIcon :size="24" :component="ArrowRight24Regular" />
             <Spacer flex="1" max="100px" />
-            <MCJEVersionSummary :id="ab.b">
+            <VersionSummary :id="ab.b">
               <NButton @click="() => deselect(ab.a)">Deselect</NButton>
-            </MCJEVersionSummary>
+            </VersionSummary>
             <Spacer />
           </Row>
         </Col>
@@ -148,7 +178,7 @@ onMounted(async () => {
           <RouterLink :to="{
             name: 'delta',
             params: {
-              provider: 'mcje',
+              provider: edition.id,
               a: ab.a,
               b: ab.b,
             }
@@ -194,7 +224,8 @@ onMounted(async () => {
   grid-row: calc(var(--row) + 2);
 }
 
-.suggestion-link {
+.suggestion-link,
+.suggestion-placeholder {
   display: contents;
 }
 
@@ -237,13 +268,6 @@ onMounted(async () => {
   grid-column: 3;
   grid-row: calc(var(--row) + 1);
   padding-right: 15px;
-}
-
-.suggestion-placeholder {
-  width: 420px;
-  max-width: 100%;
-  height: 60px;
-  border-radius: 6px;
 }
 
 .suggestion-cell {

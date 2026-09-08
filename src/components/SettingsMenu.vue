@@ -5,16 +5,12 @@ import Spacer from '@/components/Spacer.vue'
 import Tooltip from '@/components/Tooltip.vue'
 import { Settings } from '@/settings'
 import { formatBytes } from '@/util/bytes'
-import { getCacheSize, clearCache } from '@/util/download'
+import { assets } from '@/delta_providers/assets'
 import { clearVerdictCache } from '@/comparison/verdictCache'
-import { clearMetaCache } from '@/delta_providers/mcje/version_manifest'
 import { NButton, NCard, NInputNumber, NSelect, NSpin, NSwitch } from 'naive-ui'
 import { computed, onMounted, ref } from 'vue'
 
-const cacheTotal = ref<{ size: number, count: number }>({
-  size: -1,
-  count: -1,
-})
+const cacheTotal = ref<{ size: number, files: number } | null>(null)
 
 const BYTE_UNITS = { B: 1, kB: 1024, MB: 1024**2, GB: 1024**3, TB: 1024**4 }
 const byteUnitOptions = Object.keys(BYTE_UNITS).map(u => ({ label: u, value: u }))
@@ -29,14 +25,13 @@ const cacheSizeMaxDV = computed({
 })
 
 async function clearVersionCache(): Promise<void> {
-  await clearCache()
+  await assets().clearCache()
   await clearVerdictCache()
-  await clearMetaCache()
-  cacheTotal.value = await getCacheSize()
+  cacheTotal.value = await assets().cacheStats()
 }
 
 onMounted(async () => {
-  cacheTotal.value = await getCacheSize()
+  cacheTotal.value = await assets().cacheStats()
 })
 </script>
 
@@ -88,8 +83,8 @@ onMounted(async () => {
         </Row>
         <Row>
           Current total cache size:
-          <NSpin v-if="cacheTotal.size === -1" size="small"/>
-          <template v-else>{{ formatBytes(cacheTotal.size) }} ({{ cacheTotal.count }} file{{ cacheTotal.count === 1 ? '' : 's' }})</template>
+          <NSpin v-if="!cacheTotal" size="small"/>
+          <template v-else>{{ formatBytes(cacheTotal.size) }} ({{ cacheTotal.files }} file{{ cacheTotal.files === 1 ? '' : 's' }})</template>
         </Row>
         <Tooltip>
           <template #trigger="{ props }">
