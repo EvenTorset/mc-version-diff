@@ -3,7 +3,8 @@ import wasmUrl from './wasm/cmp_wasm_bg.wasm?url'
 
 self.addEventListener('unhandledrejection', e => console.error('unhandled rejection:', e.reason))
 
-const ready = init({ module_or_path: wasmUrl })
+let resolveModule: (module: WebAssembly.Module | null) => void
+const ready = new Promise<WebAssembly.Module | null>(resolve => { resolveModule = resolve }).then(module => init({ module_or_path: module ?? wasmUrl }))
 
 const STRIDE = 8
 const KIND = { png: 0, nbt: 1, structure: 2, json: 3 } as const
@@ -31,10 +32,9 @@ export type BatchTask = {
   bMethod: number
 }
 
-export type WorkerComparePayload = {
-  tasks: BatchTask[]
-  data: ArrayBuffer
-}
+export type WorkerComparePayload =
+  | { type: 'init', module: WebAssembly.Module | null }
+  | { tasks: BatchTask[], data: ArrayBuffer }
 
 export type WorkerCompareResult = {
   id: number
@@ -48,6 +48,10 @@ export type WorkerCompareMessage = {
 }
 
 self.onmessage = async (event: MessageEvent<WorkerComparePayload>) => {
+  if ('type' in event.data) {
+    resolveModule(event.data.module)
+    return
+  }
   const { tasks, data } = event.data
   await ready
 
