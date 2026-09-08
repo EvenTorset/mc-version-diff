@@ -35,6 +35,8 @@ import { naturalCompare } from '@/util/sort'
 import { pathSearch } from 'path-search-sort'
 import CardSectionHeader from '@/components/CardSectionHeader.vue'
 import MoveScriptGenerator from '@/components/MoveScriptGenerator.vue'
+import RadioGroup from '@/components/RadioGroup.vue'
+import RadioButton from '@/components/RadioButton.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -428,7 +430,7 @@ onMounted(() => {
   nextTick(updateCountWidth)
 })
 
-const autoToggle = ref<'none' | 'expand' | 'collapse'>('none')
+const autoToggle = ref<null | 'expand' | 'collapse'>(null)
 provide('autoToggle', autoToggle)
 </script>
 
@@ -503,13 +505,15 @@ provide('autoToggle', autoToggle)
                     </template>
                   </NInput>
                   <Row align="stretch">
-                    <template v-for="[name, tracks] in states">
-                      <StateFilterToggle
-                        :name
-                        :count="tracks.length"
-                        v-model="stateFilter"
-                      />
-                    </template>
+                    <RadioGroup nullable dim-unselected v-model="stateFilter">
+                      <template v-for="[name, tracks] in states">
+                        <StateFilterToggle
+                          :name
+                          :count="tracks.length"
+                          :value="name"
+                        />
+                      </template>
+                    </RadioGroup>
                   </Row>
                   <CardSectionHeader text="Sort" />
                   <Row>
@@ -559,16 +563,10 @@ provide('autoToggle', autoToggle)
                 </Col>
                 <CardSectionHeader text="View" />
                 <Row>
-                  <NButton
-                    style="flex: 1;"
-                    :class="autoToggle === 'expand' ? 'selected accent' : ''"
-                    @click="autoToggle = autoToggle === 'expand' ? 'none' : 'expand'"
-                  >Expand all</NButton>
-                  <NButton
-                    style="flex: 1;"
-                    :class="autoToggle === 'collapse' ? 'selected accent' : ''"
-                    @click="autoToggle = autoToggle === 'collapse' ? 'none' : 'collapse'"
-                  >Collapse all</NButton>
+                  <RadioGroup nullable v-model="autoToggle">
+                    <RadioButton :is="Col" class="auto-toggle-button" value="expand">Expand all</RadioButton>
+                    <RadioButton :is="Col" class="auto-toggle-button" value="collapse">Collapse all</RadioButton>
+                  </RadioGroup>
                 </Row>
                 <Transition name="pass-up-fade">
                   <div v-if="imageDisplayOptions.length > 0">
@@ -799,6 +797,11 @@ provide('autoToggle', autoToggle)
   grid-column: 1 / -1;
   display: grid;
   grid-template-columns: subgrid;
+}
+
+.auto-toggle-button {
+  flex: 1;
+  padding: 4px;
 }
 
 .main-content-container {
