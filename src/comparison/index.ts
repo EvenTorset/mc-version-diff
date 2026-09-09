@@ -1,5 +1,6 @@
 import type { WorkerCompareMessage, CompareTask, CompareItem, BatchTask } from './cmp.worker'
 import CmpWorker from './cmp.worker?worker'
+import wasmUrl from './wasm/cmp_wasm_bg.wasm?url'
 
 export class HashEquivalence {
   private groups = new Map<number, Set<number>>()
@@ -42,6 +43,18 @@ export class HashEquivalence {
 
 const MAX_BATCH = 32
 
+let wasmModule: Promise<WebAssembly.Module> | null = null
+
+function compileWasm() {
+  return wasmModule ??= (async () => {
+    try {
+      return await WebAssembly.compileStreaming(fetch(wasmUrl))
+    } catch {
+      return WebAssembly.compile(await (await fetch(wasmUrl)).arrayBuffer())
+    }
+  })()
+}
+
 class WorkerPool {
   private workers: Worker[] = []
   private idleWorkers: Worker[] = []
@@ -53,9 +66,11 @@ class WorkerPool {
   private pendingTasks = new Map<number, { resolve: (val: boolean) => void; reject: (err: any) => void }>()
   private nextId = 0
 
-  constructor(maxWorkers = (navigator.hardwareConcurrency || 4) - 1) {
+  constructor(maxWorkers = Math.max(1, Math.min(8, (navigator.hardwareConcurrency || 4) - 1))) {
+    const module = compileWasm()
     for (let i = 0; i < maxWorkers; i++) {
       const worker = new CmpWorker()
+      module.then(m => worker.postMessage({ type: 'init', module: m })).catch(() => worker.postMessage({ type: 'init', module: null }))
       worker.onmessage = (event: MessageEvent<WorkerCompareMessage>) => {
         for (const { id, same, error } of event.data.results) {
           const task = this.pendingTasks.get(id)
