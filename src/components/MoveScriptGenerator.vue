@@ -280,7 +280,7 @@ code {
     width: 1.5em;
     margin-right: 12px;
     text-align: right;
-    color: var(--color-3);
+    color: var(--color-4);
     user-select: none;
   }
 
