@@ -189,6 +189,38 @@ export function readUpload(edition: Edition, name: string, bytes: Uint8Array<Arr
 
 const decoder = new TextDecoder()
 
+const pendingVerdicts = new Map<string, Promise<Map<string, boolean>>>()
+
+function prefetchVerdicts(a: string, b: string) {
+  pendingVerdicts.set(`${a}|${b}`, loadVerdicts(a, b))
+}
+
+function takeVerdicts(a: string, b: string) {
+  const key = `${a}|${b}`
+  const pending = pendingVerdicts.get(key)
+  pendingVerdicts.delete(key)
+  return pending ?? loadVerdicts(a, b)
+}
+
+function compareTags(jarA: VersionContent, jarB: VersionContent, hashEquivalence: HashEquivalence) {
+  const tags: Array<[ VersionEntry, VersionEntry ]> = []
+  for (const [ path, entryB ] of jarB.entries) {
+    if (!TAG_PATH.test(path)) continue
+    const entryA = jarA.entries.get(path)
+    if (entryA && entryA.crc !== entryB.crc) tags.push([ entryA, entryB ])
+  }
+
+  return Promise.all(tags.map(async ([ entryA, entryB ]) => {
+    try {
+      const [ tagA, tagB ] = await Promise.all([
+        entryA.read().then(b => parseTag(decoder.decode(b))),
+        entryB.read().then(b => parseTag(decoder.decode(b))),
+      ])
+      if (tagsEquivalent(tagA, tagB)) hashEquivalence.markEquivalent(entryA.crc, entryB.crc)
+    } catch {}
+  }))
+}
+
 const STRUCTURE_PATH = /(assets|data)\/[^\/]+\/structures?\/.+\.nbt$/
 const JSON_PATH = /\.(json|mcmeta)$/
 
@@ -201,6 +233,7 @@ export async function buildDelta(
   progressDisplay: ProgressList,
 ): Promise<DeltaResult> {
   const hashEquivalence = new HashEquivalence()
+  const tagsCompared = compareTags(jarA, jarB, hashEquivalence)
 
   {
     const progressBar = createProgressBar(`${a} → ${b}`)
@@ -232,7 +265,7 @@ export async function buildDelta(
       }
     }
 
-    const verdicts = await loadVerdicts(a, b)
+    const verdicts = await takeVerdicts(a, b)
     const misses = candidates.filter(candidate => {
       const cached = verdicts.get(verdictKey(candidate.kind, candidate.entryA.crc, candidate.entryB.crc))
       if (cached) hashEquivalence.markEquivalent(candidate.entryA.crc, candidate.entryB.crc)
@@ -266,24 +299,7 @@ export async function buildDelta(
     progressDisplay.removeItem(progressBarId)
   }
 
-  {
-    const tags: Array<[ VersionEntry, VersionEntry ]> = []
-    for (const [ path, entryB ] of jarB.entries) {
-      if (!TAG_PATH.test(path)) continue
-      const entryA = jarA.entries.get(path)
-      if (entryA && entryA.crc !== entryB.crc) tags.push([ entryA, entryB ])
-    }
-
-    await Promise.all(tags.map(async ([ entryA, entryB ]) => {
-      try {
-        const [ tagA, tagB ] = await Promise.all([
-          entryA.read().then(b => parseTag(decoder.decode(b))),
-          entryB.read().then(b => parseTag(decoder.decode(b))),
-        ])
-        if (tagsEquivalent(tagA, tagB)) hashEquivalence.markEquivalent(entryA.crc, entryB.crc)
-      } catch {}
-    }))
-  }
+  await tagsCompared
 
   const tracks: DeltaTrack[] = []
 
@@ -440,6 +456,7 @@ export function editionProvider(edition: Edition, { categories, upload }: Editio
     overview: dr => <VersionOverview edition={edition} dr={dr} />,
     async fetch(a, b, progressDisplay) {
       const rehash = useRoute().query.rehash === 'true'
+      prefetchVerdicts(a, b)
       const [ contentA, contentB ] = await Promise.all([
         loadVersion(edition, a, progressDisplay, rehash),
         loadVersion(edition, b, progressDisplay, rehash),
