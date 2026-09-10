@@ -13,11 +13,13 @@ export interface Equivalence {
 
 export interface Edition {
   id: string
+  family?: string
   name: string
   typeName?: (type: string) => string
   typeTip?: string
   readonly assets: MinecraftAssets
   lineSegments: number
+  lazy?: boolean
   tooltip?: Component
   summary?: Component
   overview?: (version: ManifestVersion, details: VersionDetails) => Promise<{ facts: CompareFact[], links: CompareLink[] }>

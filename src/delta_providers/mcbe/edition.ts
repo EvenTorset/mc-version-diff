@@ -3,7 +3,7 @@ import { ArrowDownload16Filled, Open16Filled } from '@vicons/fluent'
 import type { Edition } from '@/components/versions/edition'
 import type { DeltaResult } from '@/delta_providers'
 import { formatBytes } from '@/util/bytes'
-import { assets } from '../assets'
+import { assets } from '../loader'
 import MCBEVersionTooltip from './MCBEVersionTooltip.vue'
 import MCBEVersionFacts from './MCBEVersionFacts.vue'
 

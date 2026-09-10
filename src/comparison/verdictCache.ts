@@ -1,4 +1,5 @@
 import { getDirectory, clearDirectory } from '@/util/opfs'
+import type { FileHash } from '.'
 
 const DIR = 'cmp_cache'
 
@@ -6,7 +7,7 @@ function fileName(a: string, b: string) {
   return `${a}__${b}`.replace(/[^a-zA-Z0-9_.-]/g, '_') + '.json'
 }
 
-export function verdictKey(kind: string, crcA: number, crcB: number) {
+export function verdictKey(kind: string, crcA: FileHash, crcB: FileHash) {
   return `${kind}:${crcA}:${crcB}`
 }
 

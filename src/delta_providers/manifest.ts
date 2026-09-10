@@ -2,7 +2,7 @@ import { VersionType, type ManifestVersion } from 'minecraft-asset-loader'
 import type MinecraftAssets from 'minecraft-asset-loader'
 import type { VersionPair } from '@/types'
 import type { Edition } from '@/components/versions/edition'
-import { refreshManifest } from './assets'
+import { refreshManifest } from './loader'
 
 export async function findVersion(assets: MinecraftAssets, id: string): Promise<ManifestVersion | null> {
   const found = await assets.manifest.version(id)

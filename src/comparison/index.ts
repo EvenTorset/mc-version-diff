@@ -2,21 +2,23 @@ import type { WorkerCompareMessage, CompareTask, CompareItem, BatchTask } from '
 import CmpWorker from './cmp.worker?worker'
 import wasmUrl from './wasm/cmp_wasm_bg.wasm?url'
 
-export class HashEquivalence {
-  private groups = new Map<number, Set<number>>()
+export type FileHash = number | string
 
-  areEquivalent(hashA: number, hashB: number): boolean {
+export class HashEquivalence {
+  private groups = new Map<FileHash, Set<FileHash>>()
+
+  areEquivalent(hashA: FileHash, hashB: FileHash): boolean {
     if (hashA === hashB) return true
     const groupA = this.groups.get(hashA)
     return groupA ? groupA.has(hashB) : false
   }
 
   /** Every hash equivalent to this one, including itself. */
-  group(hash: number): Iterable<number> {
+  group(hash: FileHash): Iterable<FileHash> {
     return this.groups.get(hash) ?? [hash]
   }
 
-  markEquivalent(hashA: number, hashB: number): void {
+  markEquivalent(hashA: FileHash, hashB: FileHash): void {
     if (hashA === hashB) return;
 
     const setA = this.groups.get(hashA)

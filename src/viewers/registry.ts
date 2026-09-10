@@ -16,9 +16,10 @@ export function getViewer(dr: DeltaResult, track: DeltaTrack): Viewer | null {
   const cached = results.get(track.id)
   if (cached !== undefined) return cached
 
+  const family = dr.edition.family ?? dr.edition.id
   let found: Viewer | null = null
   for (const [ , viewer ] of VIEWERS) {
-    if ((!viewer.edition || viewer.edition === dr.edition.id) && viewer.test(dr, track)) {
+    if ((!viewer.edition || viewer.edition === family) && viewer.test(dr, track)) {
       found = viewer
       break
     }

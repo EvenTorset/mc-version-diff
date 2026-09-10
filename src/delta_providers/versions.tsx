@@ -4,7 +4,7 @@ import { DeltaTrackState } from '@/delta_providers/states'
 import { readZip, type RawBytes } from 'minecraft-asset-loader'
 import type { RehashPayloadItem, RehashWorkerMessage } from '@/util/rehash.worker'
 import RehashWorker from '@/util/rehash.worker?worker'
-import { compareJson, compareNbt, comparePng, compareStructure, compareVersionless, HashEquivalence, terminateCmpWorkers } from '@/comparison'
+import { compareJson, compareNbt, comparePng, compareStructure, compareVersionless, type FileHash, HashEquivalence, terminateCmpWorkers } from '@/comparison'
 import { loadVerdicts, saveVerdicts, verdictKey } from '@/comparison/verdictCache'
 import getFileExt from '@/util/getFileExt'
 import { ProgressHandler } from '@/util/progress'
@@ -30,7 +30,7 @@ import VersionPicker from '@/components/versions/VersionPicker.vue'
 export type VersionEntry = {
   path: string
   size: number
-  crc: number
+  crc: FileHash
   read(): Promise<Uint8Array>
   raw(): Promise<RawBytes>
 }
@@ -163,14 +163,17 @@ export function loadVersion(edition: Edition, id: string, progressDisplay: Progr
     const version = await findVersion(edition.assets, id)
     if (!version) throw new Error(`Unknown version "${id}"`)
 
-    progressBar.progHandler.setMessage('Downloading...')
-    progressBar.progHandler.setUnit('byte')
-    await version.loadJar({
-      onProgress: (done, total) => progressBar.progHandler.update(total ? done / total : 0, done, total ?? 0),
-    })
+    if (!edition.lazy) {
+      progressBar.progHandler.setMessage('Downloading...')
+      progressBar.progHandler.setUnit('byte')
+      await version.loadJar({
+        onProgress: (done, total) => progressBar.progHandler.update(total ? done / total : 0, done, total ?? 0),
+      })
+    }
 
     progressBar.progHandler.setMessage('Reading...')
-    return await version.list() as VersionEntry[]
+    const files = await version.list()
+    return files.map(file => file.crc === undefined ? Object.assign(file, { crc: file.hash! }) : file) as VersionEntry[]
   })
 }
 
@@ -347,7 +350,7 @@ export async function buildDelta(
   const matchedNewInB = new Set<string>()
 
   type RemovedFile = { index: number, path: string, ext: string }
-  const removedByHash = new Map<number, RemovedFile[]>()
+  const removedByHash = new Map<FileHash, RemovedFile[]>()
   for (const [ i, { path, entry } ] of missingFromA.entries()) {
     let list = removedByHash.get(entry.crc)
     if (!list) removedByHash.set(entry.crc, list = [])

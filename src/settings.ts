@@ -9,6 +9,7 @@ export type SettingsType = {
   formatJSON: boolean
   cacheSizeMaxJava: number
   cacheSizeMaxBedrock: number
+  cacheSizeMaxAssets: number
   enableCopyStatusButton: boolean
   favoriteCategory: Record<string, string>
   chosenExecType: 'command' | 'script'
@@ -21,6 +22,7 @@ export const Settings = reactive<SettingsType>({
   formatJSON: false,
   cacheSizeMaxJava: 157286400,
   cacheSizeMaxBedrock: 419430400,
+  cacheSizeMaxAssets: 419430400,
   enableCopyStatusButton: false,
   favoriteCategory: {},
   chosenExecType: 'script',
@@ -34,6 +36,7 @@ export function loadSettings() {
   Settings.formatJSON = !!(so?.formatJSON ?? Settings.formatJSON)
   Settings.cacheSizeMaxJava = Number(so?.cacheSizeMaxJava ?? Settings.cacheSizeMaxJava)
   Settings.cacheSizeMaxBedrock = Number(so?.cacheSizeMaxBedrock ?? Settings.cacheSizeMaxBedrock)
+  Settings.cacheSizeMaxAssets = Number(so?.cacheSizeMaxAssets ?? Settings.cacheSizeMaxAssets)
   Settings.enableCopyStatusButton = !!(so?.enableCopyStatusButton ?? Settings.enableCopyStatusButton)
   Settings.favoriteCategory = so?.favoriteCategory ?? Settings.favoriteCategory
   Settings.chosenExecType = so?.chosenExecType ?? Settings.chosenExecType

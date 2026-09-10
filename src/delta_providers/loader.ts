@@ -4,10 +4,12 @@ import { clearDirectory } from '@/util/opfs'
 
 export const CORS = 'https://cors.dokucraft.co.uk:2096/'
 
+const PROXIED = ['https://github.com/', 'https://resources.download.minecraft.net/']
+
 const MANIFEST_TTL = 10 * 60 * 1000
 const MANIFEST_RETRY = 60 * 1000
 
-export type Edition = 'java' | 'bedrock'
+export type Edition = 'java' | 'bedrock' | 'assets'
 
 type Instance = {
   assets: MinecraftAssets
@@ -44,7 +46,7 @@ function refresh(type: Edition, instance: Instance, force: boolean) {
 }
 
 export function cacheSizeMax(type: Edition): number {
-  return type === 'java' ? Settings.cacheSizeMaxJava : Settings.cacheSizeMaxBedrock
+  return type === 'java' ? Settings.cacheSizeMaxJava : type === 'bedrock' ? Settings.cacheSizeMaxBedrock : Settings.cacheSizeMaxAssets
 }
 
 export function applyCacheSize(type: Edition): Promise<void> {
@@ -65,8 +67,8 @@ export function assets(type: Edition = 'java'): MinecraftAssets {
       assets: new MinecraftAssets({
         type,
         cacheSize: cacheSize || null,
-        cacheKey: type === 'bedrock' ? 'bedrock' : undefined,
-        proxy: url => url.startsWith('https://github.com/') ? CORS + url : false,
+        cacheKey: type === 'java' ? undefined : type,
+        proxy: url => PROXIED.some(host => url.startsWith(host)) ? CORS + url : false,
         manifest: stored?.manifest,
         manifestExpiry: MANIFEST_TTL,
       }),
