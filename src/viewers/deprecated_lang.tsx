@@ -6,6 +6,7 @@ import { DeltaTrackState } from '@/delta_providers/states'
 type DeprecatedLang = { removed?: string[], renamed?: Record<string, string> }
 
 registerViewer('deprecated_lang', {
+  edition: 'mcje',
   test(_dr, track) {
     return /assets\/[^\/]+\/lang\/deprecated.json$/.test(track.id)
   },

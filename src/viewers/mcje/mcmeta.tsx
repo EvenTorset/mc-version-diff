@@ -32,6 +32,7 @@ export async function hasAnimations(dr: DeltaResult, tracks: DeltaTrack[]) {
 }
 
 registerViewer('mcje_mcmeta', {
+  edition: 'mcje',
   test(_dr, track) {
     return track.id.endsWith('.mcmeta')
   },

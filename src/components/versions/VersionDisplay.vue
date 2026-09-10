@@ -11,7 +11,7 @@ import Dim from '@/components/Dim.vue'
 import Col from '@/components/Col.vue'
 import type { TooltipSide } from '@/types'
 import { findVersion } from '@/delta_providers/manifest'
-import { useEdition } from './edition'
+import { typeName, useEdition } from './edition'
 
 const props = withDefaults(defineProps<{
   version: ManifestVersion | string
@@ -80,7 +80,7 @@ async function loadDetails() {
       <component :is="edition.tooltip" v-if="edition.tooltip" :version="manVer" :details="details" />
       <Row>
         <Dim>Type:</Dim>
-        {{ manVer.type }}
+        {{ typeName(edition, manVer.type) }}
       </Row>
     </p>
   </Tooltip>

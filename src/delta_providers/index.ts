@@ -2,9 +2,10 @@ import type { ProgressList } from '@/components/progressList'
 import type { DeltaTrackState } from './states'
 import type { Renderable, StaticOrSync } from '@/types'
 import type { Component } from 'vue'
+import type { Edition } from '@/components/versions/edition'
 
 export type UploadSource =
-  | { name: string, content: Uint8Array<ArrayBuffer> }
+  | { name: string, content: Uint8Array<ArrayBuffer>, against?: string }
   | { version: string }
 
 export type DeltaTrack = {
@@ -17,12 +18,15 @@ export type DeltaTrack = {
 }
 
 export type DeltaResult = {
+  edition: Edition
   a: string
   b: string
   tracks: DeltaTrack[]
   getEntry: (versionId: string, path: string | null) => Promise<Uint8Array<ArrayBuffer>>
   listEntries: (versionId: string, path: string) => Promise<string[]>
   getCategory: (track: DeltaTrack) => DeltaProviderCategory | null
+  fileCount: (versionId: string) => number
+  getAnimation: (versionId: string, path: string) => Promise<string | null>
 }
 
 export type DeltaProviderCategory = {
@@ -30,8 +34,8 @@ export type DeltaProviderCategory = {
   name: string
   /** Used to sort the list of category tabs in the UI */
   sort: number
-  /** If true, the tracks in this category will automatically expand */
-  expand?: boolean
+  /** If true, or a function returning true for the comparison, the tracks in this category will automatically expand */
+  expand?: boolean | ((dr: DeltaResult, tracks: DeltaTrack[]) => boolean)
   /** If true, enables the image display settings panel while the category is selected */
   isImages?: boolean
   /** Used to check if a track belongs to this category */
@@ -59,6 +63,7 @@ export interface DeltaProvider<T> {
       queryParam: string
       type: 'bool' // additions need implementation in UploadSelector.vue
       default: boolean
+      uploadsOnly?: boolean
     }[]
     versionPicker?: () => Component
     defaultVersion?: () => Promise<string> | string
@@ -86,4 +91,5 @@ export interface DeltaProvider<T> {
 }
 
 await import('./mcje')
+await import('./mcbe')
 await import('./upload')

@@ -8,6 +8,7 @@ import { popupable } from '@/util/popupable'
 import { deltaVirtualHandler } from '@/util/virtualHandler'
 import { animationStats, arrayFrames, type Playhead } from '@/util/animation'
 import { formatBytes } from '@/util/bytes'
+import { imageFromBytes, imageFromBytesOwned } from '@/util/imageFromBytes'
 import { NSpin } from 'naive-ui'
 import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import FitBox from './FitBox.vue'
@@ -50,14 +51,14 @@ async function source(read: (path: string) => Promise<Uint8Array | null>) {
 
   const bytes = props.texture ? await read(props.texture).catch(() => null) : null
   const image = bytes
-    ? await createImageBitmap(new Blob([ bytes as BlobPart ])).catch(() => null)
+    ? await imageFromBytes(bytes as Uint8Array<ArrayBuffer>).catch(() => null)
     : null
   const stats = image ? animationStats(animation, image.width, image.height) : null
 
   if (!props.numbered) {
     if (!bytes || !image || !stats) throw new Error(`no texture at ${props.texture}`)
     return {
-      texture: bytes,
+      texture: bytes[0] === 0x89 && bytes[1] === 0x50 ? bytes : await createImageBitmap(image),
       ...stats.frame,
       frames: stats.frames,
       sheet: { width: image.width, height: image.height, size: bytes.byteLength },
@@ -146,11 +147,11 @@ async function build() {
 }
 
 // the player draws the texture as-is, so the channel view has to be baked into the sheet first
-async function withMode(texture: Uint8Array | HTMLCanvasElement) {
+async function withMode(texture: Uint8Array | HTMLCanvasElement | ImageBitmap) {
   if (!props.mode || props.mode === 'rgba') return texture
-  const sheet = await createImageBitmap(
-    texture instanceof Uint8Array ? new Blob([ texture as BlobPart ]) : texture,
-  )
+  const sheet = texture instanceof Uint8Array
+    ? await imageFromBytesOwned(texture as Uint8Array<ArrayBuffer>)
+    : await createImageBitmap(texture)
   return renderImageWithMode(sheet, props.mode, sheet.width, sheet.height)
 }
 

@@ -8,7 +8,7 @@ import DeltaSummary from '@/components/DeltaSummary.vue'
 import RelatedDeltas from '@/components/RelatedDeltas.vue'
 import VersionCompare, { type CompareFact, type CompareLink, type CompareSide } from '@/components/VersionCompare.vue'
 import VersionPicker from './VersionPicker.vue'
-import type { Edition } from './edition'
+import { typeName, type Edition } from './edition'
 import type { Renderable } from '@/types'
 
 const props = defineProps<{
@@ -65,21 +65,23 @@ function go(a: string, b: string) {
 const TIPS = {
   released: 'When this version was published by Mojang.',
   type: 'Release versions are the finished updates. Snapshots are the weekly previews of the next one.',
+  files: 'How many files the version holds, counting everything the comparison looks at.',
 }
 
-function toSide({ version, facts, links }: Side): CompareSide {
+function toSide({ version, facts, links }: Side, id: string): CompareSide {
   if (!version) return { facts: [], links: [] }
   return {
     facts: [
       { label: 'Released', time: new Date(version.releaseTime), tip: TIPS.released },
-      { label: 'Type', value: version.type, tip: TIPS.type },
+      { label: 'Type', value: typeName(props.edition, version.type), tip: props.edition.typeTip ?? TIPS.type },
+      { label: 'Files', value: props.dr.fileCount(id).toLocaleString(), tip: TIPS.files },
       ...facts,
     ],
     links,
   }
 }
 
-const sides = computed(() => [ toSide(sideA.value), toSide(sideB.value) ])
+const sides = computed(() => [ toSide(sideA.value, props.dr.a), toSide(sideB.value, props.dr.b) ])
 
 const between = computed(() => {
   const rows: Renderable[] = []
@@ -90,6 +92,9 @@ const between = computed(() => {
     const days = Math.round(Math.abs(new Date(timeB).valueOf() - new Date(timeA).valueOf()) / 86400000)
     rows.push(days === 0 ? 'same day' : days === 1 ? '1 day apart' : `${days} days apart`)
   }
+
+  const files = props.dr.fileCount(props.dr.b) - props.dr.fileCount(props.dr.a)
+  rows.push(files === 0 ? 'same file count' : `${files > 0 ? '+' : '-'}${Math.abs(files).toLocaleString()} file${Math.abs(files) === 1 ? '' : 's'}`)
 
   const detailsA = sideA.value.details
   const detailsB = sideB.value.details

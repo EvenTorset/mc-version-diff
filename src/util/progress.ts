@@ -14,17 +14,23 @@ export class ProgressHandler {
   #current: number = 0
   #total: number = 0
   #unit: string = ''
+  #pending = false
   constructor(private func: ProgressHandlerFunc) {
     this.#send()
   }
 
   #send() {
-    this.func({
-      ratio: this.#ratio,
-      current: this.#current,
-      total: this.#total,
-      message: this.#message,
-      unit: this.#unit,
+    if (this.#pending) return
+    this.#pending = true
+    requestAnimationFrame(() => {
+      this.#pending = false
+      this.func({
+        ratio: this.#ratio,
+        current: this.#current,
+        total: this.#total,
+        message: this.#message,
+        unit: this.#unit,
+      })
     })
   }
 

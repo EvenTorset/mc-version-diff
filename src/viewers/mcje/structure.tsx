@@ -27,6 +27,7 @@ async function jsonNbt(dr: DeltaResult, version: string, path: string): Promise<
 }
 
 registerViewer('mcje_structure', {
+  edition: 'mcje',
   test(_dr, track) {
     return track.id.endsWith('.nbt')
   },

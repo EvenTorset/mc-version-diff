@@ -18,7 +18,7 @@ export function getViewer(dr: DeltaResult, track: DeltaTrack): Viewer | null {
 
   let found: Viewer | null = null
   for (const [ , viewer ] of VIEWERS) {
-    if (viewer.test(dr, track)) {
+    if ((!viewer.edition || viewer.edition === dr.edition.id) && viewer.test(dr, track)) {
       found = viewer
       break
     }

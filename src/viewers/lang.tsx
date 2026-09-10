@@ -17,7 +17,8 @@ function parseLang(text: string): Record<string, string> {
 }
 
 registerViewer('lang', {
-  test(_dr, track) {
+  test(dr, track) {
+    if (dr.edition.id === 'mcbe') return /^resource_pack\/texts\/[^\/]+\.lang$/.test(track.id)
     return /assets\/[^\/]+\/lang\/(?!deprecated)[^\/]+.(json|lang)$/.test(track.id) || /^lang\/[^\/]+\.lang$/.test(track.id)
   },
   async render(dr, track) {

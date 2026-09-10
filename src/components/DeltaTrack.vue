@@ -1,5 +1,6 @@
 <script setup lang="tsx">
 import type { DeltaResult, DeltaTrack } from '@/delta_providers'
+import { categoryExpands } from '@/delta_providers/category'
 import FilePath from '@/components/FilePath.vue'
 import { ArrowDownload24Regular, ArrowTurnRight20Filled, ChevronDown20Filled, Copy24Regular } from '@vicons/fluent'
 import IconButton from './IconButton.vue'
@@ -40,7 +41,7 @@ const initExpanded = isInitialFocus(props.track.id) || treeList?.wasTrackExpande
     props.track.state === DeltaTrackState.Added
     || props.track.state === DeltaTrackState.Edited
   )
-  && (category.value?.expand ?? false)
+  && categoryExpands(props.dr, category.value)
   && autoToggle?.value !== 'collapse'
 )
 

@@ -1,6 +1,4 @@
-export async function tgaToBitmap(
-  buffer: Uint8Array<ArrayBuffer>
-): Promise<ImageBitmap> {
+export function tgaToImageData(buffer: Uint8Array<ArrayBuffer>): ImageData {
   if (buffer.length < 18) {
     throw new Error('Invalid TGA header size')
   }
@@ -160,8 +158,11 @@ export async function tgaToBitmap(
     }
   }
 
-  const imageData = new ImageData(rgbaData, width, height)
-  return createImageBitmap(imageData, {
+  return new ImageData(rgbaData, width, height)
+}
+
+export function tgaToBitmap(buffer: Uint8Array<ArrayBuffer>): Promise<ImageBitmap> {
+  return createImageBitmap(tgaToImageData(buffer), {
     premultiplyAlpha: 'none',
     colorSpaceConversion: 'none',
   })

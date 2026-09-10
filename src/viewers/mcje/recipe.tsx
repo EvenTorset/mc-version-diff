@@ -101,6 +101,7 @@ function computeMarks(a: NormalizedRecipe, b: NormalizedRecipe): {
 }
 
 registerViewer('mcje_recipe', {
+  edition: 'mcje',
   test(_dr, track) {
     return /(?:assets|data)\/[^\/]+\/recipes?\/.+\.json$/.test(track.id)
   },

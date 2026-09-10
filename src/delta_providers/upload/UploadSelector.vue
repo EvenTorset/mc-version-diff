@@ -74,6 +74,10 @@ const displayModeB = swapped(nothing, slotAMode)
 
 const sideAReady = computed(() => slotAVersion.value === null ? fileListA.value.length > 0 : slotAVersion.value !== '')
 
+function optionShown(option: { uploadsOnly?: boolean }) {
+  return !option.uploadsOnly || slotAVersion.value === null
+}
+
 const optionValues = reactive<any[]>([])
 const compareLink = computed<string | RouteLocationAsRelativeGeneric | RouteLocationAsPathGeneric | null>(() => {
   if (!sideAReady.value || !fileListB.value.length) {
@@ -87,6 +91,7 @@ const compareLink = computed<string | RouteLocationAsRelativeGeneric | RouteLoca
       b: swap.value ? 'swap' : undefined,
     },
     query: Object.fromEntries(comparatorProvider.value.upload?.options?.map((o, i) => {
+      if (!optionShown(o)) return null
       switch (o.type) {
         case 'bool': return optionValues[i] ? [
           o.queryParam,
@@ -264,7 +269,7 @@ const arrowHover = ref(false)
         <CardSectionHeader text="Options" style="margin-left: -12px;" />
         <Col align="stretch" style="align-self: flex-start;">
           <template v-for="option, i in comparatorProvider.upload?.options">
-            <Tooltip v-if="option.type === 'bool'">
+            <Tooltip v-if="option.type === 'bool' && optionShown(option)">
               <template #trigger="{ props }">
                 <NCheckbox v-bind="props" v-model:checked="optionValues[i]">{{ option.label }}</NCheckbox>
               </template>

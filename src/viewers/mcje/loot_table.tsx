@@ -52,6 +52,7 @@ async function initialTab(dr: DeltaResult, sides: Sides) {
 }
 
 registerViewer('mcje_loot_table', {
+  edition: 'mcje',
   test(_dr, track) {
     return /(?:assets|data)\/[^\/]+\/loot_tables?\/.+\.json$/.test(track.id)
   },

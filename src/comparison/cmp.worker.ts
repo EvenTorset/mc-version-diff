@@ -7,7 +7,7 @@ let resolveModule: (module: WebAssembly.Module | null) => void
 const ready = new Promise<WebAssembly.Module | null>(resolve => { resolveModule = resolve }).then(module => init({ module_or_path: module ?? wasmUrl }))
 
 const STRIDE = 8
-const KIND = { png: 0, nbt: 1, structure: 2, json: 3 } as const
+const KIND = { png: 0, nbt: 1, structure: 2, json: 3, versionless: 4 } as const
 
 export type CompareItem = {
   bytes: Uint8Array
@@ -19,10 +19,11 @@ export type CompareTask =
   | { kind: 'nbt'; a: CompareItem; b: CompareItem; littleEndian?: boolean }
   | { kind: 'structure'; a: CompareItem; b: CompareItem }
   | { kind: 'json'; a: CompareItem; b: CompareItem }
+  | { kind: 'versionless'; a: CompareItem; b: CompareItem }
 
 export type BatchTask = {
   id: number
-  kind: 'png' | 'nbt' | 'structure' | 'json'
+  kind: CompareTask['kind']
   littleEndian?: boolean
   aOffset: number
   aLength: number

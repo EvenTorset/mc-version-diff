@@ -30,6 +30,7 @@ function getJSON(raw: string) {
 }
 
 registerViewer('mcje_tag', {
+  edition: 'mcje',
   test(_dr, track) {
     return TAG_PATH.test(track.id)
   },
