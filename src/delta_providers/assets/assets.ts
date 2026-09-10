@@ -1,4 +1,5 @@
 import { expandSingleLanguage } from '../category'
+import { SOUNDS_PATH } from '@/viewers/mcje/sounds'
 import { registerDeltaProvider } from '../registry'
 import { editionProvider } from '../versions'
 import { javaAssetsEdition } from './edition'
@@ -15,15 +16,23 @@ registerDeltaProvider('assets', editionProvider(javaAssetsEdition, {
       }
     },
     {
-      name: 'Sounds',
+      name: 'Sound definitions',
       sort: 1,
+      expand: true,
       test(_dr, track) {
-        return /\.(?:ogg|mus)$/.test(track.id) || /assets\/[^\/]+\/sounds\.json$/.test(track.id)
+        return SOUNDS_PATH.test(track.id)
+      }
+    },
+    {
+      name: 'Sounds',
+      sort: 2,
+      test(_dr, track) {
+        return /\.(?:ogg|mus)$/.test(track.id)
       }
     },
     {
       name: 'Localization',
-      sort: 2,
+      sort: 3,
       expand: expandSingleLanguage,
       test(_dr, track) {
         return /assets\/[^\/]+\/lang\/.+\.(?:json|lang)$/.test(track.id)
@@ -31,14 +40,14 @@ registerDeltaProvider('assets', editionProvider(javaAssetsEdition, {
     },
     {
       name: 'Fonts',
-      sort: 3,
+      sort: 4,
       test(_dr, track) {
         return /assets\/[^\/]+\/font\//.test(track.id)
       }
     },
     {
       name: 'MCMETA',
-      sort: 4,
+      sort: 5,
       test(_dr, track) {
         return track.id.endsWith('.mcmeta')
       }

@@ -2,6 +2,7 @@ import { expandSingleLanguage } from '@/delta_providers/category'
 import { registerDeltaProvider } from '@/delta_providers/registry'
 import { editionProvider, REHASH_OPTION } from '@/delta_providers/versions'
 import { findVersion } from '@/delta_providers/manifest'
+import { SOUNDS_PATH } from '@/viewers/mcje/sounds'
 import { javaEdition } from './edition'
 
 function uploadFilter(legacy: boolean) {
@@ -85,57 +86,65 @@ registerDeltaProvider('mcje', editionProvider(javaEdition, {
       }
     },
     {
-      name: 'Shaders',
+      name: 'Sound definitions',
       sort: 6,
+      expand: true,
+      test(_dr, track) {
+        return SOUNDS_PATH.test(track.id)
+      }
+    },
+    {
+      name: 'Shaders',
+      sort: 7,
       test(_dr, track) {
         return /assets\/[^\/]+\/(?:shaders|post_effect)\/.+\.(?:glsl|fsh|vsh|json)$/.test(track.id)
       }
     },
     {
       name: 'Particles',
-      sort: 7,
+      sort: 8,
       test(_dr, track) {
         return /assets\/[^\/]+\/particles\/.+\.json$/.test(track.id)
       }
     },
     {
       name: 'Advancements',
-      sort: 8,
+      sort: 9,
       test(_dr, track) {
         return /(assets|data)\/[^\/]+\/advancements?\/.+\.json$/.test(track.id)
       }
     },
     {
       name: 'Loot tables',
-      sort: 9,
+      sort: 10,
       test(_dr, track) {
         return /(assets|data)\/[^\/]+\/loot_tables?\/.+\.json$/.test(track.id)
       }
     },
     {
       name: 'Recipes',
-      sort: 10,
+      sort: 11,
       test(_dr, track) {
         return /(assets|data)\/[^\/]+\/recipes?\/.+\.json$/.test(track.id)
       }
     },
     {
       name: 'Tags',
-      sort: 11,
+      sort: 12,
       test(_dr, track) {
         return /data\/[^\/]+\/tags\/.+\.json$/.test(track.id)
       }
     },
     {
       name: 'Structures',
-      sort: 12,
+      sort: 13,
       test(_dr, track) {
         return /(assets|data)\/[^\/]+\/structures?\/.+\.nbt$/.test(track.id)
       }
     },
     {
       name: 'World generation',
-      sort: 13,
+      sort: 14,
       test(_dr, track) {
         return /data\/.+\/worldgen\/.+\.json$/.test(track.id)
       }
