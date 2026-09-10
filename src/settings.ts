@@ -7,7 +7,8 @@ export type SettingsType = {
   lightMode: boolean
   pixelFont: boolean
   formatJSON: boolean
-  cacheSizeMax: number
+  cacheSizeMaxJava: number
+  cacheSizeMaxBedrock: number
   enableCopyStatusButton: boolean
   favoriteCategory: Record<string, string>
   chosenExecType: 'command' | 'script'
@@ -18,7 +19,8 @@ export const Settings = reactive<SettingsType>({
   lightMode: false,
   pixelFont: false,
   formatJSON: false,
-  cacheSizeMax: 157286400,
+  cacheSizeMaxJava: 157286400,
+  cacheSizeMaxBedrock: 419430400,
   enableCopyStatusButton: false,
   favoriteCategory: {},
   chosenExecType: 'script',
@@ -30,7 +32,8 @@ export function loadSettings() {
   Settings.lightMode = !!(so?.lightMode ?? Settings.lightMode)
   Settings.pixelFont = !!(so?.pixelFont ?? Settings.pixelFont)
   Settings.formatJSON = !!(so?.formatJSON ?? Settings.formatJSON)
-  Settings.cacheSizeMax = Number((so?.cacheSizeMax ?? Settings.cacheSizeMax))
+  Settings.cacheSizeMaxJava = Number(so?.cacheSizeMaxJava ?? Settings.cacheSizeMaxJava)
+  Settings.cacheSizeMaxBedrock = Number(so?.cacheSizeMaxBedrock ?? Settings.cacheSizeMaxBedrock)
   Settings.enableCopyStatusButton = !!(so?.enableCopyStatusButton ?? Settings.enableCopyStatusButton)
   Settings.favoriteCategory = so?.favoriteCategory ?? Settings.favoriteCategory
   Settings.chosenExecType = so?.chosenExecType ?? Settings.chosenExecType
