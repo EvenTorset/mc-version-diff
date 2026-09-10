@@ -1,7 +1,23 @@
-<script setup lang="tsx">
+<script lang="tsx">
 import type { DeltaResult, DeltaTrack } from '@/delta_providers'
+
+export type PrepareModel = (dr: DeltaResult, version: string, path: string) => Promise<{ model: any, assets: any, animate?: (group: any, time: number, camera?: any) => void, length?: number, fixed?: boolean }>
+
+let sharedRenderer: any = null
+
+function getSharedRenderer(THREE: any) {
+  if (!sharedRenderer) {
+    sharedRenderer = new THREE.WebGLRenderer({ canvas: document.createElement('canvas'), alpha: true })
+    sharedRenderer.setPixelRatio(1)
+  }
+  return sharedRenderer
+}
+</script>
+
+<script setup lang="tsx">
 import { DeltaTrackState } from '@/delta_providers/states'
 import { acquireSharedCamera, releaseSharedCamera, type SharedCamera } from '@/util/sharedCamera'
+import { acquireFixedFrame, releaseFixedFrame } from '@/util/fixedFrame'
 import { easeTowardIdle } from '@/util/orbitIdle'
 import { getGlobalTheta } from '@/util/globalRotation'
 import { createAnimator, getThree, loadModel, resolveModelData, versionAssets } from '@/util/blockModelRenderer'
@@ -16,10 +32,17 @@ const props = defineProps<{
   track: DeltaTrack
   version: 'a' | 'b'
   expanded?: boolean
+  prepare?: PrepareModel
+  cameraKey?: string | null
 }>()
 
 const IDLE_RETURN_DELAY = 5000
 const CAMERA_FOV = 35
+const FIXED_PHI = Math.PI / 3
+const FIXED_THETA = Math.PI / 4
+const FIT_SAMPLES = 16
+const FIXED_FIT_RATE = 30
+const FIXED_FIT_RUNS = 4
 
 const containerRef = ref<HTMLDivElement>()
 const canvasRef = ref<HTMLCanvasElement>()
@@ -27,25 +50,28 @@ const isVisible = useElementVisible(containerRef)
 
 const loading = ref(true)
 const errorMessage = ref('')
+const fixed = ref(false)
 
 let THREE: typeof ThreeNS
 let group: ThreeNS.Group | null = null
+let animate: ((group: any, time: number, camera?: any) => void) | null = null
 let animator: ReturnType<typeof createAnimator> | null = null
 let homeRadius = 24
 let homePhi = 0
+let fixedBox: ThreeNS.Box3 | null = null
+let fixedFrameKey: string | null = null
 
 let scene: ThreeNS.Scene | null = null
 let camera: ThreeNS.PerspectiveCamera | null = null
-let renderer: ThreeNS.WebGLRenderer | null = null
+let context2d: CanvasRenderingContext2D | null = null
 let controls: OrbitControls | null = null
-let loseContextExt: WEBGL_lose_context | null = null
 let resizeObserver: ResizeObserver | null = null
 
 let idle = true
 let idleTimer: ReturnType<typeof setTimeout> | null = null
 let rafId = 0
 let lastFrameTime = 0
-let contextActive = false
+let active = false
 
 const ownerId = Symbol('model-viewer')
 let pairCamera: SharedCamera | null = null
@@ -95,9 +121,15 @@ async function loadModelGroup() {
 
   const path = props.track[props.version]
   const version = props.dr[props.version]
-  const raw = await props.dr.getEntry(version, path)
-  const model = JSON.parse(new TextDecoder().decode(raw))
-  const assets = await versionAssets(props.dr, version)
+  const prepared = props.prepare
+    ? await props.prepare(props.dr, version, path)
+    : {
+      model: JSON.parse(new TextDecoder().decode(await props.dr.getEntry(version, path))),
+      assets: await versionAssets(props.dr, version),
+    }
+  const { model, assets } = prepared
+  animate = prepared.animate ?? null
+  fixed.value = !!prepared.fixed
 
   const resolved = await resolveModelData(assets, { model })
   const g = new THREE.Group()
@@ -108,22 +140,39 @@ async function loadModelGroup() {
   })
 
   const box = new THREE.Box3().setFromObject(g)
-  const center = box.getCenter(new THREE.Vector3())
-  g.position.sub(center)
+  if (animate) {
+    const span = Math.max(prepared.length ?? 0, 2)
+    const samples = prepared.fixed ? Math.round(span * FIXED_FIT_RATE) : FIT_SAMPLES
+    for (let run = 0; run < (prepared.fixed ? FIXED_FIT_RUNS : 1); run++) {
+      for (let i = 0; i <= samples; i++) {
+        animate(g, span * i / samples)
+        g.updateMatrixWorld(true)
+        box.union(new THREE.Box3().setFromObject(g))
+      }
+      animate(g, 0)
+    }
+  }
+  if (prepared.fixed) {
+    box.expandByPoint(new THREE.Vector3())
+    fixedBox = box
+  } else {
+    g.position.sub(box.getCenter(new THREE.Vector3()))
+  }
 
-  const size = box.getSize(new THREE.Vector3())
-  homeRadius = Math.max(1, Math.hypot(size.x, size.y, size.z)) * 1.6 + 6
+  homeRadius = fitRadius(box.getSize(new THREE.Vector3()))
 
   group = g
   animator = createAnimator(g)
 }
 
 function resize() {
-  if (!renderer || !canvasRef.value) return;
-  const w = canvasRef.value.clientWidth
-  const h = canvasRef.value.clientHeight
+  if (!canvasRef.value) return;
+  const ratio = Math.min(window.devicePixelRatio, 2)
+  const w = Math.round(canvasRef.value.clientWidth * ratio)
+  const h = Math.round(canvasRef.value.clientHeight * ratio)
   if (!w || !h) return;
-  renderer.setSize(w, h, false)
+  if (canvasRef.value.width !== w) canvasRef.value.width = w
+  if (canvasRef.value.height !== h) canvasRef.value.height = h
 }
 
 function onWheel(event: WheelEvent) {
@@ -141,19 +190,47 @@ function onWheel(event: WheelEvent) {
   camera.position.setFromSpherical(sph).add(controls.target)
 }
 
+function fitRadius(size: ThreeNS.Vector3) {
+  return Math.max(1, Math.hypot(size.x, size.y, size.z)) * 1.6 + 6
+}
+
+function fixedDistance(box: ThreeNS.Box3) {
+  const direction = new THREE.Vector3().setFromSpherical(new THREE.Spherical(1, FIXED_PHI, FIXED_THETA))
+  const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), direction).normalize()
+  const up = new THREE.Vector3().crossVectors(direction, right).normalize()
+  const tan = Math.tan(THREE.MathUtils.degToRad(CAMERA_FOV / 2))
+  const center = box.getCenter(new THREE.Vector3())
+  let distance = 0
+  for (let i = 0; i < 8; i++) {
+    const corner = new THREE.Vector3(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z).sub(center)
+    const depth = corner.dot(direction)
+    distance = Math.max(distance, Math.abs(corner.dot(up)) / tan + depth, Math.abs(corner.dot(right)) / tan + depth)
+  }
+  return Math.max(4, distance) * 1.15 + 4
+}
+
+function applyFixedFrame() {
+  if (!group || !camera || !fixedBox) return;
+  group.position.copy(fixedBox.getCenter(new THREE.Vector3())).negate()
+  camera.position.setFromSpherical(new THREE.Spherical(fixedDistance(fixedBox), FIXED_PHI, FIXED_THETA))
+  camera.lookAt(0, 0, 0)
+}
+
 function frame(now: number) {
   rafId = requestAnimationFrame(frame)
-  if (!contextActive || !renderer || !camera || !controls || !scene) return;
+  if (!active || !context2d || !camera || !scene) return;
+  if (fixed.value) applyFixedFrame()
 
-  if (pairCamera) {
-    pairCamera.sync(now)
-  } else {
-    const dt = Math.min((now - lastFrameTime) / 1000, 0.1) || 0
-    if (idle) easeTowardIdle(THREE, camera, controls.target, homePhi, homeRadius, dt)
+  const dt = Math.min((now - lastFrameTime) / 1000, 0.1) || 0
+  if (controls) {
+    if (pairCamera) {
+      pairCamera.sync(now)
+    } else if (idle) {
+      easeTowardIdle(THREE, camera, controls.target, homePhi, homeRadius, dt)
+    }
+    controls.update()
   }
   lastFrameTime = now
-
-  controls.update()
 
   if (canvasRef.value && canvasRef.value.clientHeight) {
     camera.aspect = canvasRef.value.clientWidth / canvasRef.value.clientHeight
@@ -161,7 +238,15 @@ function frame(now: number) {
   }
 
   animator?.update()
+  if (group) animate?.(group, now / 1000, camera)
+
+  const canvas = canvasRef.value!
+  if (!canvas.width || !canvas.height) return;
+  const renderer = getSharedRenderer(THREE)
+  if (renderer.domElement.width !== canvas.width || renderer.domElement.height !== canvas.height) renderer.setSize(canvas.width, canvas.height, false)
   renderer.render(scene, camera)
+  context2d.clearRect(0, 0, canvas.width, canvas.height)
+  context2d.drawImage(renderer.domElement, 0, 0)
 }
 
 function setupScene() {
@@ -170,22 +255,36 @@ function setupScene() {
   scene = new THREE.Scene()
   scene.add(group)
 
-  renderer = new THREE.WebGLRenderer({ canvas: canvasRef.value, alpha: true })
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-  loseContextExt = renderer.getContext().getExtension('WEBGL_lose_context')
-  contextActive = true
+  context2d = canvasRef.value.getContext('2d')
+  active = true
 
   resizeObserver = new ResizeObserver(resize)
   resizeObserver.observe(canvasRef.value)
   resize()
+
+  const cameraKey = props.cameraKey === undefined
+    ? props.track.state === DeltaTrackState.Edited ? props.track.id : null
+    : props.cameraKey
+
+  if (fixed.value) {
+    camera = new THREE.PerspectiveCamera(CAMERA_FOV, 1, 0.1, 1000)
+    if (cameraKey && fixedBox) {
+      fixedFrameKey = cameraKey
+      fixedBox = acquireFixedFrame(THREE, cameraKey, fixedBox)
+    }
+    applyFixedFrame()
+    lastFrameTime = performance.now()
+    rafId = requestAnimationFrame(frame)
+    return;
+  }
 
   const dir = new THREE.Vector3(-1, 0.75, -1).normalize()
   const dirSpherical = new THREE.Spherical().setFromVector3(dir)
   homePhi = dirSpherical.phi
   const initialTheta = getGlobalTheta()
 
-  if (props.track.state === DeltaTrackState.Edited) {
-    pairCameraKey = props.track.id
+  if (cameraKey) {
+    pairCameraKey = cameraKey
     pairCamera = acquireSharedCamera(THREE, pairCameraKey, initialTheta, homePhi, homeRadius)
     camera = pairCamera.camera
   } else {
@@ -213,17 +312,17 @@ function setupScene() {
   rafId = requestAnimationFrame(frame)
 }
 
-function suspendContext() {
-  if (!contextActive) return;
-  contextActive = false
-  loseContextExt?.loseContext()
+function suspend() {
+  if (!active) return;
+  active = false
+  cancelAnimationFrame(rafId)
 }
 
-function resumeContext() {
-  if (contextActive || !renderer) return;
-  contextActive = true
-  loseContextExt?.restoreContext()
+function resume() {
+  if (active || !context2d) return;
+  active = true
   lastFrameTime = performance.now()
+  rafId = requestAnimationFrame(frame)
 }
 
 function teardownScene() {
@@ -239,24 +338,25 @@ function teardownScene() {
     pairCameraKey = null
     pairCamera = null
   }
+  if (fixedFrameKey) {
+    releaseFixedFrame(fixedFrameKey)
+    fixedFrameKey = null
+  }
   if (group) disposeGroupResources(group)
-  renderer?.dispose()
-  loseContextExt?.loseContext()
-  renderer = null
-  loseContextExt = null
+  context2d = null
   scene = null
   camera = null
-  contextActive = false
+  active = false
 }
 
 function syncToVisibility() {
   if (!group) return;
   if (!isVisible.value) {
-    suspendContext()
-  } else if (!renderer) {
+    suspend()
+  } else if (!context2d) {
     setupScene()
   } else {
-    resumeContext()
+    resume()
   }
 }
 
@@ -282,7 +382,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="containerRef" class="model-viewer" :class="{ expanded }">
+  <div ref="containerRef" class="model-viewer" :class="{ expanded, fixed }">
     <canvas ref="canvasRef" tabindex="0"></canvas>
     <Transition name="fade">
       <div v-if="loading" class="loading-cover">
@@ -330,6 +430,10 @@ onBeforeUnmount(() => {
     &:active {
       cursor: grabbing;
     }
+  }
+
+  &.fixed canvas {
+    cursor: default;
   }
 }
 
