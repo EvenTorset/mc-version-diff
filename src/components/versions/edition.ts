@@ -3,7 +3,7 @@ import type MinecraftAssets from 'minecraft-asset-loader'
 import type { ManifestVersion, VersionDetails } from 'minecraft-asset-loader'
 import type { CompareLink, CompareFact } from '@/components/VersionCompare.vue'
 import type { DeltaResult } from '@/delta_providers'
-import type { VersionContent } from '@/delta_providers/versions'
+import type { VersionContent, VersionEntry } from '@/delta_providers/versions'
 import type { Renderable } from '@/types'
 
 export interface Equivalence {
@@ -24,6 +24,11 @@ export interface Edition {
   summary?: Component
   overview?: (version: ManifestVersion, details: VersionDetails) => Promise<{ facts: CompareFact[], links: CompareLink[] }>
   between?: (a: VersionDetails, b: VersionDetails) => Renderable[]
+  expand?: (entries: VersionEntry[]) => Promise<VersionEntry[]>
+  fallback?: {
+    read(version: string, path: string): Promise<Uint8Array<ArrayBuffer> | null>
+    list(version: string, path: string): Promise<string[]>
+  }
   afterLoad?: (content: VersionContent) => Promise<void>
   equivalences?: Equivalence[]
   animation?: (dr: DeltaResult, version: string, path: string) => Promise<string | null>

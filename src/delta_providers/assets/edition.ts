@@ -3,6 +3,8 @@ import { ArrowDownload16Filled } from '@vicons/fluent'
 import type { Edition } from '@/components/versions/edition'
 import { formatBytes } from '@/util/bytes'
 import { assets } from '../loader'
+import { expandSubpacks } from '../versions'
+import { listFromJar, readFromJar } from './jar'
 import AssetsVersionTooltip from './AssetsVersionTooltip.vue'
 import AssetsVersionFacts from './AssetsVersionFacts.vue'
 
@@ -40,6 +42,11 @@ export const javaAssetsEdition: Edition = {
   },
   lineSegments: 1,
   lazy: true,
+  expand: expandSubpacks,
+  fallback: {
+    read: readFromJar,
+    list: listFromJar,
+  },
   tooltip: AssetsVersionTooltip,
   summary: AssetsVersionFacts,
   async overview(version) {

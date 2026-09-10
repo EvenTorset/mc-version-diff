@@ -21,6 +21,7 @@ import { naturalCompare } from '@/util/sort'
 import { parseTag, TAG_PATH, tagsEquivalent } from '@/util/tag'
 import type { ProgressList } from '@/components/progressList.tsx'
 import { findVersion } from './manifest'
+import { SUBPACK } from './subpacks'
 import { readMcmeta } from '@/util/animation'
 import type { Edition } from '@/components/versions/edition'
 import VersionSelector from '@/components/versions/VersionSelector.vue'
@@ -130,7 +131,8 @@ async function loadContent(
   const progressBar = createProgressBar(id)
   const progressBarId = progressDisplay.addItem(progressBar.render)
 
-  const entries = new Map((await list(progressBar)).map(file => [file.path, file]))
+  const listed = await list(progressBar)
+  const entries = new Map((edition.expand ? await edition.expand(listed) : listed).map(file => [file.path, file]))
 
   if (rehash) {
     progressBar.progHandler.setMessage('Calculating file hashes...')
@@ -201,6 +203,24 @@ export function readUpload(edition: Edition, name: string, bytes: Uint8Array<Arr
     progressBar.progHandler.setMessage('Reading file...')
     return prepare(readZip(bytes))
   })
+}
+
+export async function expandSubpacks(entries: VersionEntry[]): Promise<VersionEntry[]> {
+  const expanded = await Promise.all(entries.map(async entry => {
+    if (!SUBPACK.test(entry.path)) return [ entry ]
+    try {
+      return readZip(await entry.read() as Uint8Array<ArrayBuffer>).map(file => ({
+        path: `${entry.path}/${file.path}`,
+        size: file.size,
+        crc: file.crc,
+        read: () => file.read(),
+        raw: () => file.raw(),
+      }))
+    } catch {
+      return [ entry ]
+    }
+  }))
+  return expanded.flat()
 }
 
 const decoder = new TextDecoder()
@@ -423,8 +443,11 @@ export async function buildDelta(
       if (!entries) return Promise.reject(`[MCJE getEntry] Invalid version ID: ${versionId}`)
 
       const entry = entries.get(path)
-      if (!entry) return Promise.reject(`[MCJE getEntry] File not found: ${path}`)
-      return entry.read() as Promise<Uint8Array<ArrayBuffer>>
+      if (entry) return entry.read() as Promise<Uint8Array<ArrayBuffer>>
+
+      const found = await edition.fallback?.read(versionId, path)
+      if (found) return found
+      return Promise.reject(`[MCJE getEntry] File not found: ${path}`)
     },
     getCategory(track) {
       return getTrackCategory(provider, this, track)
@@ -435,7 +458,7 @@ export async function buildDelta(
     getAnimation(version, path) {
       return edition.animation ? edition.animation(this, version, path) : readMcmeta(this, version, path)
     },
-    listEntries(versionId, path) {
+    async listEntries(versionId, path) {
       const jar = versionId === a ? jarA : jarB
       const entries: Set<string> = new Set()
       for (const k of jar.entries.keys()) {
@@ -445,7 +468,8 @@ export async function buildDelta(
           entries.add(segmentLength > 0 ? tail.slice(0, segmentLength) : tail)
         }
       }
-      return Promise.resolve(Array.from(entries))
+      for (const name of await edition.fallback?.list(versionId, path) ?? []) entries.add(name)
+      return Array.from(entries)
     },
   } as DeltaResult
 
