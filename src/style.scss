@@ -821,3 +821,130 @@ body {
 .popupable-thumbnail {
   image-rendering: pixelated;
 }
+
+.model-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.model-section {
+  padding-top: 8px;
+
+  h3 {
+    margin-left: 12px;
+  }
+
+  &.added .model-row-label {
+    color: var(--color-success);
+  }
+
+  &.edited .model-row-label {
+    color: var(--color-accent-suppl);
+  }
+
+  &.removed .model-row-label {
+    color: var(--color-danger);
+  }
+}
+
+.model-row-label {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px 2px;
+}
+
+.ui-preview {
+  padding: 0 12px 8px;
+
+  canvas {
+    image-rendering: pixelated;
+  }
+}
+
+.ui-preview-empty {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 4px;
+  color: var(--color-danger);
+}
+
+.ui-preview-blank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 120px;
+  height: 40px;
+  padding: 4px;
+  border: 1px dashed var(--color-3);
+  border-radius: 4px;
+  background-color: var(--color-1);
+  color: var(--color-4);
+}
+
+.ui-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.ui-bindings {
+  align-self: stretch;
+  padding: 10px 8px 8px;
+  font-size: 12px;
+  user-select: none;
+}
+
+.ui-bindings-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px 2px 2px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+
+  svg {
+    width: 16px;
+    height: 16px;
+    transition: rotate .2s;
+  }
+
+  &:hover {
+    background: var(--color-2);
+  }
+
+  .toggle-count {
+    margin: 0 0 0 2px;
+  }
+}
+
+.ui-bindings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 3px 16px;
+  padding: 6px 4px 4px;
+}
+
+.ui-bindings-title {
+  padding: 6px 4px 0;
+  font-weight: 600;
+}
+
+.ui-binding-added {
+  color: var(--color-success);
+}
+
+.ui-binding-removed {
+  color: var(--color-danger);
+}
+
+.ui-binding-inactive {
+  opacity: 0.45;
+}
