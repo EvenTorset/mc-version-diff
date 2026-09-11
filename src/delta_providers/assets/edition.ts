@@ -28,7 +28,7 @@ export function assetsRange(version: ManifestVersion): string {
 
 const TIPS = {
   size: 'Combined size of every object this index points at.',
-  versions: 'The game versions that use this asset index.',
+  index: 'The name Mojang gives this asset index. Versions sharing it share their assets.',
   type: 'Release indexes are used by a finished update. Snapshot indexes are only used by the weekly previews.',
 }
 
@@ -36,6 +36,7 @@ export const javaAssetsEdition: Edition = {
   id: 'assets',
   family: 'mcje',
   name: 'Java Assets',
+  label: assetsRange,
   typeTip: TIPS.type,
   get assets() {
     return assets('assets')
@@ -54,7 +55,7 @@ export const javaAssetsEdition: Edition = {
     return {
       facts: [
         { label: 'Size', value: formatBytes(index.totalSize), tip: TIPS.size },
-        { label: 'Versions', value: assetsRange(version), tip: TIPS.versions },
+        { label: 'Index', value: index.id, tip: TIPS.index },
       ],
       links: [
         {

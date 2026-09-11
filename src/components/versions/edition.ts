@@ -16,6 +16,7 @@ export interface Edition {
   family?: string
   name: string
   typeName?: (type: string) => string
+  label?: (version: ManifestVersion) => string
   typeTip?: string
   readonly assets: MinecraftAssets
   lineSegments: number
@@ -38,6 +39,10 @@ export const EDITION: InjectionKey<Edition> = Symbol('edition')
 
 export function typeName(edition: Edition, type: string) {
   return edition.typeName?.(type) ?? type
+}
+
+export function versionLabel(edition: Edition, version: ManifestVersion): string {
+  return edition.label?.(version) ?? version.id
 }
 
 export function useEdition(): Edition {

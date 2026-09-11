@@ -11,7 +11,7 @@ import Dim from '@/components/Dim.vue'
 import Col from '@/components/Col.vue'
 import type { TooltipSide } from '@/types'
 import { findVersion } from '@/delta_providers/manifest'
-import { typeName, useEdition } from './edition'
+import { typeName, useEdition, versionLabel } from './edition'
 
 const props = withDefaults(defineProps<{
   version: ManifestVersion | string
@@ -60,7 +60,7 @@ async function loadDetails() {
           }"
         />
         <Col align="flex-start">
-          <VersionNumber :id="manVer.id" style="font-size: 16px; line-height: 1;"/>
+          <VersionNumber :id="versionLabel(edition, manVer)" style="font-size: 16px; line-height: 1;"/>
           <NTime
             :time="new Date(manVer.releaseTime)"
             :to="Date.now()"
@@ -71,7 +71,7 @@ async function loadDetails() {
         </Col>
       </Row>
     </template>
-    <h3>{{ manVer.id }}</h3>
+    <h3>{{ versionLabel(edition, manVer) }}</h3>
     <p>
       <Row>
         <Dim>Released:</Dim>

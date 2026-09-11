@@ -14,7 +14,7 @@ import { NList, NListItem, NProgress, NSkeleton } from 'naive-ui'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useVirtualizer } from '@tanstack/vue-virtual'
 import VersionDisplay from './VersionDisplay.vue'
-import { useEdition } from './edition'
+import { useEdition, versionLabel } from './edition'
 import Col from '@/components/Col.vue'
 import Row from '@/components/Row.vue'
 import Spacer from '@/components/Spacer.vue'
@@ -62,8 +62,9 @@ function matching(list: ManifestVersion[], query: string) {
   const starts: ManifestVersion[] = []
   const contains: ManifestVersion[] = []
   for (const version of list) {
-    if (version.id.startsWith(query)) starts.push(version)
-    else if (version.id.includes(query)) contains.push(version)
+    const label = versionLabel(edition, version).toLowerCase()
+    if (version.id.startsWith(query) || label.startsWith(query)) starts.push(version)
+    else if (version.id.includes(query) || label.includes(query)) contains.push(version)
   }
   return starts.concat(contains)
 }

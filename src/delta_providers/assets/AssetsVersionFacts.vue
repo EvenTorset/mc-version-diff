@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { ManifestVersion } from 'minecraft-asset-loader'
-import { assetIndex, assetsRange } from './edition'
+import { assetIndex } from './edition'
 import { formatBytes } from '@/util/bytes'
 import Dim from '@/components/Dim.vue'
 import Row from '@/components/Row.vue'
@@ -20,8 +20,8 @@ const index = computed(() => assetIndex(props.version))
   </Row>
 
   <Row>
-    <Dim>Versions:</Dim>
-    <div>{{ assetsRange(version) }}</div>
+    <Dim>Index:</Dim>
+    <div>{{ index.id }}</div>
   </Row>
 
   <Row>
