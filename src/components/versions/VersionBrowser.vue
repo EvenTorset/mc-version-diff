@@ -303,6 +303,7 @@ onBeforeUnmount(() => {
     --intr-gradient-x 100ms,
     --intr-gradient-y 100ms,
     box-shadow 200ms,
+    --color-dim 200ms,
     color 200ms !important;
   text-shadow: 0 1px 2px #000;
   user-select: none;
@@ -312,41 +313,28 @@ onBeforeUnmount(() => {
     transition: color 200ms;
   }
 
-  .faded {
-    color: var(--color-4);
-    transition: color 200ms;
-  }
-
   &:not(.disabled):hover {
     --intr-color: rgb(from var(--color-accent) r g b / calc(alpha * 0.5));
+    --color-dim: var(--color-5);
 
     .n-list-item__main {
       color: var(--color-6);
-    }
-
-    .faded {
-      color: var(--color-5);
     }
   }
 
   &.selected {
     --intr-color: oklch(from var(--color-accent) l calc(c * 1.3) h);
+    --color-dim: var(--color-5);
 
     .n-list-item__main {
       color: var(--color-6);
     }
 
-    .faded {
-      color: var(--color-5);
-    }
-
     &:hover {
+      --color-dim: var(--color-6);
+
       .n-list-item__main {
         color: var(--color-7);
-      }
-
-      .faded {
-        color: var(--color-6);
       }
     }
   }

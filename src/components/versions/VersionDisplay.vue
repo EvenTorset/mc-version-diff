@@ -61,13 +61,14 @@ async function loadDetails() {
         />
         <Col align="flex-start">
           <VersionNumber :id="manVer.id" style="font-size: 16px; line-height: 1;"/>
-          <NTime
-            :time="new Date(manVer.releaseTime)"
-            :to="Date.now()"
-            type="relative"
-            class="faded"
-            style="font-size: 14px; line-height: 1;"
-          />
+          <Dim pure>
+            <NTime
+              :time="new Date(manVer.releaseTime)"
+              :to="Date.now()"
+              type="relative"
+              style="font-size: 14px; line-height: 1;"
+            />
+          </Dim>
         </Col>
       </Row>
     </template>
