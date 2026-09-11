@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import type { ManifestVersion, VersionDetails } from 'minecraft-asset-loader'
-import { archiveUrl, knownZipSize, releaseAssets } from './edition'
 import { formatBytes } from '@/util/bytes'
 import Dim from '@/components/Dim.vue'
 import Row from '@/components/Row.vue'
+import { archiveUrl, knownZipSize, releaseAssets } from './util'
 
 const props = defineProps<{
   version: ManifestVersion
