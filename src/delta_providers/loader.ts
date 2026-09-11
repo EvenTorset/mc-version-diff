@@ -1,6 +1,7 @@
 import MinecraftAssets, { type VersionManifest } from 'minecraft-asset-loader'
 import { Settings } from '@/settings'
 import { clearDirectory } from '@/util/opfs'
+import { reactive } from 'vue'
 
 export const CORS = 'https://cors.dokucraft.co.uk:2096/'
 
@@ -20,6 +21,15 @@ type Instance = {
 
 const instances = new Map<Edition, Instance>()
 const byAssets = new WeakMap<MinecraftAssets, Instance>()
+
+const progress = reactive<Record<Edition, number | null>>({ java: null, bedrock: null, assets: null })
+
+export function manifestProgress(assets: MinecraftAssets): number | null {
+  for (const [ type, instance ] of instances) {
+    if (instance.assets === assets) return progress[type]
+  }
+  return null
+}
 
 function storedManifest(type: Edition): { time: number, manifest: VersionManifest } | null {
   try {
@@ -71,6 +81,7 @@ export function assets(type: Edition = 'java'): MinecraftAssets {
         proxy: url => PROXIED.some(host => url.startsWith(host)) ? CORS + url : false,
         manifest: stored?.manifest,
         manifestExpiry: MANIFEST_TTL,
+        onManifestProgress: ratio => progress[type] = ratio < 1 ? ratio : null,
       }),
       cacheSize,
       manifestTime: stored?.time ?? 0,
