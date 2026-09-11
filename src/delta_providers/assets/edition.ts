@@ -50,7 +50,8 @@ const TIPS = {
 export const javaAssetsEdition: Edition = {
   id: 'assets',
   family: 'mcje',
-  name: 'Java Assets',
+  name: 'Java External',
+  description: 'The files Java Edition downloads separately from the game jar: every sound and music track, the language files, fonts, icons, and the bundled resource packs. Versions that share an asset index share these files, so each entry here covers a range of game versions.',
   label: assetsLabel,
   tag: assetsTag,
   typeTip: TIPS.type,

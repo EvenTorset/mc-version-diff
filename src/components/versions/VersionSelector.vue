@@ -70,7 +70,9 @@ onMounted(async () => {
     <div class="versions-list-wrapper">
       <VersionsList v-model="selectedVersions" />
     </div>
-    <NCard v-if="selectedVersions.size === 0" class="main-panel" title="Comparison Suggestions">
+    <Col v-if="selectedVersions.size === 0" align="stretch" class="main-panel">
+    <NCard v-if="edition.description" size="small" class="edition-description">{{ edition.description }}</NCard>
+    <NCard class="suggestions-card" title="Comparison Suggestions">
       <div class="suggestions-grid">
         <template v-if="loading">
           <template v-for="i in 3" :key="`placeholder-${i}`">
@@ -139,6 +141,7 @@ onMounted(async () => {
         </Row>
       </template>
     </NCard>
+    </Col>
     <NCard v-else class="main-panel" title="Selected Versions">
       <Col v-if="selectedVersions.size === 1" justify="center" gap="40px" style="height: 100%;">
          <VersionSummary :id="ab.a">
@@ -206,6 +209,15 @@ onMounted(async () => {
 
 .main-panel {
   flex: 1;
+}
+
+.suggestions-card {
+  flex: 1;
+}
+
+.edition-description {
+  flex: 0;
+  color: var(--color-dim);
 }
 
 .suggestions-grid {

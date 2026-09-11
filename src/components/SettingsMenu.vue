@@ -18,7 +18,7 @@ type Unit = keyof typeof BYTE_UNITS
 const caches = reactive<Record<Edition, { title: string, key: 'cacheSizeMaxJava' | 'cacheSizeMaxBedrock' | 'cacheSizeMaxAssets', unit: Unit, total: { size: number, files: number } | null }>>({
   java: { title: 'Java', key: 'cacheSizeMaxJava', unit: 'MB', total: null },
   bedrock: { title: 'Bedrock', key: 'cacheSizeMaxBedrock', unit: 'MB', total: null },
-  assets: { title: 'Java Assets', key: 'cacheSizeMaxAssets', unit: 'MB', total: null },
+  assets: { title: 'Java External', key: 'cacheSizeMaxAssets', unit: 'MB', total: null },
 })
 
 const editions = Object.keys(caches) as Edition[]
