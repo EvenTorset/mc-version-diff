@@ -36,7 +36,7 @@ const tag = computed(() => edition.tag?.(props.version) ?? null)
   background-color: rgb(from var(--color-2) r g b / 0.5);
   color: var(--color-5);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 16px;
   white-space: nowrap;
 }
