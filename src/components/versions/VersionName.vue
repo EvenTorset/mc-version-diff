@@ -33,8 +33,7 @@ const tag = computed(() => edition.tag?.(props.version) ?? null)
   padding: 1px 6px;
   border-radius: 4px;
   border: 1px solid var(--color-2);
-  background-color: rgb(from var(--color-2) r g b / 0.5);
-  color: var(--color-5);
+  color: var(--color-dim);
   font-size: 12px;
   font-weight: 600;
   line-height: 16px;
