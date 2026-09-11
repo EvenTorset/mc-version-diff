@@ -142,7 +142,7 @@ export async function loadBedrockParticle(dr: DeltaResult, version: string, path
     for (let i = 0; i < ticks; i++) {
       emitter.tick()
       state.ticks++
-      if (collides) for (const particle of emitter.particles.slice()) if (particle.position.y < 0) particle.remove()
+      if (collides) for (let p = emitter.particles.length - 1; p >= 0; p--) if (emitter.particles[p].position.y < 0) emitter.particles[p].remove()
       if (emitter.particles.length || !(manual ? emitter.enabled : once && !emitter.enabled)) continue
       if (++state.idle < RESTART_TICKS) continue
       state.idle = 0
