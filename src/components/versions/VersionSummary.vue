@@ -6,7 +6,8 @@ import Dim from '@/components/Dim.vue'
 import Row from '@/components/Row.vue'
 import Tooltip from '@/components/Tooltip.vue'
 import { findVersion } from '@/delta_providers/manifest'
-import { typeName, useEdition, versionLabel } from './edition'
+import { typeName, useEdition } from './edition'
+import VersionName from './VersionName.vue'
 
 const props = defineProps<{
   id: string
@@ -24,7 +25,7 @@ onMounted(async () => {
 
 <template>
   <div v-if="version && details">
-    <h2>{{ versionLabel(edition, version) }}</h2>
+    <h2><VersionName :version="version" /></h2>
     <div>
       <Row>
         <Dim>Released:</Dim>

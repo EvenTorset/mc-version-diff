@@ -27,13 +27,17 @@ export function assetsRange(version: ManifestVersion): string {
   return index.first === index.last ? index.first : `${index.first} to ${index.last}`
 }
 
-export function assetsLabel(version: ManifestVersion): string {
+export function assetsTag(version: ManifestVersion): string {
   const index = assetIndex(version)
   const from = gameVersion(index.first)
   const to = gameVersion(index.last)
   const show = (v: GameVersion) => v.exact ? v.text : `~${v.text}`
-  if (from.text === to.text) return `${index.id}: ${show(from.exact ? from : to)}`
-  return `${index.id}: ${show(from)} → ${show(to)}`
+  if (from.text === to.text) return show(from.exact ? from : to)
+  return `${show(from)} → ${show(to)}`
+}
+
+export function assetsLabel(version: ManifestVersion): string {
+  return `${version.id}: ${assetsTag(version)}`
 }
 
 const TIPS = {
@@ -48,6 +52,7 @@ export const javaAssetsEdition: Edition = {
   family: 'mcje',
   name: 'Java Assets',
   label: assetsLabel,
+  tag: assetsTag,
   typeTip: TIPS.type,
   get assets() {
     return assets('assets')

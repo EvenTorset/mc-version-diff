@@ -17,6 +17,7 @@ export interface Edition {
   name: string
   typeName?: (type: string) => string
   label?: (version: ManifestVersion) => string
+  tag?: (version: ManifestVersion) => string | null
   typeTip?: string
   readonly assets: MinecraftAssets
   lineSegments: number

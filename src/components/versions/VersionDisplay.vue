@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { NAvatar, NTime } from 'naive-ui'
 import type { ManifestVersion, VersionDetails } from 'minecraft-asset-loader'
-import VersionNumber from './VersionNumber.vue'
+import VersionName from './VersionName.vue'
 import releaseVersionIcon from '@/assets/release_version.webp'
 import snapshotVersionIcon from '@/assets/snapshot_version.webp'
 import Tooltip from '@/components/Tooltip.vue'
@@ -11,7 +11,7 @@ import Dim from '@/components/Dim.vue'
 import Col from '@/components/Col.vue'
 import type { TooltipSide } from '@/types'
 import { findVersion } from '@/delta_providers/manifest'
-import { typeName, useEdition, versionLabel } from './edition'
+import { typeName, useEdition } from './edition'
 
 const props = withDefaults(defineProps<{
   version: ManifestVersion | string
@@ -60,7 +60,7 @@ async function loadDetails() {
           }"
         />
         <Col align="flex-start">
-          <VersionNumber :id="versionLabel(edition, manVer)" style="font-size: 16px; line-height: 1;"/>
+          <VersionName :version="manVer" style="font-size: 16px; line-height: 1;"/>
           <NTime
             :time="new Date(manVer.releaseTime)"
             :to="Date.now()"
@@ -71,7 +71,7 @@ async function loadDetails() {
         </Col>
       </Row>
     </template>
-    <h3>{{ versionLabel(edition, manVer) }}</h3>
+    <h3><VersionName :version="manVer" /></h3>
     <p>
       <Row>
         <Dim>Released:</Dim>
