@@ -14,6 +14,8 @@ const processedId = computed(() => {
     changed: processed !== props.id,
   }
 })
+
+const parts = computed(() => processedId.value.value.split(/(\s+(?:to|→)\s+)/))
 </script>
 
 <template>
@@ -25,5 +27,22 @@ const processedId = computed(() => {
       {{ props.id }}
     </Tooltip>
   </template>
-  <span v-else>{{ processedId.value }}</span>
+  <span v-else class="version-number">
+    <template v-for="(part, i) of parts" :key="i">
+      <span v-if="i % 2">{{ part }}</span>
+      <span v-else class="unbroken">{{ part }}</span>
+    </template>
+  </span>
 </template>
+
+<style lang="scss" scoped>
+
+.version-number {
+  text-wrap: balance;
+}
+
+.unbroken {
+  white-space: nowrap;
+}
+
+</style>
