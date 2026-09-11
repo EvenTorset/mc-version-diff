@@ -122,7 +122,7 @@ function markChanges(original: string, modified: string): Renderable {
 </script>
 
 <template>
-  <Row class="line original" gap="6px">
+  <Row class="line original" gap="6px" align="flex-start">
     <div class="prefix" :style="{
       fontSize: '14px',
       fontFamily: 'var(--font-family)',
@@ -134,7 +134,7 @@ function markChanges(original: string, modified: string): Renderable {
       <Content v-else :content="() => markChanges(modified, original)"/>
     </div>
   </Row>
-  <Row class="line modified" gap="6px">
+  <Row class="line modified" gap="6px" align="flex-start">
     <div class="prefix" :style="{
       fontSize: '14px',
       fontFamily: 'var(--font-family)',
