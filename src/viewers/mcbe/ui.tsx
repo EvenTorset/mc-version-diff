@@ -74,7 +74,12 @@ const UiPreview = defineComponent({
         ? <RawImage
           bytes={rendered.bytes}
           style={{ width: `${rendered.width * scale}px`, height: `${rendered.height * scale}px` }}
-          {...popupable({ title: `${props.id} (${props.dr[props.version]})`, zoom: true })}
+          {...popupable({
+            title: `${props.id} (${props.dr[props.version]})`,
+            group: `${props.track.id} ${props.id}`,
+            thumbnails: true,
+            zoom: true,
+          })}
         />
         : <div class='ui-preview-empty'>{loading.value ? <NSpin size='small' /> : error.value}</div>
       return <div ref={container} class='ui-preview'>
