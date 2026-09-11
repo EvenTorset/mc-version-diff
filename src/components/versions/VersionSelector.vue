@@ -221,7 +221,7 @@ onMounted(async () => {
 
   p {
     margin: 0;
-    color: var(--color-dim);
+    color: var(--color-5);
     font-size: 14px;
     line-height: 1.5;
   }
