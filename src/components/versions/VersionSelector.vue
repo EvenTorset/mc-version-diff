@@ -12,6 +12,7 @@ import { NAlert, NButton, NCard, NIcon, NSkeleton } from 'naive-ui'
 import { computed, onMounted, provide, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import Col from '@/components/Col.vue'
+import Content from '@/components/Content.vue'
 
 const props = defineProps<{
   edition: Edition
@@ -71,7 +72,7 @@ onMounted(async () => {
       <VersionsList v-model="selectedVersions" />
     </div>
     <Col v-if="selectedVersions.size === 0" align="stretch" class="main-panel">
-    <NCard v-if="edition.description" size="small" class="edition-description">{{ edition.description }}</NCard>
+    <NCard v-if="edition.description" size="small" class="edition-description"><p><Content :content="edition.description" /></p></NCard>
     <NCard class="suggestions-card" title="Comparison Suggestions">
       <div class="suggestions-grid">
         <template v-if="loading">
@@ -217,7 +218,18 @@ onMounted(async () => {
 
 .edition-description {
   flex: 0;
-  color: var(--color-dim);
+
+  p {
+    margin: 0;
+    color: var(--color-dim);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  :deep(a) {
+    color: var(--color-6);
+    text-decoration: underline;
+  }
 }
 
 .suggestions-grid {

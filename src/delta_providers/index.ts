@@ -91,6 +91,6 @@ export interface DeltaProvider<T> {
 }
 
 await import('./mcje')
-await import('./assets')
+await import('./mcjeo')
 await import('./mcbe')
 await import('./upload')

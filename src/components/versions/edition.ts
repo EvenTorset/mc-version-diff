@@ -15,7 +15,7 @@ export interface Edition {
   id: string
   family?: string
   name: string
-  description?: string
+  description?: Renderable
   typeName?: (type: string) => string
   label?: (version: ManifestVersion) => string
   tag?: (version: ManifestVersion) => string | null

@@ -6,8 +6,8 @@ import { assets } from '../loader'
 import { gameVersion, type GameVersion } from './estimate'
 import { expandSubpacks } from '../versions'
 import { listFromJar, readFromJar } from './jar'
-import AssetsVersionTooltip from './AssetsVersionTooltip.vue'
-import AssetsVersionFacts from './AssetsVersionFacts.vue'
+import MCJEOVersionTooltip from './MCJEOVersionTooltip.vue'
+import MCJEOVersionFacts from './MCJEOVersionFacts.vue'
 
 export type AssetsManifestVersion = ManifestVersion & {
   sha1: string
@@ -48,10 +48,10 @@ const TIPS = {
 }
 
 export const javaAssetsEdition: Edition = {
-  id: 'assets',
+  id: 'mcjeo',
   family: 'mcje',
   name: 'Java External',
-  description: 'The files Java Edition downloads separately from the game jar: every sound and music track, the language files, fonts, icons, and the bundled resource packs. Versions that share an asset index share these files, so each entry here covers a range of game versions.',
+  description: "Not all of Minecraft: Java Edition's assets live in the game jar. The larger ones are stored separately and reused across versions: sounds, music, languages, fonts and the bundled resource packs. Each entry here is one of those shared sets.",
   label: assetsLabel,
   tag: assetsTag,
   typeTip: TIPS.type,
@@ -65,8 +65,8 @@ export const javaAssetsEdition: Edition = {
     read: readFromJar,
     list: listFromJar,
   },
-  tooltip: AssetsVersionTooltip,
-  summary: AssetsVersionFacts,
+  tooltip: MCJEOVersionTooltip,
+  summary: MCJEOVersionFacts,
   async overview(version) {
     const index = assetIndex(version)
     return {

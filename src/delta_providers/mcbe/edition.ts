@@ -4,6 +4,7 @@ import type { Edition } from '@/components/versions/edition'
 import type { DeltaResult } from '@/delta_providers'
 import { formatBytes } from '@/util/bytes'
 import { assets } from '../loader'
+import MCBEDescription from './MCBEDescription.vue'
 import MCBEVersionTooltip from './MCBEVersionTooltip.vue'
 import MCBEVersionFacts from './MCBEVersionFacts.vue'
 import { knownZipSize, releaseAssets } from './util'
@@ -56,6 +57,7 @@ async function readFlipbooks(dr: DeltaResult, version: string) {
 export const bedrockEdition: Edition = {
   id: 'mcbe',
   name: 'Bedrock Edition',
+  description: MCBEDescription,
   typeName: type => type === 'snapshot' ? 'preview' : type,
   typeTip: 'Release versions are the finished updates. Previews are the test builds of the next one.',
   get assets() {

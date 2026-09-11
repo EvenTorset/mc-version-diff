@@ -3,6 +3,6 @@ import { editionProvider } from '../versions'
 import { javaCategories } from '../mcje/categories'
 import { javaAssetsEdition } from './edition'
 
-registerDeltaProvider('assets', editionProvider(javaAssetsEdition, {
+registerDeltaProvider('mcjeo', editionProvider(javaAssetsEdition, {
   categories: javaCategories,
 }))
