@@ -51,7 +51,7 @@ export const javaAssetsEdition: Edition = {
   id: 'mcjeo',
   family: 'mcje',
   name: 'Java External',
-  description: "Not all of Minecraft: Java Edition's assets live in the game jar. The larger ones are stored separately and reused across versions: sounds, music, languages, fonts and the bundled resource packs. Each entry here is one of those shared sets.",
+  description: "Not all of Minecraft: Java Edition's assets live in the game jar. The larger ones are stored separately and reused across versions: sounds, panoramas, languages, fonts and the bundled resource packs. Each entry here is one of those shared sets.",
   label: assetsLabel,
   tag: assetsTag,
   typeTip: TIPS.type,
