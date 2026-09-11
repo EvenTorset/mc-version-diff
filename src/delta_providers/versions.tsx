@@ -4,7 +4,7 @@ import { DeltaTrackState } from '@/delta_providers/states'
 import { readZip, type RawBytes } from 'minecraft-asset-loader'
 import type { RehashPayloadItem, RehashWorkerMessage } from '@/util/rehash.worker'
 import RehashWorker from '@/util/rehash.worker?worker'
-import { compareJson, compareNbt, comparePng, compareStructure, HashEquivalence, terminateCmpWorkers } from '@/comparison'
+import { compareJson, compareNbt, comparePng, compareStructure, compareVersionless, HashEquivalence, terminateCmpWorkers } from '@/comparison'
 import { loadVerdicts, saveVerdicts, verdictKey } from '@/comparison/verdictCache'
 import getFileExt from '@/util/getFileExt'
 import { ProgressHandler } from '@/util/progress'
@@ -21,6 +21,7 @@ import { naturalCompare } from '@/util/sort'
 import { parseTag, TAG_PATH, tagsEquivalent } from '@/util/tag'
 import type { ProgressList } from '@/components/progressList.tsx'
 import { findVersion } from './manifest'
+import { readMcmeta } from '@/util/animation'
 import type { Edition } from '@/components/versions/edition'
 import VersionSelector from '@/components/versions/VersionSelector.vue'
 import VersionOverview from '@/components/versions/VersionOverview.vue'
@@ -85,16 +86,18 @@ export function createProgressBar(title: string) {
         { title }{ this.message.value ? <Dim>- { this.message.value }</Dim> : '' }
         <Spacer />
         { this.unit.value === 'byte'
-          ? <>{ formatBytes(this.current.value) } / { formatBytes(this.total.value) }</>
+          ? this.total.value
+            ? <>{ formatBytes(this.current.value) } / { formatBytes(this.total.value) }</>
+            : formatBytes(this.current.value)
           : <>{ this.current.value } / { this.total.value }</>
         }
       </Row>
-      <NProgress
+      { this.total.value ? <NProgress
         processing={ this.ratio.value < 1 }
         color={ getCSSVar('--color-accent') }
         type="line" percentage={ this.ratio.value * 100 }
         show-indicator={ false }
-      />
+      /> : null }
     </div>
   }).bind(obj)
   obj.progHandler = new ProgressHandler(p => {
@@ -171,19 +174,29 @@ export function loadVersion(edition: Edition, id: string, progressDisplay: Progr
   })
 }
 
-function uploadFilter(legacy: boolean) {
-  return (path: string) => !path.endsWith('.class') && (
-    legacy
-      ? !path.startsWith('META-INF/')
-      : !path.includes('/') || /(assets|data)[/]/.test(path)
-  )
+type UploadOptions = NonNullable<DeltaProvider<VersionContent>['upload']>
+export type UploadOption = NonNullable<UploadOptions['options']>[number]
+export type PrepareUpload = (entries: VersionEntry[], params: URLSearchParams, against?: string) => VersionEntry[] | Promise<VersionEntry[]>
+
+export const REHASH_OPTION: UploadOption = {
+  label: 'Rehash',
+  queryParam: 'rehash',
+  type: 'bool',
+  default: false,
+  tooltip: () => <>
+    <h3>Rehash</h3>
+    <p>
+      Recalculates file hashes before comparing.
+    </p>
+    <p><strong>When to use:</strong> If stored hashes are missing or corrupted, causing incorrect comparison results.</p>
+    <p><strong>Downside:</strong> Significantly increases comparison time.</p>
+  </>,
 }
 
-export function readUpload(edition: Edition, name: string, bytes: Uint8Array<ArrayBuffer>, legacy: boolean, progressDisplay: ProgressList, rehash = false) {
+export function readUpload(edition: Edition, name: string, bytes: Uint8Array<ArrayBuffer>, prepare: (entries: VersionEntry[]) => VersionEntry[] | Promise<VersionEntry[]>, progressDisplay: ProgressList, rehash = false) {
   return loadContent(edition, name, progressDisplay, rehash, async progressBar => {
     progressBar.progHandler.setMessage('Reading file...')
-    const keep = uploadFilter(legacy)
-    return readZip(bytes).filter(e => keep(e.path))
+    return prepare(readZip(bytes))
   })
 }
 
@@ -226,6 +239,7 @@ const JSON_PATH = /\.(json|mcmeta)$/
 
 export async function buildDelta(
   provider: DeltaProvider<VersionContent>,
+  edition: Edition,
   a: string,
   b: string,
   jarA: VersionContent,
@@ -242,27 +256,26 @@ export async function buildDelta(
     progressBar.progHandler.setUnit('file')
 
     const candidates: Array<{
-      kind: 'png' | 'nbt' | 'structure' | 'json'
+      kind: 'png' | 'nbt' | 'structure' | 'json' | 'versionless'
       entryA: VersionEntry
       entryB: VersionEntry
     }> = []
 
     for (const [path, entryB] of jarB.entries) {
-      if (!path.endsWith('.png') && !path.endsWith('.nbt') && !JSON_PATH.test(path)) continue
       const entryA = jarA.entries.get(path)
-      if (!entryA) continue
+      if (!entryA || entryA.crc === entryB.crc) continue
 
-      if (entryA.crc !== entryB.crc) {
-        candidates.push({
-          kind: path.endsWith('.png')
-            ? 'png'
-            : JSON_PATH.test(path)
-              ? 'json'
-              : STRUCTURE_PATH.test(path) ? 'structure' : 'nbt',
-          entryA,
-          entryB,
-        })
-      }
+      const equivalence = edition.equivalences?.find(e => e.test(path))
+      const kind = equivalence
+        ? equivalence.kind
+        : path.endsWith('.png')
+          ? 'png'
+          : JSON_PATH.test(path)
+            ? 'json'
+            : path.endsWith('.nbt')
+              ? STRUCTURE_PATH.test(path) ? 'structure' : 'nbt'
+              : null
+      if (kind) candidates.push({ kind, entryA, entryB })
     }
 
     const verdicts = await takeVerdicts(a, b)
@@ -280,7 +293,7 @@ export async function buildDelta(
       await Promise.all(
         misses.map(async candidate => {
           const [ rawA, rawB ] = await Promise.all([ candidate.entryA.raw(), candidate.entryB.raw() ])
-          const compare = { json: compareJson, structure: compareStructure, nbt: compareNbt, png: comparePng }[candidate.kind]
+          const compare = { json: compareJson, structure: compareStructure, nbt: compareNbt, png: comparePng, versionless: compareVersionless }[candidate.kind]
           const equal = await compare(rawA, rawB)
 
           verdicts.set(verdictKey(candidate.kind, candidate.entryA.crc, candidate.entryB.crc), equal)
@@ -396,6 +409,7 @@ export async function buildDelta(
   tracks.sort((x, y) => x.state - y.state || naturalCompare(x.id, y.id))
 
   return {
+    edition,
     a,
     b,
     tracks,
@@ -411,6 +425,12 @@ export async function buildDelta(
     },
     getCategory(track) {
       return getTrackCategory(provider, this, track)
+    },
+    fileCount(versionId) {
+      return (versionId === a ? jarA : jarB).entries.size
+    },
+    getAnimation(version, path) {
+      return edition.animation ? edition.animation(this, version, path) : readMcmeta(this, version, path)
     },
     listEntries(versionId, path) {
       const jar = versionId === a ? jarA : jarB
@@ -430,7 +450,7 @@ export async function buildDelta(
 
 type EditionProviderOptions = {
   categories: DeltaProviderCategory[]
-  upload?: Pick<NonNullable<DeltaProvider<VersionContent>['upload']>, 'accept' | 'options'>
+  upload?: Pick<UploadOptions, 'accept' | 'options'> & { prepare?: PrepareUpload }
 }
 
 export function editionProvider(edition: Edition, { categories, upload }: EditionProviderOptions): DeltaProvider<VersionContent> {
@@ -438,7 +458,8 @@ export function editionProvider(edition: Edition, { categories, upload }: Editio
     name: edition.name,
     categories,
     upload: upload && {
-      ...upload,
+      accept: upload.accept,
+      options: upload.options,
       versionPicker: () => (props: any) => h(VersionPicker, { edition, ...props }),
       async defaultVersion() {
         return (await edition.assets.manifest.version('release'))?.id ?? ''
@@ -446,10 +467,9 @@ export function editionProvider(edition: Edition, { categories, upload }: Editio
       load(source, progressDisplay) {
         const params = new URL(location.href).searchParams
         const rehash = params.get('rehash') === 'true'
-        const legacy = params.get('legacy') === 'true'
         return 'version' in source
           ? loadVersion(edition, source.version, progressDisplay, rehash)
-          : readUpload(edition, source.name, source.content, legacy, progressDisplay, rehash)
+          : readUpload(edition, source.name, source.content, entries => upload.prepare?.(entries, params, source.against) ?? entries, progressDisplay, rehash)
       },
     },
     selector: () => () => <VersionSelector edition={edition} />,
@@ -464,7 +484,7 @@ export function editionProvider(edition: Edition, { categories, upload }: Editio
       return { contentA, contentB }
     },
     compare(a, b, contentA, contentB, progressDisplay) {
-      return buildDelta(provider, a, b, contentA, contentB, progressDisplay)
+      return buildDelta(provider, edition, a, b, contentA, contentB, progressDisplay)
     },
   }
   return provider

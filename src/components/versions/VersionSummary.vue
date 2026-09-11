@@ -6,7 +6,7 @@ import Dim from '@/components/Dim.vue'
 import Row from '@/components/Row.vue'
 import Tooltip from '@/components/Tooltip.vue'
 import { findVersion } from '@/delta_providers/manifest'
-import { useEdition } from './edition'
+import { typeName, useEdition } from './edition'
 
 const props = defineProps<{
   id: string
@@ -40,7 +40,7 @@ onMounted(async () => {
 
       <Row>
         <Dim>Type:</Dim>
-        <div>{{ version.type }}</div>
+        <div>{{ typeName(edition, version.type) }}</div>
       </Row>
 
       <component :is="edition.summary" v-if="edition.summary" :version="version" :details="details" />

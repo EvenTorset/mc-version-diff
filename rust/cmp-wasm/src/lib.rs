@@ -16,7 +16,7 @@ const STRIDE: usize = 8;
 const ENTRY_LIMIT: usize = 1 << 30;
 
 /// `tasks` is a flat array with a stride of [`STRIDE`]:
-/// kind (0 png, 1 nbt, 2 structure, 3 json), aOffset, aLength, aMethod,
+/// kind (0 png, 1 nbt, 2 structure, 3 json, 4 versionless), aOffset, aLength, aMethod,
 /// bOffset, bLength, bMethod, littleEndian.
 #[wasm_bindgen]
 pub fn compare_batch(buffer: &[u8], tasks: &[u32]) -> Vec<u8> {
@@ -52,8 +52,62 @@ fn run_task(
         0 => compare_png_pixels(&raw_a, &raw_b).ok(),
         2 => compare_structure(&raw_a, &raw_b, little_endian),
         3 => compare_json(&raw_a, &raw_b),
+        4 => compare_versionless(&raw_a, &raw_b),
         _ => compare_nbt(&raw_a, &raw_b, little_endian),
     }
+}
+
+fn compare_versionless(a: &[u8], b: &[u8]) -> Option<bool> {
+    let a = a.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(a);
+    let b = b.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(b);
+    match (serde_json::from_slice::<JsonValue>(a), serde_json::from_slice::<JsonValue>(b)) {
+        (Ok(a), Ok(b)) => Some(same_versionless_json(&a, &b)),
+        _ => Some(strip_versions(std::str::from_utf8(a).ok()?) == strip_versions(std::str::from_utf8(b).ok()?)),
+    }
+}
+
+fn same_versionless_json(a: &JsonValue, b: &JsonValue) -> bool {
+    match (a, b) {
+        (JsonValue::String(x), JsonValue::String(y)) => strip_versions(x) == strip_versions(y),
+        (JsonValue::Number(x), JsonValue::Number(y)) => same_json_number(x, y),
+        (JsonValue::Array(x), JsonValue::Array(y)) => {
+            x.len() == y.len() && x.iter().zip(y).all(|(i, j)| same_versionless_json(i, j))
+        }
+        (JsonValue::Object(x), JsonValue::Object(y)) => {
+            let kept = |k: &String| k != "min_engine_version";
+            x.keys().filter(|k| kept(k)).count() == y.keys().filter(|k| kept(k)).count()
+                && x.iter().filter(|(k, _)| kept(k))
+                    .all(|(k, v)| y.get(k).is_some_and(|other| same_versionless_json(v, other)))
+        }
+        _ => a == b,
+    }
+}
+
+fn strip_versions(text: &str) -> String {
+    let bytes = text.as_bytes();
+    let mut out = String::with_capacity(text.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        let start = i;
+        while i < bytes.len() && (bytes[i].is_ascii_digit() || bytes[i] == b'.') {
+            i += 1;
+        }
+        if i == start {
+            let ch = text[start..].chars().next().unwrap();
+            out.push(ch);
+            i += ch.len_utf8();
+            continue;
+        }
+        let run = &text[start..i];
+        let bounded = !start.checked_sub(1).is_some_and(|p| bytes[p].is_ascii_alphanumeric())
+            && !bytes.get(i).is_some_and(|c| c.is_ascii_alphanumeric());
+        let parts: Vec<&str> = run.split('.').collect();
+        let version = bounded && parts.len() >= 3 && parts.iter().all(|p| !p.is_empty() && p.bytes().all(|c| c.is_ascii_digit()));
+        if !version {
+            out.push_str(run);
+        }
+    }
+    out
 }
 
 /// `3` and `3.0` are the same number, so a file rewritten with the other
@@ -485,6 +539,45 @@ mod tests {
     #[test]
     fn broken_json_does_not_match() {
         assert_eq!(compare_json(b"{", b"{"), None);
+    }
+
+    #[test]
+    fn versionless_ignores_format_version() {
+        let a = br#"{"format_version":"1.26.30","minecraft:entity":{"identifier":"minecraft:egg"}}"#;
+        let b = br#"{"format_version":"1.26.40","minecraft:entity":{"identifier":"minecraft:egg"}}"#;
+        assert_eq!(compare_versionless(a, b), Some(true));
+    }
+
+    #[test]
+    fn versionless_ignores_min_engine_version() {
+        let a = br#"{"header":{"name":"vanilla","min_engine_version":[1,26,30]}}"#;
+        let b = br#"{"header":{"name":"vanilla","min_engine_version":[1,26,40]}}"#;
+        assert_eq!(compare_versionless(a, b), Some(true));
+    }
+
+    #[test]
+    fn versionless_ignores_a_byte_order_mark() {
+        assert_eq!(compare_versionless(b"\xEF\xBB\xBF{\"a\":1}", b"{\"a\":1}"), Some(true));
+    }
+
+    #[test]
+    fn versionless_keeps_real_changes() {
+        let a = br#"{"format_version":"1.26.30","vertical_power":0.12}"#;
+        let b = br#"{"format_version":"1.26.40","vertical_power":0.10}"#;
+        assert_eq!(compare_versionless(a, b), Some(false));
+    }
+
+    #[test]
+    fn versionless_falls_back_to_text() {
+        let a = b"<h1>DOCUMENTATION</br>Version: 1.26.30.5</h1>";
+        let b = b"<h1>DOCUMENTATION</br>Version: 1.26.40.5</h1>";
+        assert_eq!(compare_versionless(a, b), Some(true));
+        assert_eq!(compare_versionless(b"Object of type Identifier", b"Object of type Biome Identifier"), Some(false));
+    }
+
+    #[test]
+    fn strip_versions_needs_three_parts_and_boundaries() {
+        assert_eq!(strip_versions("at 1.26.30 and 1.5 and v1.2.3 and 1.2.3.4"), "at  and 1.5 and v1.2.3 and ");
     }
 
     #[test]

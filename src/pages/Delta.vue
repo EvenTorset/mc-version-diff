@@ -3,7 +3,7 @@ import AnimatedHeight from '@/components/AnimatedHeight.vue'
 import Content from '@/components/Content.vue'
 import VersionDiffLogo from '@/components/VersionDiffLogo.vue'
 import type { DeltaProvider, DeltaProviderCategory, DeltaResult, DeltaTrack } from '@/delta_providers'
-import { getDeltaProvider } from '@/delta_providers/registry'
+import { getDeltaProvider, listDeltaProviders } from '@/delta_providers/registry'
 import { getTrackCategory } from '@/delta_providers/category'
 import { NButton, NCard, NCheckbox, NIcon, NInput, NRadio, NRadioGroup, NSelect, NSpin, type InputInst } from 'naive-ui'
 import { computed, nextTick, onBeforeUnmount, onMounted, provide, ref, shallowRef, watch } from 'vue'
@@ -18,7 +18,7 @@ import { prefetchRenderers } from '@/components/lazyRenderers'
 import Col from '@/components/Col.vue'
 import Dim from '@/components/Dim.vue'
 import Tooltip from '@/components/Tooltip.vue'
-import { animateTextures, imageViewMode } from '@/viewers/png'
+import { animateTextures, imageViewMode } from '@/viewers/image'
 import { hasAnimations, mcmetaTexture } from '@/viewers/mcje/mcmeta'
 import { DeltaTrackState, type DeltaTrackStateName } from '@/delta_providers/states'
 import { asyncRenderable } from '@/util/asyncRenderable'
@@ -56,6 +56,11 @@ mcmetaTexture.value = param('animtexture') === '1'
 const progressDisplay = createProgressList()
 
 const provider = shallowRef<DeltaProvider<unknown> | null>(null)
+const firstProviderId = listDeltaProviders().next().value!.id
+const homeLink = computed(() => ({
+  name: 'home',
+  params: { provider: route.params.provider === firstProviderId ? '' : route.params.provider },
+}))
 const dr = shallowRef<DeltaResult>()
 const provCategories = ref<DeltaProviderCategory[]>([])
 
@@ -447,7 +452,7 @@ provide('autoToggle', autoToggle)
       }">
         <Col class="sidebar">
           <Row justify="center">
-            <RouterLink :to="{ name: 'home' }">
+            <RouterLink :to="homeLink">
               <VersionDiffLogo :style="{
                 fontSize: '12px',
                 marginBottom: '12px',

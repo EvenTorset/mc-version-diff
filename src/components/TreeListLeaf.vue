@@ -2,6 +2,7 @@
 import { ref, computed, watch, onUnmounted, inject } from 'vue'
 import DeltaTrack from './DeltaTrack.vue'
 import type { DeltaResult, DeltaTrack as DeltaTrackType } from '@/delta_providers'
+import { categoryExpands } from '@/delta_providers/category'
 import { getViewer } from '@/viewers/registry.ts'
 import { DeltaTrackState } from '@/delta_providers/states'
 
@@ -44,7 +45,7 @@ const trackHeight = computed(() => {
       t.state === DeltaTrackState.Added
       || t.state === DeltaTrackState.Edited
     )
-    && (props.dr.getCategory(t)?.expand ?? false)
+    && categoryExpands(props.dr, props.dr.getCategory(t))
   ) {
     const ph = getViewer(props.dr, t)?.predictedHeight
     if (ph !== undefined) {

@@ -55,11 +55,15 @@ export function animationStats(animation: any, spriteWidth: number, spriteHeight
   return { frame, frames, duration: ticks * 50 }
 }
 
-export async function readAnimation(dr: DeltaResult, version: string, path: string) {
+export async function readMcmeta(dr: DeltaResult, version: string, path: string) {
   try {
     const raw = new TextDecoder().decode(await dr.getEntry(version, `${path}.mcmeta`))
     return animationOf(raw) ? raw : null
   } catch {
     return null
   }
+}
+
+export function readAnimation(dr: DeltaResult, version: string, path: string) {
+  return dr.getAnimation(version, path)
 }

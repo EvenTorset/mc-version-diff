@@ -3,7 +3,7 @@
 
 /**
  * `tasks` is a flat array with a stride of [`STRIDE`]:
- * kind (0 png, 1 nbt, 2 structure, 3 json), aOffset, aLength, aMethod,
+ * kind (0 png, 1 nbt, 2 structure, 3 json, 4 versionless), aOffset, aLength, aMethod,
  * bOffset, bLength, bMethod, littleEndian.
  */
 export function compare_batch(buffer: Uint8Array, tasks: Uint32Array): Uint8Array;

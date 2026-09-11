@@ -1,3 +1,6 @@
+import { hdrToBitmap, isHdr } from './hdr'
+import { tgaToBitmap } from './tga'
+
 const cache = new WeakMap<Uint8Array, Promise<ImageBitmap>>()
 
 export function imageFromBytes(input: Uint8Array<ArrayBuffer>) {
@@ -10,9 +13,18 @@ export function imageFromBytes(input: Uint8Array<ArrayBuffer>) {
 }
 
 /** A decode the caller owns, safe to close or transfer. */
-export function imageFromBytesOwned(input: Uint8Array<ArrayBuffer>) {
-  return createImageBitmap(new Blob([input]), {
-    premultiplyAlpha: 'none',
-    colorSpaceConversion: 'none',
-  })
+export async function imageFromBytesOwned(input: Uint8Array<ArrayBuffer>) {
+  if (isHdr(input)) return hdrToBitmap(input)
+  try {
+    return await createImageBitmap(new Blob([input]), {
+      premultiplyAlpha: 'none',
+      colorSpaceConversion: 'none',
+    })
+  } catch (err) {
+    try {
+      return await tgaToBitmap(input)
+    } catch {
+      throw err
+    }
+  }
 }

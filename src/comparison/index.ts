@@ -183,6 +183,10 @@ export function compareJson(a: CompareItem, b: CompareItem): Promise<boolean> {
   return getPool().run({ kind: 'json', a, b })
 }
 
+export function compareVersionless(a: CompareItem, b: CompareItem): Promise<boolean> {
+  return getPool().run({ kind: 'versionless', a, b })
+}
+
 export function compareNbt(
   a: CompareItem,
   b: CompareItem,

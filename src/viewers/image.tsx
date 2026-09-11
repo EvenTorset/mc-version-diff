@@ -134,10 +134,10 @@ const legend = [
   },
 ]
 
-registerViewer('png', {
+registerViewer('image', {
   predictedHeight: 166.4,
   test(_dr, track) {
-    return track.id.endsWith('.png')
+    return /\.(?:png|tga|jpg|jpeg|hdr)$/.test(track.id)
   },
   async render(dr, track) {
     if (track.state === DeltaTrackState.Added || track.state === DeltaTrackState.Moved) {

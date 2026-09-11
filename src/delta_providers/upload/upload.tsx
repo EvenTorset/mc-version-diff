@@ -22,12 +22,12 @@ function sideName(meta: FilesMeta | null, slot: Slot) {
   return slotVersion(meta, slot) || name || (slot === 'a' ? 'Version A' : 'Version B')
 }
 
-async function sideSource(meta: FilesMeta | null, slot: Slot): Promise<UploadSource> {
+async function sideSource(meta: FilesMeta | null, slot: Slot, other: Slot): Promise<UploadSource> {
   const version = slotVersion(meta, slot)
   if (version) return { version }
   const file = await readUserFile(slot === 'a' ? UPLOAD_VERSION_A_KEY : UPLOAD_VERSION_B_KEY)
   if (!file) throw new Error('Both sides need a file or a version to compare')
-  return { name: sideName(meta, slot), content: new Uint8Array(await file.arrayBuffer()) }
+  return { name: sideName(meta, slot), content: new Uint8Array(await file.arrayBuffer()), against: slotVersion(meta, other) }
 }
 
 registerDeltaProvider('upload', {
@@ -51,8 +51,8 @@ registerDeltaProvider('upload', {
     const meta = readFilesMeta()
     const [ first, second ] = slots(swap)
     const [ sourceA, sourceB ] = await Promise.all([
-      sideSource(meta, first),
-      sideSource(meta, second),
+      sideSource(meta, first, second),
+      sideSource(meta, second, first),
     ])
     const [ contentA, contentB ] = await Promise.all([
       provider.upload.load(sourceA, progressDisplay),
