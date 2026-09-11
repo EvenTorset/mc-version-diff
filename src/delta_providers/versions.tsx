@@ -21,7 +21,6 @@ import { naturalCompare } from '@/util/sort'
 import { parseTag, TAG_PATH, tagsEquivalent } from '@/util/tag'
 import type { ProgressList } from '@/components/progressList.tsx'
 import { findVersion } from './manifest'
-import { SUBPACK } from './subpacks'
 import { readMcmeta } from '@/util/animation'
 import type { Edition } from '@/components/versions/edition'
 import VersionSelector from '@/components/versions/VersionSelector.vue'
@@ -205,9 +204,9 @@ export function readUpload(edition: Edition, name: string, bytes: Uint8Array<Arr
   })
 }
 
-export async function expandSubpacks(entries: VersionEntry[]): Promise<VersionEntry[]> {
+export async function expandZips(entries: VersionEntry[]): Promise<VersionEntry[]> {
   const expanded = await Promise.all(entries.map(async entry => {
-    if (!SUBPACK.test(entry.path)) return [ entry ]
+    if (!entry.path.endsWith('.zip')) return [ entry ]
     try {
       return readZip(await entry.read() as Uint8Array<ArrayBuffer>).map(file => ({
         path: `${entry.path}/${file.path}`,

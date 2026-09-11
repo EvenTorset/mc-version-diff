@@ -1,7 +1,5 @@
 import type { DeltaResult, DeltaTrack } from '.'
 
-export const SUBPACK = /\/resourcepacks\/[^\/]+\.zip$/
-
 const SUBPACK_ROOT = /^.*\/resourcepacks\/[^\/]+\.zip\//
 
 const scoped = new WeakMap<DeltaResult, Map<string, DeltaResult>>()
