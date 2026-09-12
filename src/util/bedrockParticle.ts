@@ -8,6 +8,7 @@ const MAX_CATCHUP_TICKS = TICK_RATE
 const RESTART_TICKS = 8
 const COLLISION_HEIGHT = 48
 const FIT_SECONDS = 8
+const FIT_MAX_PARTICLES = 50
 
 const ATLAS_TEXTURES: Record<string, string> = {
   'atlas.terrain': 'textures/blocks/stone',
@@ -126,6 +127,7 @@ export async function loadBedrockParticle(dr: DeltaResult, version: string, path
     if (!state) state = stateOf(group)
     if (!state) return
     const { scene, emitter } = state
+    const fit = !camera
     if (!state.started || time < state.last) {
       if (state.started) emitter.stop(true)
       emitter.start()
@@ -143,6 +145,7 @@ export async function loadBedrockParticle(dr: DeltaResult, version: string, path
       emitter.tick()
       state.ticks++
       if (collides) for (let p = emitter.particles.length - 1; p >= 0; p--) if (emitter.particles[p].position.y < 0) emitter.particles[p].remove()
+      if (fit) while (emitter.particles.length > FIT_MAX_PARTICLES) emitter.particles[emitter.particles.length - 1].remove()
       if (emitter.particles.length || !(manual ? emitter.enabled : once && !emitter.enabled)) continue
       if (++state.idle < RESTART_TICKS) continue
       state.idle = 0
