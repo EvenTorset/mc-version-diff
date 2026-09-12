@@ -8,6 +8,7 @@ import Tooltip from '@/components/Tooltip.vue'
 import { Settings } from '@/settings'
 import { Pause16Filled, Play16Filled } from '@vicons/fluent'
 import Row from '@/components/Row.vue'
+import { splitOgg, type OggSplit } from './ogg'
 
 export interface TrackSource {
   id: string
@@ -22,7 +23,8 @@ interface ProcessedTrack {
   version: string
   name: string
   color?: string
-  buffer: AudioBuffer
+  duration: number
+  buffer: AudioBuffer | null
   peaks: Float32Array
 }
 
@@ -59,6 +61,8 @@ const SCRUB_GRAIN = 0.12
 const SCRUB_FADE = 0.012
 const SCRUB_INTERVAL = 0.05
 const SCRUB_MIN_STEP = 0.001
+const CHUNK_SECONDS = 15
+const PEAK_RATE = 8000
 
 const props = withDefaults(
   defineProps<{
@@ -99,7 +103,7 @@ const canvasHeight = computed(() => {
 
 const maxDuration = computed(() => {
   if (loadedTracks.value.length === 0) return 0
-  return Math.max(...loadedTracks.value.map((t) => t.buffer.duration))
+  return Math.max(...loadedTracks.value.map((t) => t.duration))
 })
 
 function getAudioContext(): AudioContext {
@@ -183,22 +187,35 @@ async function loadSources() {
   const bucketCount = Math.max(1, Math.floor(containerWidth * dpr))
 
   try {
+    const pending: { track: ProcessedTrack, src: TrackSource, split: OggSplit }[] = []
     const fetchedTracks = await Promise.all(
       sources.slice(0, 2).map(async (src) => {
+        const meta = { id: src.id, version: src.version, name: src.name, color: src.color }
+        const split = splitOgg(src.bytes, CHUNK_SECONDS)
+        if (split && split.chunks.length > 1) {
+          const track: ProcessedTrack = {
+            ...meta,
+            duration: split.duration,
+            buffer: null,
+            peaks: new Float32Array(bucketCount * 2)
+          }
+          pending.push({ track, src, split })
+          return track
+        }
         const buffer = await getAudioBuffer(src.bytes)
         const peaks = await getPeaks(buffer, bucketCount)
-        return {
-          id: src.id,
-          version: src.version,
-          name: src.name,
-          color: src.color,
-          buffer,
-          peaks
-        }
+        return { ...meta, duration: buffer.duration, buffer, peaks }
       })
     )
 
     loadedTracks.value = fetchedTracks
+
+    for (const { track, src, split } of pending) {
+      fillPeaks(track, split, bucketCount)
+      getAudioBuffer(src.bytes).then((buffer) => {
+        if (loadedTracks.value.includes(track)) track.buffer = buffer
+      }).catch((err) => console.error('Failed to decode audio:', err))
+    }
 
     const validIds = new Set(fetchedTracks.map((t) => t.id))
     for (const id of Object.keys(playback)) {
@@ -219,13 +236,54 @@ async function loadSources() {
   }
 }
 
+function writePeaks(peaks: Float32Array, buffer: AudioBuffer, from: number, to: number) {
+  const channels: Float32Array[] = []
+  for (let c = 0; c < buffer.numberOfChannels; c++) channels.push(buffer.getChannelData(c))
+  const perBucket = buffer.length / (to - from)
+
+  for (let bucket = from; bucket < to; bucket++) {
+    const start = Math.floor((bucket - from) * perBucket)
+    const end = bucket === to - 1 ? buffer.length : Math.floor((bucket - from + 1) * perBucket)
+    let min = 0
+    let max = 0
+    for (const channel of channels) {
+      for (let i = start; i < end; i++) {
+        const sample = channel[i]
+        if (sample < min) min = sample
+        if (sample > max) max = sample
+      }
+    }
+    peaks[bucket * 2] = min
+    peaks[bucket * 2 + 1] = max
+  }
+}
+
+async function fillPeaks(track: ProcessedTrack, split: OggSplit, bucketCount: number) {
+  const ctx = new OfflineAudioContext(1, 1, PEAK_RATE)
+  for (const chunk of split.chunks) {
+    if (!loadedTracks.value.includes(track)) return;
+    let buffer: AudioBuffer
+    try {
+      buffer = await ctx.decodeAudioData(chunk.bytes.slice(0).buffer)
+    } catch (err) {
+      console.error('Failed to decode audio chunk:', err)
+      return;
+    }
+    if (!loadedTracks.value.includes(track)) return;
+    const from = Math.floor((chunk.start / split.duration) * bucketCount)
+    const to = Math.min(bucketCount, Math.max(from + 1, Math.round((chunk.end / split.duration) * bucketCount)))
+    writePeaks(track.peaks, buffer, from, to)
+    renderWaveform()
+  }
+}
+
 function unloadTracks() {
   stopAll()
   loadedTracks.value = []
 }
 
 function computeEnvelope(track: ProcessedTrack, width: number, maxDur: number): TrackEnvelope {
-  const trackWidth = width * (track.buffer.duration / maxDur)
+  const trackWidth = width * (track.duration / maxDur)
   const centerY = props.laneHeight / 2
   const halfHeight = props.laneHeight / 2 - 10
 
@@ -242,16 +300,16 @@ function computeEnvelope(track: ProcessedTrack, width: number, maxDur: number): 
   const bottomPoints: number[] = []
 
   for (let x = 0; x < renderWidth; x++) {
-    const tStart = (x / trackWidth) * track.buffer.duration
+    const tStart = (x / trackWidth) * track.duration
     const tEnd = Math.min(
-      track.buffer.duration,
-      ((x + 1) / trackWidth) * track.buffer.duration
+      track.duration,
+      ((x + 1) / trackWidth) * track.duration
     )
 
-    const startBucket = Math.floor((tStart / track.buffer.duration) * numPairs)
+    const startBucket = Math.floor((tStart / track.duration) * numPairs)
     const endBucket = Math.min(
       numPairs - 1,
-      Math.floor((tEnd / track.buffer.duration) * numPairs)
+      Math.floor((tEnd / track.duration) * numPairs)
     )
 
     let min = 0
@@ -542,14 +600,14 @@ function findTrack(id: string): ProcessedTrack | null {
 function playTrack(id: string) {
   const track = findTrack(id)
   const state = ensurePlaybackState(id)
-  if (!track || state.isPlaying) return;
+  if (!track?.buffer || state.isPlaying) return;
 
   const ctx = getAudioContext()
   if (ctx.state === 'suspended') {
     ctx.resume()
   }
 
-  if (state.currentOffset >= track.buffer.duration) {
+  if (state.currentOffset >= track.duration) {
     state.currentOffset = 0
   }
 
@@ -627,7 +685,7 @@ function seekTrack(id: string, timeInSeconds: number) {
 
   const state = ensurePlaybackState(id)
   const wasPlaying = state.isPlaying
-  const clampedTime = Math.max(0, Math.min(timeInSeconds, track.buffer.duration))
+  const clampedTime = Math.max(0, Math.min(timeInSeconds, track.duration))
 
   pauseTrack(id)
   state.currentOffset = clampedTime
@@ -654,7 +712,7 @@ function ensureAnimationLoop() {
       const elapsed = ctx.currentTime - transient.playbackStartTime
       const total = state.currentOffset + elapsed
 
-      if (total >= track.buffer.duration) {
+      if (total >= track.duration) {
         stopTrack(id)
       } else {
         state.currentTime = total
@@ -670,12 +728,13 @@ function ensureAnimationLoop() {
 }
 
 function playScrubGrain(track: ProcessedTrack, time: number) {
+  if (!track.buffer) return;
   const ctx = getAudioContext()
   if (ctx.state === 'suspended') ctx.resume()
   if (ctx.currentTime - lastGrainAt < SCRUB_INTERVAL) return;
 
-  const offset = Math.max(0, Math.min(time, track.buffer.duration))
-  const duration = Math.min(SCRUB_GRAIN, track.buffer.duration - offset)
+  const offset = Math.max(0, Math.min(time, track.duration))
+  const duration = Math.min(SCRUB_GRAIN, track.duration - offset)
   if (duration <= 0) return;
 
   lastGrainAt = ctx.currentTime
@@ -839,13 +898,13 @@ onUnmounted(() => {
 
       <template v-for="(track, index) in loadedTracks" :key="'hatch-' + track.id">
         <div
-          v-if="maxDuration > 0 && track.buffer.duration < maxDuration"
+          v-if="maxDuration > 0 && track.duration < maxDuration"
           class="hatch-overlay"
           :style="{
             top: `${index * laneHeight}px`,
             height: `${laneHeight}px`,
-            left: `${(track.buffer.duration / maxDuration) * 100}%`,
-            width: `${(1 - track.buffer.duration / maxDuration) * 100}%`
+            left: `${(track.duration / maxDuration) * 100}%`,
+            width: `${(1 - track.duration / maxDuration) * 100}%`
           }"
         ></div>
       </template>
@@ -880,17 +939,18 @@ onUnmounted(() => {
                     v-bind="tooltipProps"
                     class="accent"
                     style="pointer-events: auto;"
+                    :disabled="!track.buffer"
                     @click.stop="toggleTrackPlay(track.id)"
                   >
                     <Pause16Filled v-if="playback[track.id]?.isPlaying" />
                     <Play16Filled v-else />
                   </IconButton>
                 </template>
-                <h3>{{ playback[track.id]?.isPlaying ? 'Pause' : 'Play' }}</h3>
+                <h3>{{ !track.buffer ? 'Decoding' : playback[track.id]?.isPlaying ? 'Pause' : 'Play' }}</h3>
               </Tooltip>
 
               <span class="time-display">
-                {{ formatTime(playback[track.id]?.currentTime ?? 0) }} / {{ formatTime(track.buffer.duration) }}
+                {{ formatTime(playback[track.id]?.currentTime ?? 0) }} / {{ formatTime(track.duration) }}
               </span>
             </Row>
           </div>
