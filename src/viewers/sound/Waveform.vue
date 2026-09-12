@@ -12,6 +12,7 @@ import { splitOgg, type OggSplit } from './ogg'
 import { queueDecode } from './decodeQueue'
 import { cachePeaks, cachedPeaks, peaksKey } from './peaksStore'
 import { peaksFromOgg, vorbisSupported } from './webcodecs'
+import { readWav, wavPeaks } from './wav'
 
 export interface TrackSource {
   id: string
@@ -230,6 +231,13 @@ async function loadSources() {
           }
           if (!cached) pending.push({ track, split: codec ? null : split })
           return track
+        }
+        const wav = readWav(src.bytes)
+        if (wav) {
+          const key = peaksKey(src.version, src.name, src.bytes.length, bucketCount)
+          const peaks = cachedPeaks(key) ?? wavPeaks(src.bytes, wav, bucketCount)
+          cachePeaks(key, peaks)
+          return { ...meta, duration: wav.duration, buffer: null, peaks, filled: bucketCount, reveal: bucketCount }
         }
         const buffer = await getAudioBuffer(src.bytes)
         const peaks = await getPeaks(buffer, bucketCount)
