@@ -9,7 +9,7 @@ import { Settings } from '@/settings'
 import { Pause16Filled, Play16Filled } from '@vicons/fluent'
 import Row from '@/components/Row.vue'
 import { splitOgg, type OggSplit } from './ogg'
-import { beginFill, endFill, queueDecode } from './decodeQueue'
+import { queueDecode } from './decodeQueue'
 
 export interface TrackSource {
   id: string
@@ -88,6 +88,7 @@ const waveformCanvasRef = ref<HTMLCanvasElement | null>(null)
 const overlayCanvasRef = ref<HTMLCanvasElement | null>(null)
 
 const isVisible = useElementVisible(containerRef)
+const isOnScreen = useElementVisible(containerRef, { rootMargin: '0px' })
 
 const loadedTracks = ref<ProcessedTrack[]>([])
 const isLoading = ref(false)
@@ -277,28 +278,40 @@ function writePeaks(peaks: Float32Array, buffer: AudioBuffer, from: number, to: 
   }
 }
 
+const waiting = new Set<() => void>()
+
+function whenOnScreen(): Promise<void> {
+  if (isOnScreen.value) return Promise.resolve()
+  return new Promise((resolve) => {
+    const stop = watch(isOnScreen, (visible) => {
+      if (!visible) return;
+      stop()
+      waiting.delete(stop)
+      resolve()
+    })
+    waiting.add(stop)
+  })
+}
+
 async function fillPeaks(track: ProcessedTrack, split: OggSplit, bucketCount: number) {
   const ctx = new OfflineAudioContext(1, 1, PEAK_RATE)
-  beginFill()
-  try {
-    for (const chunk of split.chunks) {
-      if (!loadedTracks.value.includes(track)) return;
-      let buffer: AudioBuffer
-      try {
-        buffer = await queueDecode(1, () => ctx.decodeAudioData(chunk.bytes.slice(0).buffer))
-      } catch (err) {
-        console.error('Failed to decode audio chunk:', err)
-        return;
-      }
-      if (!loadedTracks.value.includes(track)) return;
-      const from = Math.floor((chunk.start / split.duration) * bucketCount)
-      const to = Math.min(bucketCount, Math.max(from + 1, Math.round((chunk.end / split.duration) * bucketCount)))
-      writePeaks(track.peaks, buffer, from, to)
-      track.filled = to
-      ensureRevealLoop()
+  for (const chunk of split.chunks) {
+    if (!loadedTracks.value.includes(track)) return;
+    await whenOnScreen()
+    if (!loadedTracks.value.includes(track)) return;
+    let buffer: AudioBuffer
+    try {
+      buffer = await queueDecode(1, () => ctx.decodeAudioData(chunk.bytes.slice(0).buffer))
+    } catch (err) {
+      console.error('Failed to decode audio chunk:', err)
+      return;
     }
-  } finally {
-    endFill()
+    if (!loadedTracks.value.includes(track)) return;
+    const from = Math.floor((chunk.start / split.duration) * bucketCount)
+    const to = Math.min(bucketCount, Math.max(from + 1, Math.round((chunk.end / split.duration) * bucketCount)))
+    writePeaks(track.peaks, buffer, from, to)
+    track.filled = to
+    ensureRevealLoop()
   }
 }
 

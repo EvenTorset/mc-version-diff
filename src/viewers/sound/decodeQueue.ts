@@ -1,4 +1,4 @@
-const MAX_RUNNING = 1
+const MAX_RUNNING = 4
 
 const queues: (() => void)[][] = [[], []]
 let running = 0
@@ -22,18 +22,4 @@ export function queueDecode<T>(priority: 0 | 1, task: () => Promise<T>): Promise
     })
     pump()
   })
-}
-
-let fills = 0
-
-export function beginFill() {
-  fills++
-}
-
-export function endFill() {
-  fills--
-}
-
-export function fillCount(): number {
-  return fills
 }
