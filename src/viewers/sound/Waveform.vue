@@ -10,6 +10,7 @@ import { Pause16Filled, Play16Filled } from '@vicons/fluent'
 import Row from '@/components/Row.vue'
 import { splitOgg, type OggSplit } from './ogg'
 import { queueDecode } from './decodeQueue'
+import { cachePeaks, cachedPeaks, peaksKey } from './peaksStore'
 
 export interface TrackSource {
   id: string
@@ -216,15 +217,16 @@ async function loadSources() {
         const meta = { id: src.id, version: src.version, name: src.name, color: src.color, bytes: src.bytes }
         const split = splitOgg(src.bytes, CHUNK_SECONDS)
         if (split && split.chunks.length > 1) {
+          const cached = cachedPeaks(peaksKey(src.version, src.name, src.bytes.length, bucketCount))
           const track: ProcessedTrack = {
             ...meta,
             duration: split.duration,
             buffer: null,
-            peaks: new Float32Array(bucketCount * 2),
-            filled: 0,
-            reveal: 0
+            peaks: cached ?? new Float32Array(bucketCount * 2),
+            filled: cached ? bucketCount : 0,
+            reveal: cached ? bucketCount : 0
           }
-          pending.push({ track, split })
+          if (!cached) pending.push({ track, split })
           return track
         }
         const buffer = await getAudioBuffer(src.bytes)
@@ -313,6 +315,8 @@ async function fillPeaks(track: ProcessedTrack, split: OggSplit, bucketCount: nu
     track.filled = to
     ensureRevealLoop()
   }
+
+  cachePeaks(peaksKey(track.version, track.name, track.bytes.length, bucketCount), track.peaks)
 }
 
 function ensureRevealLoop() {
