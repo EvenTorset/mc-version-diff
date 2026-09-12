@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { ManifestVersion } from 'minecraft-asset-loader'
-import { assetIndex, assetsRange } from './edition'
+import { assetIndex, assetsRange } from './util'
 import { formatBytes } from '@/util/bytes'
 import Dim from '@/components/Dim.vue'
 import Row from '@/components/Row.vue'
