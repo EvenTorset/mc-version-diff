@@ -135,7 +135,7 @@ const legend = [
 ]
 
 registerViewer('image', {
-  predictedHeight: 166.4,
+  predictedHeight(_track) { return 166.4 },
   test(_dr, track) {
     return /\.(?:png|tga|jpg|jpeg|hdr)$/.test(track.id)
   },

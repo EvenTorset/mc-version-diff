@@ -47,7 +47,7 @@ const trackHeight = computed(() => {
     )
     && categoryExpands(props.dr, props.dr.getCategory(t))
   ) {
-    const ph = getViewer(props.dr, t)?.predictedHeight
+    const ph = getViewer(props.dr, t)?.predictedHeight?.(t)
     if (ph !== undefined) {
       h = ph + 34
     }

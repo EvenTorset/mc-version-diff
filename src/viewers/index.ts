@@ -3,7 +3,7 @@ import type { Renderable } from '@/types'
 
 export type Viewer = {
   edition?: string
-  predictedHeight?: number
+  predictedHeight?: (track: DeltaTrack) => number
   test(dr: DeltaResult, track: DeltaTrack): boolean
   render(dr: DeltaResult, track: DeltaTrack): Promise<Renderable> | Renderable
 }

@@ -317,7 +317,7 @@ function toggle() {
       v-if="shouldRenderContent"
       class="delta-track-detail"
       :style="{
-        minHeight: (expanded && isInitialAutoExpanded) ? `${viewer?.predictedHeight ?? 0}px` : undefined
+        minHeight: (expanded && isInitialAutoExpanded) ? `${viewer?.predictedHeight?.(track) ?? 0}px` : undefined
       }"
       @pointerdown.capture="markContentInteraction"
       @keydown.capture="markContentInteraction"
