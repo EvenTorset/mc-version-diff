@@ -310,15 +310,25 @@ function drawDiffWaveform(
   if (n > 0) {
     const overlapTop: number[] = []
     const overlapBottom: number[] = []
+    const EPSILON = 0.1
+    const PADDING = 2
 
     for (let i = 0; i < n; i++) {
-      const top = Math.max(topPoints[i], otherTop[i])
-      const bottom = Math.min(bottomPoints[i], otherBottom[i])
+      let top = Math.max(topPoints[i], otherTop[i])
+      let bottom = Math.min(bottomPoints[i], otherBottom[i])
+
       if (top > bottom) {
         const mid = (topPoints[i] + bottomPoints[i]) / 2
         overlapTop.push(mid)
         overlapBottom.push(mid)
       } else {
+        if (Math.abs(topPoints[i] - otherTop[i]) < EPSILON || otherTop[i] <= topPoints[i]) {
+          top = topPoints[i] - PADDING
+        }
+        if (Math.abs(bottomPoints[i] - otherBottom[i]) < EPSILON || otherBottom[i] >= bottomPoints[i]) {
+          bottom = bottomPoints[i] + PADDING
+        }
+
         overlapTop.push(top)
         overlapBottom.push(bottom)
       }
