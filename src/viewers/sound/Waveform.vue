@@ -9,7 +9,7 @@ import { Settings } from '@/settings'
 import { Pause16Filled, Play16Filled } from '@vicons/fluent'
 import Row from '@/components/Row.vue'
 import { splitOgg, type OggSplit } from './ogg'
-import { queueDecode } from './decodeQueue'
+import { beginFill, endFill, queueDecode } from './decodeQueue'
 
 export interface TrackSource {
   id: string
@@ -28,6 +28,8 @@ interface ProcessedTrack {
   bytes: Uint8Array<ArrayBuffer>
   buffer: AudioBuffer | null
   peaks: Float32Array
+  filled: number
+  reveal: number
 }
 
 interface PlaybackState {
@@ -66,6 +68,10 @@ const SCRUB_INTERVAL = 0.05
 const SCRUB_MIN_STEP = 0.001
 const CHUNK_SECONDS = 15
 const PEAK_RATE = 8000
+const REVEAL_SWEEP = 1.2
+const REVEAL_CATCHUP = 0.12
+const REVEAL_EDGE = 0.1
+const REVEAL_FRAME = 1000 / 30
 
 const props = withDefaults(
   defineProps<{
@@ -98,6 +104,7 @@ const scrubVoices = new Set<ScrubVoice>()
 let lastGrainAt = 0
 let lastScrubTime = 0
 let animFrameId: number | null = null
+let revealFrameId: number | null = null
 let resizeObserver: ResizeObserver | null = null
 
 const canvasHeight = computed(() => {
@@ -108,6 +115,18 @@ const maxDuration = computed(() => {
   if (loadedTracks.value.length === 0) return 0
   return Math.max(...loadedTracks.value.map((t) => t.duration))
 })
+
+let palette: Record<string, string> = {}
+let paletteAt = 0
+
+function themeColor(name: string): string {
+  const now = performance.now()
+  if (now - paletteAt > 250) {
+    palette = {}
+    paletteAt = now
+  }
+  return palette[name] ??= getCSSVar(name)
+}
 
 function getAudioContext(): AudioContext {
   if (!sharedAudioCtx) {
@@ -200,14 +219,16 @@ async function loadSources() {
             ...meta,
             duration: split.duration,
             buffer: null,
-            peaks: new Float32Array(bucketCount * 2)
+            peaks: new Float32Array(bucketCount * 2),
+            filled: 0,
+            reveal: 0
           }
           pending.push({ track, split })
           return track
         }
         const buffer = await getAudioBuffer(src.bytes)
         const peaks = await getPeaks(buffer, bucketCount)
-        return { ...meta, duration: buffer.duration, buffer, peaks }
+        return { ...meta, duration: buffer.duration, buffer, peaks, filled: bucketCount, reveal: bucketCount }
       })
     )
 
@@ -258,21 +279,62 @@ function writePeaks(peaks: Float32Array, buffer: AudioBuffer, from: number, to: 
 
 async function fillPeaks(track: ProcessedTrack, split: OggSplit, bucketCount: number) {
   const ctx = new OfflineAudioContext(1, 1, PEAK_RATE)
-  for (const chunk of split.chunks) {
-    if (!loadedTracks.value.includes(track)) return;
-    let buffer: AudioBuffer
-    try {
-      buffer = await queueDecode(1, () => ctx.decodeAudioData(chunk.bytes.slice(0).buffer))
-    } catch (err) {
-      console.error('Failed to decode audio chunk:', err)
-      return;
+  beginFill()
+  try {
+    for (const chunk of split.chunks) {
+      if (!loadedTracks.value.includes(track)) return;
+      let buffer: AudioBuffer
+      try {
+        buffer = await queueDecode(1, () => ctx.decodeAudioData(chunk.bytes.slice(0).buffer))
+      } catch (err) {
+        console.error('Failed to decode audio chunk:', err)
+        return;
+      }
+      if (!loadedTracks.value.includes(track)) return;
+      const from = Math.floor((chunk.start / split.duration) * bucketCount)
+      const to = Math.min(bucketCount, Math.max(from + 1, Math.round((chunk.end / split.duration) * bucketCount)))
+      writePeaks(track.peaks, buffer, from, to)
+      track.filled = to
+      ensureRevealLoop()
     }
-    if (!loadedTracks.value.includes(track)) return;
-    const from = Math.floor((chunk.start / split.duration) * bucketCount)
-    const to = Math.min(bucketCount, Math.max(from + 1, Math.round((chunk.end / split.duration) * bucketCount)))
-    writePeaks(track.peaks, buffer, from, to)
-    renderWaveform()
+  } finally {
+    endFill()
   }
+}
+
+function ensureRevealLoop() {
+  if (revealFrameId !== null) return;
+
+  let last = performance.now()
+  let drawn = 0
+  const step = (now: number) => {
+    const elapsed = Math.min(now - last, 100) / 1000
+    last = now
+
+    const rect = containerRef.value?.getBoundingClientRect()
+    const onScreen = !!rect && rect.bottom > 0 && rect.top < window.innerHeight
+
+    let animating = false
+    for (const track of loadedTracks.value) {
+      if (track.reveal >= track.filled) continue
+      if (!onScreen) {
+        track.reveal = track.filled
+        continue
+      }
+      const buckets = track.peaks.length / 2
+      const speed = Math.max(buckets * REVEAL_SWEEP, (track.filled - track.reveal) / REVEAL_CATCHUP)
+      track.reveal = Math.min(track.filled, track.reveal + speed * elapsed)
+      if (track.reveal < track.filled) animating = true
+    }
+
+    if (!animating || now - drawn >= REVEAL_FRAME) {
+      drawn = now
+      renderWaveform()
+    }
+    revealFrameId = animating ? requestAnimationFrame(step) : null
+  }
+
+  revealFrameId = requestAnimationFrame(step)
 }
 
 function unloadTracks() {
@@ -282,7 +344,6 @@ function unloadTracks() {
 
 function computeEnvelope(track: ProcessedTrack, width: number, maxDur: number): TrackEnvelope {
   const trackWidth = width * (track.duration / maxDur)
-  const centerY = props.laneHeight / 2
   const halfHeight = props.laneHeight / 2 - 10
 
   let peakAmp = 0
@@ -324,38 +385,116 @@ function computeEnvelope(track: ProcessedTrack, width: number, maxDur: number): 
       }
     }
 
-    topPoints.push(centerY - (max * scaleFactor) * halfHeight - 0.5)
-    bottomPoints.push(centerY - (min * scaleFactor) * halfHeight + 0.5)
+    topPoints.push(-(max * scaleFactor) * halfHeight)
+    bottomPoints.push(-(min * scaleFactor) * halfHeight)
   }
 
   return { trackWidth, topPoints, bottomPoints }
 }
 
+const envelopeCache = new WeakMap<ProcessedTrack, { key: string, envelope: TrackEnvelope }>()
+
+function trackEnvelope(track: ProcessedTrack, width: number, maxDur: number): TrackEnvelope {
+  const key = `${width}|${maxDur}|${track.filled}`
+  const cached = envelopeCache.get(track)
+  if (cached?.key === key) return cached.envelope
+  const envelope = computeEnvelope(track, width, maxDur)
+  envelopeCache.set(track, { key, envelope })
+  return envelope
+}
+
+function centred(points: number[], offset: number): number[] {
+  const centerY = props.laneHeight / 2
+  return points.map((value) => centerY + value + offset)
+}
+
+const layerCache = new WeakMap<ProcessedTrack, { key: string, layer: HTMLCanvasElement }>()
+
+function trackLayer(track: ProcessedTrack, index: number, width: number, maxDur: number): HTMLCanvasElement {
+  const tracks = loadedTracks.value
+  const other = tracks.length === 2 ? tracks[index === 0 ? 1 : 0] : null
+  const key = `${width}|${maxDur}|${track.filled}|${other?.filled ?? ''}|${themeColor('--color-6')}`
+  const cached = layerCache.get(track)
+  if (cached?.key === key) return cached.layer
+
+  const base = trackEnvelope(track, width, maxDur)
+  const topPoints = centred(base.topPoints, -0.5)
+  const bottomPoints = centred(base.bottomPoints, 0.5)
+
+  const layer = document.createElement('canvas')
+  layer.width = Math.max(1, Math.ceil(width))
+  layer.height = Math.max(1, Math.ceil(props.laneHeight))
+  const lctx = layer.getContext('2d')!
+
+  if (other) {
+    const otherBase = trackEnvelope(other, width, maxDur)
+    drawDiffWaveform(
+      lctx,
+      topPoints,
+      bottomPoints,
+      centred(otherBase.topPoints, -0.5),
+      centred(otherBase.bottomPoints, 0.5),
+      Math.min(base.trackWidth, otherBase.trackWidth),
+      themeColor(index === 0 ? '--color-danger' : '--color-success'),
+      themeColor('--color-6')
+    )
+  } else {
+    drawPlainWaveform(lctx, topPoints, bottomPoints, themeColor(track.color ?? '--color-accent'))
+  }
+
+  layerCache.set(track, { key, layer })
+  return layer
+}
+
+function compositeLayer(ctx: CanvasRenderingContext2D, layer: HTMLCanvasElement, track: ProcessedTrack, laneY: number, trackWidth: number) {
+  const height = props.laneHeight
+  const buckets = track.peaks.length / 2
+
+  if (track.reveal >= buckets) {
+    ctx.drawImage(layer, 0, laneY)
+    return;
+  }
+
+  const front = (track.reveal / buckets) * trackWidth
+  const edge = Math.max(1, REVEAL_EDGE * trackWidth)
+  const solid = Math.max(0, front - edge)
+
+  if (solid >= 1) ctx.drawImage(layer, 0, 0, solid, height, 0, laneY, solid, height)
+
+  const bands = 12
+  for (let band = 0; band < bands; band++) {
+    const from = solid + (edge * band) / bands
+    const to = Math.min(solid + (edge * (band + 1)) / bands, front)
+    if (to - from < 0.5) continue
+    const eased = 1 - (from - solid) / edge
+    const open = eased * eased * (3 - 2 * eased)
+    const bandHeight = height * open
+    if (bandHeight < 0.5) continue
+    ctx.drawImage(layer, from, 0, to - from, height, from, laneY + (height - bandHeight) / 2, to - from, bandHeight)
+  }
+}
+
 function drawPlainWaveform(
   ctx: CanvasRenderingContext2D,
-  laneY: number,
   topPoints: number[],
   bottomPoints: number[],
   color: string
 ) {
   ctx.fillStyle = color
   ctx.beginPath()
-  ctx.moveTo(0, laneY + topPoints[0])
+  ctx.moveTo(0, topPoints[0])
   for (let i = 1; i < topPoints.length; i++) {
-    ctx.lineTo(i, laneY + topPoints[i])
+    ctx.lineTo(i, topPoints[i])
   }
   for (let i = bottomPoints.length - 1; i >= 0; i--) {
-    ctx.lineTo(i, laneY + bottomPoints[i])
+    ctx.lineTo(i, bottomPoints[i])
   }
   ctx.closePath()
   ctx.fill()
 }
 
 function drawDiffWaveform(
-  mainCtx: CanvasRenderingContext2D,
-  width: number,
-  laneHeight: number,
-  laneY: number,
+  lctx: CanvasRenderingContext2D,
   topPoints: number[],
   bottomPoints: number[],
   otherTop: number[],
@@ -364,12 +503,6 @@ function drawDiffWaveform(
   highlightColor: string,
   color: string
 ) {
-  const layer = document.createElement('canvas')
-  layer.width = Math.max(1, Math.ceil(width))
-  layer.height = Math.max(1, Math.ceil(laneHeight))
-  const lctx = layer.getContext('2d')
-  if (!lctx) return;
-
   lctx.fillStyle = highlightColor
   lctx.beginPath()
   lctx.moveTo(0, topPoints[0])
@@ -424,8 +557,6 @@ function drawDiffWaveform(
     lctx.fill()
     lctx.globalCompositeOperation = 'source-over'
   }
-
-  mainCtx.drawImage(layer, 0, laneY)
 }
 
 function syncCanvasSize(canvas: HTMLCanvasElement, width: number, height: number, dpr: number) {
@@ -466,20 +597,15 @@ function renderWaveform() {
     return;
   }
 
-  const isComparison = loadedTracks.value.length === 2
-  const envelopes = loadedTracks.value.map((track) => computeEnvelope(track, width, maxDur))
-
   for (let i = 0; i < loadedTracks.value.length; i++) {
+    const track = loadedTracks.value[i]
     const laneY = i * props.laneHeight
-    const { trackWidth, topPoints, bottomPoints } = envelopes[i]
 
-    // Background
-    ctx.fillStyle = getCSSVar('--color-0-alt')
+    ctx.fillStyle = themeColor('--color-0-alt')
     ctx.fillRect(0, laneY, width, props.laneHeight)
 
-    // Lane divider
     if (i > 0) {
-      ctx.strokeStyle = getCSSVar('--color-2')
+      ctx.strokeStyle = themeColor('--color-2')
       ctx.lineWidth = 1
       ctx.beginPath()
       ctx.moveTo(0, laneY)
@@ -487,30 +613,9 @@ function renderWaveform() {
       ctx.stroke()
     }
 
-    if (topPoints.length === 0) return;
-
-    if (isComparison) {
-      const otherIndex = i === 0 ? 1 : 0
-      const other = envelopes[otherIndex]
-      const overlapWidth = Math.min(trackWidth, other.trackWidth)
-      const highlightColor = i === 0 ? getCSSVar('--color-danger') : getCSSVar('--color-success')
-
-      drawDiffWaveform(
-        ctx,
-        width,
-        props.laneHeight,
-        laneY,
-        topPoints,
-        bottomPoints,
-        other.topPoints,
-        other.bottomPoints,
-        overlapWidth,
-        highlightColor,
-        getCSSVar('--color-6')
-      )
-    } else {
-      drawPlainWaveform(ctx, laneY, topPoints, bottomPoints, getCSSVar(loadedTracks.value[i].color ?? '--color-accent'))
-    }
+    const { trackWidth } = trackEnvelope(track, width, maxDur)
+    if (trackWidth < 1) continue
+    compositeLayer(ctx, trackLayer(track, i, width, maxDur), track, laneY, trackWidth)
   }
 
   ctx.restore()
@@ -543,14 +648,14 @@ function drawOverlay() {
       const laneY = index * props.laneHeight
       const x = (state.currentTime / maxDur) * width
 
-      ctx.strokeStyle = getCSSVar('--color-5')
+      ctx.strokeStyle = themeColor('--color-5')
       ctx.lineWidth = 2
       ctx.beginPath()
       ctx.moveTo(x, laneY)
       ctx.lineTo(x, laneY + props.laneHeight)
       ctx.stroke()
 
-      ctx.fillStyle = getCSSVar('--color-5')
+      ctx.fillStyle = themeColor('--color-5')
       ctx.beginPath()
       ctx.moveTo(x - 5, laneY)
       ctx.lineTo(x + 5, laneY)
@@ -564,10 +669,10 @@ function drawOverlay() {
     ctx.beginPath()
     ctx.moveTo(hoverX.value + 0.5, 0)
     ctx.lineTo(hoverX.value + 0.5, height)
-    ctx.strokeStyle = getCSSVar('--color-0')
+    ctx.strokeStyle = themeColor('--color-0')
     ctx.lineWidth = 3
     ctx.stroke()
-    ctx.strokeStyle = getCSSVar('--color-6')
+    ctx.strokeStyle = themeColor('--color-6')
     ctx.lineWidth = 1
     ctx.stroke()
   }

@@ -23,3 +23,17 @@ export function queueDecode<T>(priority: 0 | 1, task: () => Promise<T>): Promise
     pump()
   })
 }
+
+let fills = 0
+
+export function beginFill() {
+  fills++
+}
+
+export function endFill() {
+  fills--
+}
+
+export function fillCount(): number {
+  return fills
+}
