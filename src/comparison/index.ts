@@ -189,6 +189,10 @@ export function compareVersionless(a: CompareItem, b: CompareItem): Promise<bool
   return getPool().run({ kind: 'versionless', a, b })
 }
 
+export function compareOgg(a: CompareItem, b: CompareItem): Promise<boolean> {
+  return getPool().run({ kind: 'ogg', a, b })
+}
+
 export function compareNbt(
   a: CompareItem,
   b: CompareItem,

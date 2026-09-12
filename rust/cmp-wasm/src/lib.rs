@@ -1,6 +1,7 @@
 //! One wasm call compares a whole batch: zip entry inflation, PNG pixel
 //! comparison, NBT comparison with the DataVersion masked, structures compared
-//! by the blocks they hold, and JSON compared by its values. Anything malformed
+//! by the blocks they hold, JSON compared by its values, and Ogg audio compared
+//! with each page's serial number and checksum masked. Anything malformed
 //! compares as false, matching how the worker treated a throw.
 
 use minecraft_block_reader::{read_any, Compound, State, Structure, Value};
@@ -16,7 +17,7 @@ const STRIDE: usize = 8;
 const ENTRY_LIMIT: usize = 1 << 30;
 
 /// `tasks` is a flat array with a stride of [`STRIDE`]:
-/// kind (0 png, 1 nbt, 2 structure, 3 json, 4 versionless), aOffset, aLength, aMethod,
+/// kind (0 png, 1 nbt, 2 structure, 3 json, 4 versionless, 5 ogg), aOffset, aLength, aMethod,
 /// bOffset, bLength, bMethod, littleEndian.
 #[wasm_bindgen]
 pub fn compare_batch(buffer: &[u8], tasks: &[u32]) -> Vec<u8> {
@@ -53,8 +54,47 @@ fn run_task(
         2 => compare_structure(&raw_a, &raw_b, little_endian),
         3 => compare_json(&raw_a, &raw_b),
         4 => compare_versionless(&raw_a, &raw_b),
+        5 => compare_ogg(&raw_a, &raw_b),
         _ => compare_nbt(&raw_a, &raw_b, little_endian),
     }
+}
+
+/// Ogg re-muxing tools assign a fresh random bitstream serial number and
+/// recompute each page's CRC on save, even when the audio itself is
+/// untouched, so those are masked out before comparing.
+fn compare_ogg(a: &[u8], b: &[u8]) -> Option<bool> {
+    let a = mask_ogg(a)?;
+    let b = mask_ogg(b)?;
+    Some(a == b)
+}
+
+/// Returns a copy of an Ogg bitstream with each page's serial number and CRC
+/// checksum zeroed out, leaving the granule positions, sequence numbers,
+/// segment layout, and packet bytes that make up the actual sound data.
+/// `None` if the bytes are not a well-formed sequence of Ogg pages.
+fn mask_ogg(data: &[u8]) -> Option<Vec<u8>> {
+    let mut out = data.to_vec();
+    let mut offset = 0usize;
+
+    while offset < out.len() {
+        if out.get(offset..offset + 4)? != b"OggS" {
+            return None;
+        }
+        let num_seg = *out.get(offset + 26)? as usize;
+        let seg_table = out.get(offset + 27..offset + 27 + num_seg)?;
+        let payload_len: usize = seg_table.iter().map(|&s| s as usize).sum();
+        let page_len = (27 + num_seg).checked_add(payload_len)?;
+        if offset.checked_add(page_len)? > out.len() {
+            return None;
+        }
+
+        out[offset + 14..offset + 18].fill(0); // bitstream serial number
+        out[offset + 22..offset + 26].fill(0); // CRC checksum
+
+        offset += page_len;
+    }
+
+    Some(out)
 }
 
 fn compare_versionless(a: &[u8], b: &[u8]) -> Option<bool> {
@@ -578,6 +618,69 @@ mod tests {
     #[test]
     fn strip_versions_needs_three_parts_and_boundaries() {
         assert_eq!(strip_versions("at 1.26.30 and 1.5 and v1.2.3 and 1.2.3.4"), "at  and 1.5 and v1.2.3 and ");
+    }
+
+    /// Builds one raw Ogg page with the given serial, sequence number, and
+    /// payload; the checksum is left as a fixed dummy value since `mask_ogg`
+    /// never inspects it.
+    fn ogg_page(serial: u32, seq: u32, payload: &[u8]) -> Vec<u8> {
+        let mut segs = Vec::new();
+        let mut remaining = payload.len();
+        loop {
+            let n = remaining.min(255);
+            segs.push(n as u8);
+            remaining -= n;
+            if n < 255 {
+                break;
+            }
+        }
+        let mut page = Vec::new();
+        page.extend_from_slice(b"OggS");
+        page.push(0); // version
+        page.push(0); // header type
+        page.extend_from_slice(&0i64.to_le_bytes()); // granule position
+        page.extend_from_slice(&serial.to_le_bytes());
+        page.extend_from_slice(&seq.to_le_bytes());
+        page.extend_from_slice(&0xDEADBEEFu32.to_le_bytes()); // checksum
+        page.push(segs.len() as u8);
+        page.extend_from_slice(&segs);
+        page.extend_from_slice(payload);
+        page
+    }
+
+    #[test]
+    fn ogg_ignores_serial_and_checksum() {
+        let a = ogg_page(0x1111_1111, 0, b"same audio bytes");
+        let b = ogg_page(0x2222_2222, 0, b"same audio bytes");
+        assert_ne!(a, b, "the fixtures must differ as bytes");
+        assert_eq!(compare_ogg(&a, &b), Some(true));
+    }
+
+    #[test]
+    fn ogg_catches_a_real_audio_change() {
+        let a = ogg_page(0x1111_1111, 0, b"same audio bytes");
+        let b = ogg_page(0x1111_1111, 0, b"changed audio!!!");
+        assert_eq!(compare_ogg(&a, &b), Some(false));
+    }
+
+    #[test]
+    fn ogg_compares_every_page() {
+        let mut a = ogg_page(0x1111_1111, 0, b"page one");
+        a.extend(ogg_page(0x1111_1111, 1, b"page two"));
+        let mut b = ogg_page(0x2222_2222, 0, b"page one");
+        b.extend(ogg_page(0x2222_2222, 1, b"page two, but different"));
+        assert_eq!(compare_ogg(&a, &b), Some(false));
+    }
+
+    #[test]
+    fn ogg_garbage_does_not_match() {
+        assert_eq!(compare_ogg(b"not ogg", b"also not ogg"), None);
+    }
+
+    #[test]
+    fn ogg_truncated_page_does_not_match() {
+        let a = ogg_page(0x1111_1111, 0, b"a full page of audio");
+        assert_eq!(compare_ogg(&a[..30], &a[..30]), None);
     }
 
     #[test]

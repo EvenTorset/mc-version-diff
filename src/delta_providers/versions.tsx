@@ -4,7 +4,7 @@ import { DeltaTrackState } from '@/delta_providers/states'
 import { readZip, type RawBytes } from 'minecraft-asset-loader'
 import type { RehashPayloadItem, RehashWorkerMessage } from '@/util/rehash.worker'
 import RehashWorker from '@/util/rehash.worker?worker'
-import { compareJson, compareNbt, comparePng, compareStructure, compareVersionless, type FileHash, HashEquivalence, terminateCmpWorkers } from '@/comparison'
+import { compareJson, compareNbt, compareOgg, comparePng, compareStructure, compareVersionless, type FileHash, HashEquivalence, terminateCmpWorkers } from '@/comparison'
 import { loadVerdicts, saveVerdicts, verdictKey } from '@/comparison/verdictCache'
 import getFileExt from '@/util/getFileExt'
 import { ProgressHandler } from '@/util/progress'
@@ -278,7 +278,7 @@ export async function buildDelta(
     progressBar.progHandler.setUnit('file')
 
     const candidates: Array<{
-      kind: 'png' | 'nbt' | 'structure' | 'json' | 'versionless'
+      kind: 'png' | 'nbt' | 'structure' | 'json' | 'versionless' | 'ogg'
       entryA: VersionEntry
       entryB: VersionEntry
     }> = []
@@ -292,11 +292,13 @@ export async function buildDelta(
         ? equivalence.kind
         : path.endsWith('.png')
           ? 'png'
-          : JSON_PATH.test(path)
-            ? 'json'
-            : path.endsWith('.nbt')
-              ? STRUCTURE_PATH.test(path) ? 'structure' : 'nbt'
-              : null
+          : path.endsWith('.ogg')
+            ? 'ogg'
+            : JSON_PATH.test(path)
+              ? 'json'
+              : path.endsWith('.nbt')
+                ? STRUCTURE_PATH.test(path) ? 'structure' : 'nbt'
+                : null
       if (kind) candidates.push({ kind, entryA, entryB })
     }
 
@@ -315,7 +317,14 @@ export async function buildDelta(
       await Promise.all(
         misses.map(async candidate => {
           const [ rawA, rawB ] = await Promise.all([ candidate.entryA.raw(), candidate.entryB.raw() ])
-          const compare = { json: compareJson, structure: compareStructure, nbt: compareNbt, png: comparePng, versionless: compareVersionless }[candidate.kind]
+          const compare = {
+            json: compareJson,
+            structure: compareStructure,
+            nbt: compareNbt,
+            png: comparePng,
+            versionless: compareVersionless,
+            ogg: compareOgg,
+          }[candidate.kind]
           const equal = await compare(rawA, rawB)
 
           verdicts.set(verdictKey(candidate.kind, candidate.entryA.crc, candidate.entryB.crc), equal)
