@@ -11,6 +11,7 @@ import Row from '@/components/Row.vue'
 import { splitOgg, type OggSplit } from './ogg'
 import { queueDecode } from './decodeQueue'
 import { cachePeaks, cachedPeaks, peaksKey } from './peaksStore'
+import { peaksFromOgg, vorbisSupported } from './webcodecs'
 
 export interface TrackSource {
   id: string
@@ -211,12 +212,13 @@ async function loadSources() {
   const bucketCount = Math.max(1, Math.floor(containerWidth * dpr))
 
   try {
-    const pending: { track: ProcessedTrack, split: OggSplit }[] = []
+    const pending: { track: ProcessedTrack, split: OggSplit | null }[] = []
     const fetchedTracks = await Promise.all(
       sources.slice(0, 2).map(async (src) => {
         const meta = { id: src.id, version: src.version, name: src.name, color: src.color, bytes: src.bytes }
         const split = splitOgg(src.bytes, CHUNK_SECONDS)
-        if (split && split.chunks.length > 1) {
+        const codec = split ? await vorbisSupported(src.bytes) : false
+        if (split && (codec || split.chunks.length > 1)) {
           const cached = cachedPeaks(peaksKey(src.version, src.name, src.bytes.length, bucketCount))
           const track: ProcessedTrack = {
             ...meta,
@@ -226,7 +228,7 @@ async function loadSources() {
             filled: cached ? bucketCount : 0,
             reveal: cached ? bucketCount : 0
           }
-          if (!cached) pending.push({ track, split })
+          if (!cached) pending.push({ track, split: codec ? null : split })
           return track
         }
         const buffer = await getAudioBuffer(src.bytes)
@@ -237,7 +239,10 @@ async function loadSources() {
 
     loadedTracks.value = fetchedTracks
 
-    for (const { track, split } of pending) fillPeaks(track, split, bucketCount)
+    for (const { track, split } of pending) {
+      if (split) fillPeaks(track, split, bucketCount)
+      else fillCodecPeaks(track, bucketCount)
+    }
 
     const validIds = new Set(fetchedTracks.map((t) => t.id))
     for (const id of Object.keys(playback)) {
@@ -293,6 +298,21 @@ function whenOnScreen(): Promise<void> {
     })
     waiting.add(stop)
   })
+}
+
+async function fillCodecPeaks(track: ProcessedTrack, bucketCount: number) {
+  await whenOnScreen()
+  if (!loadedTracks.value.includes(track)) return;
+
+  await peaksFromOgg(track.bytes, bucketCount, (peaks, filled) => {
+    if (!loadedTracks.value.includes(track)) return;
+    track.peaks = peaks
+    track.filled = filled
+    ensureRevealLoop()
+  })
+
+  if (!loadedTracks.value.includes(track)) return;
+  cachePeaks(peaksKey(track.version, track.name, track.bytes.length, bucketCount), track.peaks)
 }
 
 async function fillPeaks(track: ProcessedTrack, split: OggSplit, bucketCount: number) {

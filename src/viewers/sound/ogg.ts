@@ -76,3 +76,77 @@ export function splitOgg(bytes: Uint8Array<ArrayBuffer>, chunkSeconds: number): 
 
   return { duration, sampleRate, chunks }
 }
+
+export interface OggStream {
+  description: Uint8Array<ArrayBuffer>
+  packets: Uint8Array<ArrayBuffer>[]
+  channels: number
+  sampleRate: number
+  frames: number
+}
+
+function lacing(length: number): number[] {
+  const out: number[] = []
+  while (length >= 255) {
+    out.push(255)
+    length -= 255
+  }
+  out.push(length)
+  return out
+}
+
+export function readStream(bytes: Uint8Array<ArrayBuffer>): OggStream | null {
+  const pages = readPages(bytes)
+  if (!pages || pages.length < 3) return null
+
+  const packets: Uint8Array<ArrayBuffer>[] = []
+  let pending: Uint8Array[] = []
+  let length = 0
+
+  for (const page of pages) {
+    const segments = bytes[page.start + 26]
+    let at = page.start + 27 + segments
+    for (let s = 0; s < segments; s++) {
+      const size = bytes[page.start + 27 + s]
+      pending.push(bytes.subarray(at, at + size))
+      length += size
+      at += size
+      if (size === 255) continue
+      const packet = new Uint8Array(length)
+      let offset = 0
+      for (const part of pending) {
+        packet.set(part, offset)
+        offset += part.length
+      }
+      packets.push(packet)
+      pending = []
+      length = 0
+    }
+  }
+
+  if (packets.length < 4) return null
+  const headers = packets.slice(0, 3)
+  if (headers[0].length < 16 || headers[0][0] !== 1) return null
+
+  const prefix = [2].concat(lacing(headers[0].length), lacing(headers[1].length))
+  const description = new Uint8Array(prefix.length + headers.reduce((total, header) => total + header.length, 0))
+  description.set(prefix, 0)
+  let offset = prefix.length
+  for (const header of headers) {
+    description.set(header, offset)
+    offset += header.length
+  }
+
+  const head = new DataView(headers[0].buffer, headers[0].byteOffset, headers[0].byteLength)
+  const sampleRate = head.getUint32(12, true)
+  const channels = headers[0][11]
+  if (!sampleRate || !channels) return null
+
+  return {
+    description,
+    packets: packets.slice(3),
+    channels,
+    sampleRate,
+    frames: pages[pages.length - 1].granule,
+  }
+}
