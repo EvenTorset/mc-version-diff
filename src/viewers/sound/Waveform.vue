@@ -9,6 +9,7 @@ import { Settings } from '@/settings'
 import { Pause16Filled, Play16Filled } from '@vicons/fluent'
 import Row from '@/components/Row.vue'
 import { splitOgg, type OggSplit } from './ogg'
+import { queueDecode } from './decodeQueue'
 
 export interface TrackSource {
   id: string
@@ -24,12 +25,14 @@ interface ProcessedTrack {
   name: string
   color?: string
   duration: number
+  bytes: Uint8Array<ArrayBuffer>
   buffer: AudioBuffer | null
   peaks: Float32Array
 }
 
 interface PlaybackState {
   isPlaying: boolean
+  waiting: boolean
   currentTime: number
   currentOffset: number
 }
@@ -146,11 +149,11 @@ function processPeaksInWorker(
 function getAudioBuffer(bytes: Uint8Array<ArrayBuffer>): Promise<AudioBuffer> {
   let cached = audioBufferCache.get(bytes)
   if (!cached) {
-    cached = (async () => {
+    cached = queueDecode(0, () => {
       const ctx = getAudioContext()
       const copy = bytes.slice(0)
       return ctx.decodeAudioData(copy.buffer)
-    })()
+    })
     audioBufferCache.set(bytes, cached)
   }
   return cached
@@ -187,10 +190,10 @@ async function loadSources() {
   const bucketCount = Math.max(1, Math.floor(containerWidth * dpr))
 
   try {
-    const pending: { track: ProcessedTrack, src: TrackSource, split: OggSplit }[] = []
+    const pending: { track: ProcessedTrack, split: OggSplit }[] = []
     const fetchedTracks = await Promise.all(
       sources.slice(0, 2).map(async (src) => {
-        const meta = { id: src.id, version: src.version, name: src.name, color: src.color }
+        const meta = { id: src.id, version: src.version, name: src.name, color: src.color, bytes: src.bytes }
         const split = splitOgg(src.bytes, CHUNK_SECONDS)
         if (split && split.chunks.length > 1) {
           const track: ProcessedTrack = {
@@ -199,7 +202,7 @@ async function loadSources() {
             buffer: null,
             peaks: new Float32Array(bucketCount * 2)
           }
-          pending.push({ track, src, split })
+          pending.push({ track, split })
           return track
         }
         const buffer = await getAudioBuffer(src.bytes)
@@ -210,12 +213,7 @@ async function loadSources() {
 
     loadedTracks.value = fetchedTracks
 
-    for (const { track, src, split } of pending) {
-      fillPeaks(track, split, bucketCount)
-      getAudioBuffer(src.bytes).then((buffer) => {
-        if (loadedTracks.value.includes(track)) track.buffer = buffer
-      }).catch((err) => console.error('Failed to decode audio:', err))
-    }
+    for (const { track, split } of pending) fillPeaks(track, split, bucketCount)
 
     const validIds = new Set(fetchedTracks.map((t) => t.id))
     for (const id of Object.keys(playback)) {
@@ -223,7 +221,7 @@ async function loadSources() {
     }
     for (const track of fetchedTracks) {
       if (!playback[track.id]) {
-        playback[track.id] = { isPlaying: false, currentTime: 0, currentOffset: 0 }
+        playback[track.id] = { isPlaying: false, waiting: false, currentTime: 0, currentOffset: 0 }
       }
     }
   } catch (err) {
@@ -264,7 +262,7 @@ async function fillPeaks(track: ProcessedTrack, split: OggSplit, bucketCount: nu
     if (!loadedTracks.value.includes(track)) return;
     let buffer: AudioBuffer
     try {
-      buffer = await ctx.decodeAudioData(chunk.bytes.slice(0).buffer)
+      buffer = await queueDecode(1, () => ctx.decodeAudioData(chunk.bytes.slice(0).buffer))
     } catch (err) {
       console.error('Failed to decode audio chunk:', err)
       return;
@@ -579,7 +577,7 @@ function drawOverlay() {
 
 function ensurePlaybackState(id: string): PlaybackState {
   if (!playback[id]) {
-    playback[id] = { isPlaying: false, currentTime: 0, currentOffset: 0 }
+    playback[id] = { isPlaying: false, waiting: false, currentTime: 0, currentOffset: 0 }
   }
   return playback[id]
 }
@@ -673,10 +671,32 @@ function stopAll() {
   }
 }
 
-function toggleTrackPlay(id: string) {
+function ensureBuffer(track: ProcessedTrack): Promise<AudioBuffer | null> {
+  if (track.buffer) return Promise.resolve(track.buffer)
+  return getAudioBuffer(track.bytes).then((buffer) => {
+    if (loadedTracks.value.includes(track)) track.buffer = buffer
+    return buffer
+  }).catch((err) => {
+    console.error('Failed to decode audio:', err)
+    return null
+  })
+}
+
+async function toggleTrackPlay(id: string) {
   const state = ensurePlaybackState(id)
-  if (state.isPlaying) pauseTrack(id)
-  else playTrack(id)
+  if (state.isPlaying) {
+    pauseTrack(id)
+    return;
+  }
+  const track = findTrack(id)
+  if (track && !track.buffer) {
+    if (state.waiting) return;
+    state.waiting = true
+    await ensureBuffer(track)
+    state.waiting = false
+    if (!loadedTracks.value.includes(track)) return;
+  }
+  playTrack(id)
 }
 
 function seekTrack(id: string, timeInSeconds: number) {
@@ -793,6 +813,7 @@ function handlePointerDown(e: PointerEvent) {
   canvas.setPointerCapture(e.pointerId)
 
   pauseTrack(track.id)
+  ensureBuffer(track)
   hoverX.value = e.clientX - rect.left
   seekTrack(track.id, timeAt(e.clientX, rect))
   lastScrubTime = state.currentTime
@@ -939,14 +960,14 @@ onUnmounted(() => {
                     v-bind="tooltipProps"
                     class="accent"
                     style="pointer-events: auto;"
-                    :disabled="!track.buffer"
+                    :disabled="playback[track.id]?.waiting"
                     @click.stop="toggleTrackPlay(track.id)"
                   >
                     <Pause16Filled v-if="playback[track.id]?.isPlaying" />
                     <Play16Filled v-else />
                   </IconButton>
                 </template>
-                <h3>{{ !track.buffer ? 'Decoding' : playback[track.id]?.isPlaying ? 'Pause' : 'Play' }}</h3>
+                <h3>{{ playback[track.id]?.waiting ? 'Decoding' : playback[track.id]?.isPlaying ? 'Pause' : 'Play' }}</h3>
               </Tooltip>
 
               <span class="time-display">
