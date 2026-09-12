@@ -26,6 +26,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { onBeforeUnmount, onMounted, ref, Transition, watch } from 'vue'
 import type * as ThreeNS from 'three'
 import { useElementVisible } from '@/util/useElementVisible'
+import { createBudget } from '@/util/yieldToMain'
 
 const props = defineProps<{
   dr: DeltaResult
@@ -45,6 +46,7 @@ const FIXED_FIT_RATE = 10
 const FIXED_FIT_RUNS = 4
 const FIT_SETTLE_SECONDS = 2
 const FIT_GROWTH = 0.001
+const FIT_BUDGET = 8
 
 const containerRef = ref<HTMLDivElement>()
 const canvasRef = ref<HTMLCanvasElement>()
@@ -149,9 +151,11 @@ async function loadModelGroup() {
     const sampled = new THREE.Box3()
     const size = new THREE.Vector3()
     const extent = () => box.isEmpty() ? 0 : box.getSize(size).x + size.y + size.z
+    const breathe = createBudget(FIT_BUDGET)
     for (let run = 0; run < (prepared.fixed ? FIXED_FIT_RUNS : 1); run++) {
       let settled = 0
       for (let i = 0; i <= samples; i++) {
+        await breathe()
         animate(g, span * i / samples)
         g.updateMatrixWorld(true)
         const before = extent()
@@ -370,7 +374,11 @@ function syncToVisibility() {
   }
 }
 
-onMounted(async () => {
+let started = false
+
+async function startLoading() {
+  if (started) return;
+  started = true
   try {
     await loadModelGroup()
   } catch (err) {
@@ -381,9 +389,16 @@ onMounted(async () => {
     loading.value = false
   }
   syncToVisibility()
+}
+
+onMounted(() => {
+  if (isVisible.value) startLoading()
 })
 
-watch(isVisible, syncToVisibility)
+watch(isVisible, visible => {
+  if (visible) startLoading()
+  syncToVisibility()
+})
 
 onBeforeUnmount(() => {
   teardownScene()
