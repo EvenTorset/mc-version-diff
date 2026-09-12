@@ -129,13 +129,16 @@ defineExpose({ hide, itemSelected })
         ref="input"
         class="version-select-trigger"
         :class="{ open }"
-        :value="open ? filter : label"
-        :placeholder="open ? label ?? placeholder : placeholder"
+        :value="open || !$slots.label ? (open ? filter : label) : ''"
+        :placeholder="open ? label ?? placeholder : ($slots.label ? '' : placeholder)"
         @update:value="value => filter = value"
         @focus="show"
         @mousedown="onTriggerMousedown"
         @keydown.escape="hide"
       >
+        <template #prefix v-if="!open && $slots.label">
+          <slot name="label"></slot>
+        </template>
         <template #suffix>
           <NIcon :component="ChevronDown16Filled" class="chevron" />
         </template>

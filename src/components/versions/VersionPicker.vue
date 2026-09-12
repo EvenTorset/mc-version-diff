@@ -4,8 +4,9 @@ import type { ManifestVersion } from 'minecraft-asset-loader'
 import VersionBrowser, { VERSION_MODES, type VersionMode } from './VersionBrowser.vue'
 import VersionModeTabs from '@/components/VersionModeTabs.vue'
 import VersionSelect from '@/components/VersionSelect.vue'
+import VersionName from './VersionName.vue'
 import { findVersion } from '@/delta_providers/manifest'
-import { EDITION, type Edition } from './edition'
+import { EDITION, type Edition, versionLabel } from './edition'
 
 const props = defineProps<{
   edition: Edition
@@ -39,6 +40,8 @@ async function sync(id: string) {
 onMounted(() => sync(props.modelValue))
 watch(() => props.modelValue, sync)
 
+const label = computed(() => current.value ? versionLabel(props.edition, current.value) : props.modelValue)
+
 const select = ref<InstanceType<typeof VersionSelect> | null>(null)
 
 function onSelect(version: ManifestVersion) {
@@ -54,9 +57,12 @@ function onSelect(version: ManifestVersion) {
     title="Versions"
     v-model:open="open"
     v-model:filter="filter"
-    :label="modelValue || undefined"
+    :label="label || undefined"
     :placeholder="modelValue ? undefined : 'Choose a version'"
   >
+    <template #label v-if="current">
+      <VersionName :version="current" />
+    </template>
     <template #tabs>
       <VersionModeTabs v-model="mode" :options="VERSION_MODES" />
     </template>

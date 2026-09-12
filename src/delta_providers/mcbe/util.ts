@@ -1,6 +1,6 @@
 import type { ManifestVersion, VersionDetails } from 'minecraft-asset-loader'
 import type { MCBEManifestVersion, MCBEReleaseAsset, MCBEVersionDetails } from './edition'
-import { assets } from '../assets'
+import { assets } from '../loader'
 
 export function releaseAssets(details: VersionDetails | null): MCBEReleaseAsset[] {
   return (details as MCBEVersionDetails | null)?.assets ?? []

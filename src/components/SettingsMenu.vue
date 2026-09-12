@@ -5,7 +5,7 @@ import Spacer from '@/components/Spacer.vue'
 import Tooltip from '@/components/Tooltip.vue'
 import { Settings } from '@/settings'
 import { formatBytes } from '@/util/bytes'
-import { applyCacheSize, assets, type Edition } from '@/delta_providers/assets'
+import { applyCacheSize, assets, type Edition } from '@/delta_providers/loader'
 import { clearVerdictCache } from '@/comparison/verdictCache'
 import { NButton, NCard, NInputNumber, NPopconfirm, NSelect, NSpin, NSwitch, NTabPane, NTabs } from 'naive-ui'
 import { onMounted, reactive, ref, watch } from 'vue'
@@ -15,9 +15,10 @@ const byteUnitOptions = Object.keys(BYTE_UNITS).map(u => ({ label: u, value: u }
 
 type Unit = keyof typeof BYTE_UNITS
 
-const caches = reactive<Record<Edition, { title: string, key: 'cacheSizeMaxJava' | 'cacheSizeMaxBedrock', unit: Unit, total: { size: number, files: number } | null }>>({
+const caches = reactive<Record<Edition, { title: string, key: 'cacheSizeMaxJava' | 'cacheSizeMaxBedrock' | 'cacheSizeMaxAssets', unit: Unit, total: { size: number, files: number } | null }>>({
   java: { title: 'Java', key: 'cacheSizeMaxJava', unit: 'MB', total: null },
   bedrock: { title: 'Bedrock', key: 'cacheSizeMaxBedrock', unit: 'MB', total: null },
+  assets: { title: 'Java External', key: 'cacheSizeMaxAssets', unit: 'MB', total: null },
 })
 
 const editions = Object.keys(caches) as Edition[]
@@ -87,7 +88,7 @@ for (const edition of editions) {
       </Col>
     </NCard>
     <NCard title="Version Cache">
-      <p style="max-width: 500px;">The version cache keeps local copies of versions so that they don't need to be downloaded again next time you want to compare them. This speeds up future comparisons, but uses some amount of local system storage. Java and Bedrock versions are kept in separate caches with their own limits.</p>
+      <p style="max-width: 500px;">The version cache keeps local copies of versions so that they don't need to be downloaded again next time you want to compare them. This speeds up future comparisons, but uses some amount of local system storage. Each version type is kept in its own cache with its own limit.</p>
       <Col align="stretch" gap="16px">
         <div class="separator" />
         <NTabs v-model:value="cacheTab">
@@ -96,7 +97,7 @@ for (const edition of editions) {
               <template #trigger>
                 <NButton class="danger" size="small">Clear all</NButton>
               </template>
-              Clear both version caches and the saved comparison results?
+              Clear every version cache and the saved comparison results?
             </NPopconfirm>
           </template>
           <NTabPane v-for="edition in editions" :key="edition" :name="edition" :tab="caches[edition].title">

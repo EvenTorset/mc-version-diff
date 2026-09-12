@@ -4,7 +4,7 @@ import { DeltaTrackState } from '@/delta_providers/states'
 import { readZip, type RawBytes } from 'minecraft-asset-loader'
 import type { RehashPayloadItem, RehashWorkerMessage } from '@/util/rehash.worker'
 import RehashWorker from '@/util/rehash.worker?worker'
-import { compareJson, compareNbt, comparePng, compareStructure, compareVersionless, HashEquivalence, terminateCmpWorkers } from '@/comparison'
+import { compareJson, compareNbt, comparePng, compareStructure, compareVersionless, type FileHash, HashEquivalence, terminateCmpWorkers } from '@/comparison'
 import { loadVerdicts, saveVerdicts, verdictKey } from '@/comparison/verdictCache'
 import getFileExt from '@/util/getFileExt'
 import { ProgressHandler } from '@/util/progress'
@@ -30,7 +30,7 @@ import VersionPicker from '@/components/versions/VersionPicker.vue'
 export type VersionEntry = {
   path: string
   size: number
-  crc: number
+  crc: FileHash
   read(): Promise<Uint8Array>
   raw(): Promise<RawBytes>
 }
@@ -130,7 +130,8 @@ async function loadContent(
   const progressBar = createProgressBar(id)
   const progressBarId = progressDisplay.addItem(progressBar.render)
 
-  const entries = new Map((await list(progressBar)).map(file => [file.path, file]))
+  const listed = await list(progressBar)
+  const entries = new Map((edition.expand ? await edition.expand(listed) : listed).map(file => [file.path, file]))
 
   if (rehash) {
     progressBar.progHandler.setMessage('Calculating file hashes...')
@@ -163,14 +164,17 @@ export function loadVersion(edition: Edition, id: string, progressDisplay: Progr
     const version = await findVersion(edition.assets, id)
     if (!version) throw new Error(`Unknown version "${id}"`)
 
-    progressBar.progHandler.setMessage('Downloading...')
-    progressBar.progHandler.setUnit('byte')
-    await version.loadJar({
-      onProgress: (done, total) => progressBar.progHandler.update(total ? done / total : 0, done, total ?? 0),
-    })
+    if (!edition.lazy) {
+      progressBar.progHandler.setMessage('Downloading...')
+      progressBar.progHandler.setUnit('byte')
+      await version.loadJar({
+        onProgress: (done, total) => progressBar.progHandler.update(total ? done / total : 0, done, total ?? 0),
+      })
+    }
 
     progressBar.progHandler.setMessage('Reading...')
-    return await version.list() as VersionEntry[]
+    const files = await version.list()
+    return files.map(file => file.crc === undefined ? Object.assign(file, { crc: file.hash! }) : file) as VersionEntry[]
   })
 }
 
@@ -198,6 +202,24 @@ export function readUpload(edition: Edition, name: string, bytes: Uint8Array<Arr
     progressBar.progHandler.setMessage('Reading file...')
     return prepare(readZip(bytes))
   })
+}
+
+export async function expandZips(entries: VersionEntry[]): Promise<VersionEntry[]> {
+  const expanded = await Promise.all(entries.map(async entry => {
+    if (!entry.path.endsWith('.zip')) return [ entry ]
+    try {
+      return readZip(await entry.read() as Uint8Array<ArrayBuffer>).map(file => ({
+        path: `${entry.path}/${file.path}`,
+        size: file.size,
+        crc: file.crc,
+        read: () => file.read(),
+        raw: () => file.raw(),
+      }))
+    } catch {
+      return [ entry ]
+    }
+  }))
+  return expanded.flat()
 }
 
 const decoder = new TextDecoder()
@@ -347,7 +369,7 @@ export async function buildDelta(
   const matchedNewInB = new Set<string>()
 
   type RemovedFile = { index: number, path: string, ext: string }
-  const removedByHash = new Map<number, RemovedFile[]>()
+  const removedByHash = new Map<FileHash, RemovedFile[]>()
   for (const [ i, { path, entry } ] of missingFromA.entries()) {
     let list = removedByHash.get(entry.crc)
     if (!list) removedByHash.set(entry.crc, list = [])
@@ -420,8 +442,11 @@ export async function buildDelta(
       if (!entries) return Promise.reject(`[MCJE getEntry] Invalid version ID: ${versionId}`)
 
       const entry = entries.get(path)
-      if (!entry) return Promise.reject(`[MCJE getEntry] File not found: ${path}`)
-      return entry.read() as Promise<Uint8Array<ArrayBuffer>>
+      if (entry) return entry.read() as Promise<Uint8Array<ArrayBuffer>>
+
+      const found = await edition.fallback?.read(versionId, path)
+      if (found) return found
+      return Promise.reject(`[MCJE getEntry] File not found: ${path}`)
     },
     getCategory(track) {
       return getTrackCategory(provider, this, track)
@@ -432,7 +457,7 @@ export async function buildDelta(
     getAnimation(version, path) {
       return edition.animation ? edition.animation(this, version, path) : readMcmeta(this, version, path)
     },
-    listEntries(versionId, path) {
+    async listEntries(versionId, path) {
       const jar = versionId === a ? jarA : jarB
       const entries: Set<string> = new Set()
       for (const k of jar.entries.keys()) {
@@ -442,7 +467,8 @@ export async function buildDelta(
           entries.add(segmentLength > 0 ? tail.slice(0, segmentLength) : tail)
         }
       }
-      return Promise.resolve(Array.from(entries))
+      for (const name of await edition.fallback?.list(versionId, path) ?? []) entries.add(name)
+      return Array.from(entries)
     },
   } as DeltaResult
 

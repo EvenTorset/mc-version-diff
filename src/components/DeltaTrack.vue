@@ -9,6 +9,7 @@ import { inject, onMounted, ref, shallowRef, watch, type Ref } from 'vue'
 import AnimatedHeight from './AnimatedHeight.vue'
 import Content from '@/components/Content.vue'
 import { getViewer } from '@/viewers/registry.ts'
+import { scopeToSubpack } from '@/delta_providers/subpacks'
 import Dim from './Dim.vue'
 import type { Renderable } from '@/types.ts'
 import { DeltaTrackState } from '@/delta_providers/states.ts'
@@ -77,7 +78,7 @@ let renderPromise: Promise<Renderable> | undefined
 function renderView() {
   renderPromise ??= (async () => {
     try {
-      return (await viewer.value?.render(props.dr, props.track)) ?? defaultViewer
+      return (await viewer.value?.render(scopeToSubpack(props.dr, props.track), props.track)) ?? defaultViewer
     } catch (err) {
       renderPromise = undefined
       throw err

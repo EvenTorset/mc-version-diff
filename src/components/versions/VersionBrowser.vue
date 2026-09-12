@@ -10,13 +10,17 @@ export const VERSION_MODES: { value: VersionMode, label: string }[] = [
 
 <script setup lang="ts">
 import { VersionType, type ManifestVersion } from 'minecraft-asset-loader'
-import { NList, NListItem, NSkeleton } from 'naive-ui'
+import { NList, NListItem, NProgress, NSkeleton } from 'naive-ui'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useVirtualizer } from '@tanstack/vue-virtual'
 import VersionDisplay from './VersionDisplay.vue'
-import { useEdition } from './edition'
+import { useEdition, versionLabel } from './edition'
 import Col from '@/components/Col.vue'
 import Row from '@/components/Row.vue'
+import Spacer from '@/components/Spacer.vue'
+import Dim from '@/components/Dim.vue'
+import { manifestProgress } from '@/delta_providers/loader'
+import { getCSSVar } from '@/util/getCSSVar'
 
 const props = withDefaults(defineProps<{
   max?: number
@@ -38,6 +42,7 @@ const edition = useEdition()
 const ROW_HEIGHT = 60
 
 const loading = ref(true)
+const indexing = computed(() => manifestProgress(edition.assets))
 const allVersions = ref<ManifestVersion[]>([])
 const releasesOnly = ref<ManifestVersion[]>([])
 const mainVersions = ref<ManifestVersion[]>([])
@@ -57,8 +62,9 @@ function matching(list: ManifestVersion[], query: string) {
   const starts: ManifestVersion[] = []
   const contains: ManifestVersion[] = []
   for (const version of list) {
-    if (version.id.startsWith(query)) starts.push(version)
-    else if (version.id.includes(query)) contains.push(version)
+    const label = versionLabel(edition, version).toLowerCase()
+    if (version.id.startsWith(query) || label.startsWith(query)) starts.push(version)
+    else if (version.id.includes(query) || label.includes(query)) contains.push(version)
   }
   return starts.concat(contains)
 }
@@ -158,6 +164,20 @@ onBeforeUnmount(() => {
 <template>
   <Col align="stretch" class="browser">
     <div v-if="loading" class="list-container">
+      <div v-if="indexing !== null" class="indexing">
+        <Row>
+          Indexing versions
+          <Spacer />
+          <Dim>{{ Math.round(indexing * 100) }}%</Dim>
+        </Row>
+        <NProgress
+          type="line"
+          :percentage="indexing * 100"
+          :color="getCSSVar('--color-accent')"
+          :show-indicator="false"
+          processing
+        />
+      </div>
       <NList>
         <NListItem v-for="i in 12" :key="i" :style="{ height: `${ROW_HEIGHT}px` }">
           <Row gap="8px">
@@ -285,6 +305,14 @@ onBeforeUnmount(() => {
   overflow-y: auto;
   border-bottom-left-radius: 6px;
   border-bottom-right-radius: 6px;
+}
+
+.indexing {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  font-weight: 500;
 }
 
 </style>
