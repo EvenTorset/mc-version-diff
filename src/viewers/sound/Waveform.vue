@@ -44,6 +44,22 @@ interface TrackEnvelope {
   bottomPoints: number[]
 }
 
+interface Scrub {
+  id: string
+  pointerId: number
+  wasPlaying: boolean
+}
+
+interface ScrubVoice {
+  source: AudioBufferSourceNode
+  gain: GainNode
+}
+
+const SCRUB_GRAIN = 0.12
+const SCRUB_FADE = 0.012
+const SCRUB_INTERVAL = 0.05
+const SCRUB_MIN_STEP = 0.001
+
 const props = withDefaults(
   defineProps<{
     sources: TrackSource[]
@@ -63,6 +79,7 @@ const isVisible = useElementVisible(containerRef)
 const loadedTracks = ref<ProcessedTrack[]>([])
 const isLoading = ref(false)
 const hoverX = ref<number | null>(null)
+const scrubbing = ref<Scrub | null>(null)
 const playback = reactive<Record<string, PlaybackState>>({})
 
 const audioBufferCache = new WeakMap<Uint8Array, Promise<AudioBuffer>>()
@@ -70,6 +87,9 @@ const peaksCache = new WeakMap<AudioBuffer, Map<number, Promise<Float32Array>>>(
 
 let sharedAudioCtx: AudioContext | null = null
 const transientByTrack = new Map<string, Transient>()
+const scrubVoices = new Set<ScrubVoice>()
+let lastGrainAt = 0
+let lastScrubTime = 0
 let animFrameId: number | null = null
 let resizeObserver: ResizeObserver | null = null
 
@@ -588,6 +608,8 @@ function stopTrack(id: string) {
 }
 
 function stopAll() {
+  scrubbing.value = null
+  stopScrubVoices()
   for (const id of Object.keys(playback)) {
     stopTrack(id)
   }
@@ -647,32 +669,109 @@ function ensureAnimationLoop() {
   animFrameId = requestAnimationFrame(step)
 }
 
-function handleCanvasClick(e: MouseEvent) {
+function playScrubGrain(track: ProcessedTrack, time: number) {
+  const ctx = getAudioContext()
+  if (ctx.state === 'suspended') ctx.resume()
+  if (ctx.currentTime - lastGrainAt < SCRUB_INTERVAL) return;
+
+  const offset = Math.max(0, Math.min(time, track.buffer.duration))
+  const duration = Math.min(SCRUB_GRAIN, track.buffer.duration - offset)
+  if (duration <= 0) return;
+
+  lastGrainAt = ctx.currentTime
+  const fade = Math.min(SCRUB_FADE, duration / 3)
+  const peak = volumeToGain(Settings.volume)
+  const start = ctx.currentTime
+
+  const source = ctx.createBufferSource()
+  source.buffer = track.buffer
+  const gain = ctx.createGain()
+  gain.gain.setValueAtTime(0, start)
+  gain.gain.linearRampToValueAtTime(peak, start + fade)
+  gain.gain.setValueAtTime(peak, start + duration - fade)
+  gain.gain.linearRampToValueAtTime(0, start + duration)
+  gain.connect(ctx.destination)
+  source.connect(gain)
+
+  const voice = { source, gain }
+  scrubVoices.add(voice)
+  source.onended = () => {
+    source.disconnect()
+    gain.disconnect()
+    scrubVoices.delete(voice)
+  }
+  source.start(start, offset, duration)
+}
+
+function stopScrubVoices() {
+  if (!scrubVoices.size) return;
+  const ctx = getAudioContext()
+  const now = ctx.currentTime
+  for (const { source, gain } of scrubVoices) {
+    gain.gain.cancelScheduledValues(now)
+    gain.gain.setValueAtTime(gain.gain.value, now)
+    gain.gain.linearRampToValueAtTime(0, now + SCRUB_FADE)
+    source.stop(now + SCRUB_FADE)
+  }
+}
+
+function timeAt(clientX: number, rect: DOMRect): number {
+  return ((clientX - rect.left) / rect.width) * maxDuration.value
+}
+
+function handlePointerDown(e: PointerEvent) {
   const canvas = overlayCanvasRef.value
-  if (!canvas) return;
+  if (!canvas || e.button !== 0) return;
 
   const rect = canvas.getBoundingClientRect()
-  const x = e.clientX - rect.left
-  const y = e.clientY - rect.top
-
-  const laneIndex = Math.floor(y / props.laneHeight)
+  const laneIndex = Math.floor((e.clientY - rect.top) / props.laneHeight)
   const track = loadedTracks.value[laneIndex]
   if (!track) return;
 
-  const clickedTime = (x / rect.width) * maxDuration.value
-  seekTrack(track.id, clickedTime)
+  e.preventDefault()
+  const state = ensurePlaybackState(track.id)
+  scrubbing.value = { id: track.id, pointerId: e.pointerId, wasPlaying: state.isPlaying }
+  canvas.setPointerCapture(e.pointerId)
+
+  pauseTrack(track.id)
+  hoverX.value = e.clientX - rect.left
+  seekTrack(track.id, timeAt(e.clientX, rect))
+  lastScrubTime = state.currentTime
 }
 
-function handleCanvasMouseMove(e: MouseEvent) {
+function handlePointerMove(e: PointerEvent) {
   const canvas = overlayCanvasRef.value
   if (!canvas) return;
 
   const rect = canvas.getBoundingClientRect()
   hoverX.value = e.clientX - rect.left
+
+  const active = scrubbing.value
+  const track = active ? findTrack(active.id) : null
+  if (active && track && active.pointerId === e.pointerId) {
+    seekTrack(active.id, timeAt(e.clientX, rect))
+    const time = playback[active.id].currentTime
+    if (Math.abs(time - lastScrubTime) > SCRUB_MIN_STEP) {
+      lastScrubTime = time
+      playScrubGrain(track, time)
+    }
+  }
+
   drawOverlay()
 }
 
-function handleCanvasMouseLeave() {
+function handlePointerUp(e: PointerEvent) {
+  const active = scrubbing.value
+  if (!active || active.pointerId !== e.pointerId) return;
+
+  scrubbing.value = null
+  overlayCanvasRef.value?.releasePointerCapture(e.pointerId)
+  stopScrubVoices()
+  if (active.wasPlaying) playTrack(active.id)
+}
+
+function handlePointerLeave() {
+  if (scrubbing.value) return;
   hoverX.value = null
   drawOverlay()
 }
@@ -754,9 +853,12 @@ onUnmounted(() => {
       <canvas
         ref="overlayCanvasRef"
         class="overlay-canvas"
-        @click="handleCanvasClick"
-        @mousemove="handleCanvasMouseMove"
-        @mouseleave="handleCanvasMouseLeave"
+        :class="{ scrubbing }"
+        @pointerdown="handlePointerDown"
+        @pointermove="handlePointerMove"
+        @pointerup="handlePointerUp"
+        @pointercancel="handlePointerUp"
+        @pointerleave="handlePointerLeave"
       ></canvas>
 
       <div class="lanes-overlay">
@@ -843,6 +945,12 @@ onUnmounted(() => {
 
 .overlay-canvas {
   cursor: pointer;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.overlay-canvas.scrubbing {
+  cursor: grabbing;
 }
 
 .lanes-overlay {
