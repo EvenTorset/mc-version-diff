@@ -822,32 +822,32 @@ body {
   image-rendering: pixelated;
 }
 
-.model-rows {
+.viewer-diff-rows {
   display: flex;
   flex-direction: column;
 }
 
-.model-section {
+.viewer-diff-section {
   padding-top: 8px;
 
   h3 {
     margin-left: 12px;
   }
 
-  &.added .model-row-label {
+  &.added .viewer-diff-row-label {
     color: var(--color-success);
   }
 
-  &.edited .model-row-label {
+  &.edited .viewer-diff-row-label {
     color: var(--color-accent-suppl);
   }
 
-  &.removed .model-row-label {
+  &.removed .viewer-diff-row-label {
     color: var(--color-danger);
   }
 }
 
-.model-row-label {
+.viewer-diff-row-label {
   font-size: 12px;
   font-weight: 700;
   padding: 6px 12px 2px;

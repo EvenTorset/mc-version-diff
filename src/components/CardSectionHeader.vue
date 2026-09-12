@@ -13,14 +13,14 @@ defineProps<{
 <style lang="scss" scoped>
 
 .section-header {
-  margin: 0 -4px -8px;
+  margin: -4px -4px -8px;
   padding: 4px 0;
   font-size: 12px;
   font-weight: 600;
   line-height: 22px;
 
-  &:not(:first-child) {
-    margin-top: -4px;
+  &:first-child {
+    margin-top: 0;
   }
 }
 

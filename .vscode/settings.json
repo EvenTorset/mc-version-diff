@@ -1,0 +1,16 @@
+{
+  "VsCodeTaskButtons.tasks": [
+    {
+      "label": "$(debug-alt) Dev",
+      "task": "task-button dev"
+    },
+    {
+      "label": "$(play) Build Site",
+      "task": "task-button build"
+    },
+    {
+      "label": "$(build) Build WASM",
+      "task": "task-button build:wasm"
+    }
+  ]
+}

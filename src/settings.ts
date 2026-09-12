@@ -14,6 +14,7 @@ export type SettingsType = {
   favoriteCategory: Record<string, string>
   chosenExecType: 'command' | 'script'
   chosenShell: Shell
+  volume: number
 }
 
 export const Settings = reactive<SettingsType>({
@@ -27,6 +28,7 @@ export const Settings = reactive<SettingsType>({
   favoriteCategory: {},
   chosenExecType: 'script',
   chosenShell: 'cmd',
+  volume: 1,
 })
 
 export function loadSettings() {
@@ -41,4 +43,5 @@ export function loadSettings() {
   Settings.favoriteCategory = so?.favoriteCategory ?? Settings.favoriteCategory
   Settings.chosenExecType = so?.chosenExecType ?? Settings.chosenExecType
   Settings.chosenShell = so?.chosenShell ?? Settings.chosenShell
+  Settings.volume = Number(so?.volume ?? Settings.volume)
 }

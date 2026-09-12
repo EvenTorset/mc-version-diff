@@ -36,8 +36,10 @@ export type DeltaProviderCategory = {
   sort: number
   /** If true, or a function returning true for the comparison, the tracks in this category will automatically expand */
   expand?: boolean | ((dr: DeltaResult, tracks: DeltaTrack[]) => boolean)
-  /** If true, enables the image display settings panel while the category is selected */
+  /** If true, enables the image display settings section while the category is selected */
   isImages?: boolean
+  /** If true, enables the sound settings section while the category is selected */
+  isSounds?: boolean
   /** Used to check if a track belongs to this category */
   test(dr: DeltaResult, track: DeltaTrack): boolean
 }

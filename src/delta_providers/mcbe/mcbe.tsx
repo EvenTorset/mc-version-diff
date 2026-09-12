@@ -60,6 +60,7 @@ registerDeltaProvider('mcbe', editionProvider(bedrockEdition, {
     {
       name: 'Sounds',
       sort: 3,
+      isSounds: true,
       test(_dr, track) {
         return /^resource_pack\/sounds(?:\.json$|\/)/.test(track.id)
       }

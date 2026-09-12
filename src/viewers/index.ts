@@ -8,6 +8,7 @@ export type Viewer = {
   render(dr: DeltaResult, track: DeltaTrack): Promise<Renderable> | Renderable
 }
 
+await import('./sound')
 await import('./deprecated_lang')
 await import('./lang')
 await import('./mcje/structure')

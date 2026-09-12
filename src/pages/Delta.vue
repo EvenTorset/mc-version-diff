@@ -5,13 +5,13 @@ import VersionDiffLogo from '@/components/VersionDiffLogo.vue'
 import type { DeltaProvider, DeltaProviderCategory, DeltaResult, DeltaTrack } from '@/delta_providers'
 import { getDeltaProvider, listDeltaProviders } from '@/delta_providers/registry'
 import { getTrackCategory } from '@/delta_providers/category'
-import { NButton, NCard, NCheckbox, NIcon, NInput, NRadio, NRadioGroup, NSelect, NSpin, type InputInst } from 'naive-ui'
+import { NButton, NCard, NCheckbox, NIcon, NInput, NRadio, NRadioGroup, NSelect, NSlider, NSpin, type InputInst } from 'naive-ui'
 import { computed, nextTick, onBeforeUnmount, onMounted, provide, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Row from '@/components/Row.vue'
 import TreeList from '@/components/TreeList.vue'
 import { createProgressList } from '@/components/progressList'
-import { ArrowSortDownLines20Regular, Eraser20Filled, TextPeriodAsterisk20Filled } from '@vicons/fluent'
+import { ArrowSortDownLines20Regular, Eraser20Filled, Speaker220Filled, TextPeriodAsterisk20Filled } from '@vicons/fluent'
 import '@/viewers'
 import { prefetchTextViews } from '@/components/lazyText'
 import { prefetchRenderers } from '@/components/lazyRenderers'
@@ -208,8 +208,10 @@ function onCategoryTransitionEnd() {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-const isImageCategory = computed(() =>
-  !!provCategories.value.find(c => c.name === selectedCategory.value)?.isImages)
+const selectedCategoryInfo = computed(() =>
+  provCategories.value.find(c => c.name === selectedCategory.value))
+const isImageCategory = computed(() => !!selectedCategoryInfo.value?.isImages)
+const isSoundCategory = computed(() => !!selectedCategoryInfo.value?.isSounds)
 
 const animationCategories = ref(new Set<string>())
 let animationScan = 0
@@ -574,7 +576,7 @@ provide('autoToggle', autoToggle)
                   </RadioGroup>
                 </Row>
                 <Transition name="pass-up-fade">
-                  <div v-if="imageDisplayOptions.length > 0">
+                  <div v-if="imageDisplayOptions.length > 0" class="optional-section">
                     <TransitionList :items="imageDisplayOptions" :style="{
                       display: 'flex',
                       flexFlow: 'column',
@@ -615,6 +617,21 @@ provide('autoToggle', autoToggle)
                         />
                       </template>
                     </TransitionList>
+                  </div>
+                </Transition>
+                <Transition name="pass-up-fade">
+                  <div v-if="isSoundCategory" class="optional-section">
+                    <CardSectionHeader text="Volume" />
+                    <Row gap="8px" style="margin-top: 8px;">
+                      <NIcon :component="Speaker220Filled" :size="20" />
+                      <NSlider
+                        v-model:value="Settings.volume"
+                        :min="0"
+                        :max="1"
+                        :step="0.01"
+                        :tooltip="false"
+                      />
+                    </Row>
                   </div>
                 </Transition>
               </Col>
@@ -788,6 +805,14 @@ provide('autoToggle', autoToggle)
 
   .n-card>:deep(.n-card-content) {
     padding: 0 16px 20px;
+  }
+
+  .optional-section {
+    display: contents;
+
+    &>:first-child {
+      margin-top: -4px;
+    }
   }
 }
 

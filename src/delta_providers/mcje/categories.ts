@@ -59,6 +59,7 @@ export const javaCategories: DeltaProviderCategory[] = [
   {
     name: 'Sounds',
     sort: 7,
+    isSounds: true,
     test(_dr, track) {
       return /\.(?:ogg|mus)$/.test(track.id)
     }

@@ -94,24 +94,24 @@ export function renderModelTrack(dr: DeltaResult, track: DeltaTrack, options: Mo
     if (!rows.length) return () => null
     if (rows.length === 1) return rows[0].render
     if (track.state !== DeltaTrackState.Edited) {
-      return () => <div class='model-rows'>
+      return () => <div class='viewer-diff-rows'>
         {rows.map(({ id, name, render }) => <div key={id}>
-          <div class='model-row-label'>{name}</div>
+          <div class='viewer-diff-row-label'>{name}</div>
           {render()}
         </div>)}
       </div>
     }
     unchanged.value = rows.filter(row => !row.state).length
-    return () => <div class='model-rows'>
+    return () => <div class='viewer-diff-rows'>
       {[
         { title: `New ${noun}`, state: 'added' },
         { title: `Edited ${noun}`, state: 'edited' },
         { title: `Removed ${noun}`, state: 'removed' },
         ...showUnchanged.value ? [ { title: `Unchanged ${noun}`, state: '' } ] : [],
-      ].map(section => ({ ...section, rows: rows.filter(row => row.state === section.state) })).filter(section => section.rows.length).map(section => <div key={section.state} class={`model-section ${section.state}`}>
+      ].map(section => ({ ...section, rows: rows.filter(row => row.state === section.state) })).filter(section => section.rows.length).map(section => <div key={section.state} class={`viewer-diff-section ${section.state}`}>
         <h3>{section.title}</h3>
         {section.rows.map(({ id, name, render }) => <div key={id}>
-          <div class='model-row-label'>{name}</div>
+          <div class='viewer-diff-row-label'>{name}</div>
           {render()}
         </div>)}
       </div>)}
