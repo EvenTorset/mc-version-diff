@@ -660,7 +660,7 @@ function drawOverlay() {
   if (maxDur > 0) {
     loadedTracks.value.forEach((track, index) => {
       const state = playback[track.id]
-      if (!state) return;
+      if (!state || state.currentTime <= 0) return;
 
       const laneY = index * props.laneHeight
       const x = (state.currentTime / maxDur) * width
