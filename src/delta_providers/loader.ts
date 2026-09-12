@@ -3,7 +3,7 @@ import { Settings } from '@/settings'
 import { clearDirectory } from '@/util/opfs'
 import { reactive } from 'vue'
 
-export const CORS = 'https://cors.dokucraft.co.uk:2096/'
+export const CORS = 'https://cors.dokucraft.co.uk/'
 
 const PROXIED = ['https://github.com/', 'https://resources.download.minecraft.net/']
 
