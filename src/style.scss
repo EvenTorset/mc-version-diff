@@ -861,6 +861,16 @@ body {
   }
 }
 
+.viewer-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 12px;
+  text-align: center;
+  color: var(--color-danger);
+}
+
 .ui-preview-empty {
   display: flex;
   align-items: center;
