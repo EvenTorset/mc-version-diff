@@ -18,28 +18,24 @@ const agreed = ref(false)
         <VersionDiffLogo />
       </Row>
 
-      <Col class="about" gap="12px">
-        <p>
-          Compare any two versions of Minecraft, side by side. Every texture, model, sound, structure,
-          language file and recipe that changed between them, each one previewable in place.
-        </p>
-        <p>
-          Works on Java Edition, Bedrock Edition, the assets Java downloads outside the game jar, and
-          resource packs you upload yourself.
-        </p>
-      </Col>
+      <p class="about">
+        Compare any two versions of Minecraft side by side. Instantly preview changes across textures, models, sounds, recipes, structures, and more.
+        <br>
+        <br>
+        Works on Java Edition, Bedrock Edition, and resource or data packs you upload yourself.
+      </p>
 
       <Col align="stretch" gap="16px">
         <NCard title="Minecraft EULA">
           <Col gap="14px" align="stretch">
             <p>
               This site shows assets from Minecraft. To continue, you need to agree to the
-              <a :href="EULA_URL" target="_blank" rel="noopener">Minecraft End User License Agreement</a>.
+              <a :href="EULA_URL" target="_blank" rel="noopener">Minecraft End User License Agreement (EULA)</a>.
             </p>
 
-            <Row justify="space-between" align="flex-end" gap="16px">
+            <Row justify="space-between" gap="16px">
               <NCheckbox v-model:checked="agreed" class="terms">
-                I have read the End User License Agreement and I agree to its terms
+                I have read the EULA and I agree to its terms
               </NCheckbox>
               <NButton
                 class="accent"
@@ -86,7 +82,8 @@ p {
 }
 
 .about {
-  padding: 0 4px;
+  text-wrap: balance;
+  text-align: center;
 }
 
 .about p {
@@ -101,6 +98,10 @@ p {
 a {
   color: var(--color-accent);
   text-decoration: underline;
+
+  &:hover {
+    color: var(--color-accent-suppl);
+  }
 }
 
 </style>
