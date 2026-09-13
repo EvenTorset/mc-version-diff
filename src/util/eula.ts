@@ -1,0 +1,2 @@
+export const DISCLAIMER = 'NOT AN OFFICIAL MINECRAFT WEBSITE. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT'
+export const EULA_URL = 'https://www.minecraft.net/en-us/eula'

@@ -3,6 +3,7 @@ import Col from '@/components/Col.vue'
 import Content from '@/components/Content.vue'
 import GitHubIcon from '@/components/GitHubIcon.vue'
 import Row from '@/components/Row.vue'
+import SiteDisclaimer from '@/components/SiteDisclaimer.vue'
 import SettingsMenu from '@/components/SettingsMenu.vue'
 import Tooltip from '@/components/Tooltip.vue'
 import VersionDiffLogo from '@/components/VersionDiffLogo.vue'
@@ -29,80 +30,102 @@ watch([tab, settingsOpen], () => {
 </script>
 
 <template>
-  <Col justify="safe center" style="min-height: 100vh; box-sizing: border-box; padding: 60px 20px" gap="12px">
-    <Row justify="center" gap="20px">
-      <VersionDiffLogo />
-    </Row>
-    <Col align="stretch" class="tabs-container">
-      <NTabs
-        :default-value="dps[0].id"
-        style="flex: 0;"
-        class="provider-tabs"
-        :class="{ hidden: settingsOpen }"
-        v-model:value="tab"
-      >
-        <template #suffix>
-          <Row>
-            <Tooltip>
-              <template #trigger="{ props }">
-                <a
-                  v-bind="props"
-                  href="https://github.com/EvenTorset/mc-version-diff"
-                  target="_blank"
-                >
-                  <button
-                    type="button"
-                    class="github-link"
-                    aria-label="GitHub Repository"
+  <Col class="home-page" align="stretch" gap="12px">
+    <Col justify="safe center" class="home-main" gap="12px">
+      <Row justify="center" gap="20px">
+        <VersionDiffLogo />
+      </Row>
+      <Col align="stretch" class="tabs-container">
+        <NTabs
+          :default-value="dps[0].id"
+          style="flex: 0;"
+          class="provider-tabs"
+          :class="{ hidden: settingsOpen }"
+          v-model:value="tab"
+        >
+          <template #suffix>
+            <Row>
+              <Tooltip>
+                <template #trigger="{ props }">
+                  <a
+                    v-bind="props"
+                    href="https://github.com/EvenTorset/mc-version-diff"
+                    target="_blank"
                   >
-                    <NIcon :size="24" :component="GitHubIcon" />
+                    <button
+                      type="button"
+                      class="github-link"
+                      aria-label="GitHub Repository"
+                    >
+                      <NIcon :size="24" :component="GitHubIcon" />
+                    </button>
+                  </a>
+                </template>
+                GitHub Repository
+              </Tooltip>
+              <Tooltip>
+                <template #trigger="{ props }">
+                  <button
+                    v-bind="props"
+                    type="button"
+                    class="settings-toggle"
+                    :class="{ open: settingsOpen }"
+                    :aria-label="settingsOpen ? 'Close settings' : 'Open settings'"
+                    :aria-expanded="settingsOpen"
+                    @click="settingsOpen = !settingsOpen"
+                  >
+                    <NIcon :size="24" :component="Settings24Filled" class="settings-icon gear" />
+                    <NIcon :size="24" :component="Dismiss24Filled" class="settings-icon cross" />
                   </button>
-                </a>
+                </template>
+                {{ settingsOpen ? 'Close settings' : 'Settings' }}
+              </Tooltip>
+            </Row>
+          </template>
+          <NTab v-for="dp in dps" :name="dp.id" :tab="dp.provider.name" />
+        </NTabs>
+        <Suspense>
+          <Transition name="slide-fade" mode="out-in">
+            <div :key="settingsOpen ? 'settings' : tab" style="height: 520px;">
+              <SettingsMenu v-if="settingsOpen" />
+              <template v-else v-for="dp in dps" :key="dp.id">
+                <Content v-if="tab === dp.id" :content="asyncRenderable(dp.provider.selector())" />
               </template>
-              GitHub Repository
-            </Tooltip>
-            <Tooltip>
-              <template #trigger="{ props }">
-                <button
-                  v-bind="props"
-                  type="button"
-                  class="settings-toggle"
-                  :class="{ open: settingsOpen }"
-                  :aria-label="settingsOpen ? 'Close settings' : 'Open settings'"
-                  :aria-expanded="settingsOpen"
-                  @click="settingsOpen = !settingsOpen"
-                >
-                  <NIcon :size="24" :component="Settings24Filled" class="settings-icon gear" />
-                  <NIcon :size="24" :component="Dismiss24Filled" class="settings-icon cross" />
-                </button>
-              </template>
-              {{ settingsOpen ? 'Close settings' : 'Settings' }}
-            </Tooltip>
-          </Row>
-        </template>
-        <NTab v-for="dp in dps" :name="dp.id" :tab="dp.provider.name" />
-      </NTabs>
-      <Suspense>
-        <Transition name="slide-fade" mode="out-in">
-          <div :key="settingsOpen ? 'settings' : tab" style="height: 520px;">
-            <SettingsMenu v-if="settingsOpen" />
-            <template v-else v-for="dp in dps" :key="dp.id">
-              <Content v-if="tab === dp.id" :content="asyncRenderable(dp.provider.selector())" />
-            </template>
-          </div>
-        </Transition>
-        <template #fallback>
-          <Row align="stretch" style="height: 520px;">
-            <NSkeleton class="panel-placeholder" style="width: 280px; min-width: 280px;" />
-            <NSkeleton class="panel-placeholder" style="flex: 1;" />
-          </Row>
-        </template>
-      </Suspense>
+            </div>
+          </Transition>
+          <template #fallback>
+            <Row align="stretch" style="height: 520px;">
+              <NSkeleton class="panel-placeholder" style="width: 280px; min-width: 280px;" />
+              <NSkeleton class="panel-placeholder" style="flex: 1;" />
+            </Row>
+          </template>
+        </Suspense>
+      </Col>
     </Col>
+
+    <footer class="home-footer">
+      <SiteDisclaimer />
+    </footer>
   </Col>
 </template>
 
 <style lang="scss">
+
+.home-page {
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.home-main {
+  flex: 1;
+  padding: 60px 20px;
+  box-sizing: border-box;
+}
+
+.home-footer {
+  padding: 0 20px 20px;
+}
+
 
 .tabs-container {
   min-width: min(960px, 100vw - 40px);

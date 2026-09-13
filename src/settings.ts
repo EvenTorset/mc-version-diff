@@ -4,6 +4,7 @@ import type { Shell } from './util/moveScriptGen'
 export const SETTINGS_STORAGE_KEY = 'mc-version-diff-settings'
 
 export type SettingsType = {
+  eulaAccepted: boolean
   lightMode: boolean
   pixelFont: boolean
   formatJSON: boolean
@@ -18,6 +19,7 @@ export type SettingsType = {
 }
 
 export const Settings = reactive<SettingsType>({
+  eulaAccepted: import.meta.env.DEV,
   lightMode: false,
   pixelFont: false,
   formatJSON: false,
@@ -33,6 +35,7 @@ export const Settings = reactive<SettingsType>({
 
 export function loadSettings() {
   const so = JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')
+  Settings.eulaAccepted = !!(so?.eulaAccepted ?? Settings.eulaAccepted)
   Settings.lightMode = !!(so?.lightMode ?? Settings.lightMode)
   Settings.pixelFont = !!(so?.pixelFont ?? Settings.pixelFont)
   Settings.formatJSON = !!(so?.formatJSON ?? Settings.formatJSON)
