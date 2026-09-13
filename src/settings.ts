@@ -3,22 +3,7 @@ import type { Shell } from './util/moveScriptGen'
 
 export const SETTINGS_STORAGE_KEY = 'mc-version-diff-settings'
 
-export type SettingsType = {
-  eulaAccepted: boolean
-  lightMode: boolean
-  pixelFont: boolean
-  formatJSON: boolean
-  cacheSizeMaxJava: number
-  cacheSizeMaxBedrock: number
-  cacheSizeMaxAssets: number
-  enableCopyStatusButton: boolean
-  favoriteCategory: Record<string, string>
-  chosenExecType: 'command' | 'script'
-  chosenShell: Shell
-  volume: number
-}
-
-export const Settings = reactive<SettingsType>({
+const DEFAULT_SETTINGS = {
   eulaAccepted: import.meta.env.DEV,
   lightMode: false,
   pixelFont: false,
@@ -27,24 +12,28 @@ export const Settings = reactive<SettingsType>({
   cacheSizeMaxBedrock: 419430400,
   cacheSizeMaxAssets: 419430400,
   enableCopyStatusButton: false,
-  favoriteCategory: {},
-  chosenExecType: 'script',
-  chosenShell: 'cmd',
+  favoriteCategory: {} as Record<string, string>,
+  chosenExecType: 'script' as 'command' | 'script',
+  chosenShell: 'cmd' as Shell,
   volume: 1,
-})
+}
+
+export type SettingsType = typeof DEFAULT_SETTINGS
+export const Settings = reactive<SettingsType>({ ...DEFAULT_SETTINGS })
 
 export function loadSettings() {
   const so = JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')
-  Settings.eulaAccepted = !!(so?.eulaAccepted ?? Settings.eulaAccepted)
-  Settings.lightMode = !!(so?.lightMode ?? Settings.lightMode)
-  Settings.pixelFont = !!(so?.pixelFont ?? Settings.pixelFont)
-  Settings.formatJSON = !!(so?.formatJSON ?? Settings.formatJSON)
-  Settings.cacheSizeMaxJava = Number(so?.cacheSizeMaxJava ?? Settings.cacheSizeMaxJava)
-  Settings.cacheSizeMaxBedrock = Number(so?.cacheSizeMaxBedrock ?? Settings.cacheSizeMaxBedrock)
-  Settings.cacheSizeMaxAssets = Number(so?.cacheSizeMaxAssets ?? Settings.cacheSizeMaxAssets)
-  Settings.enableCopyStatusButton = !!(so?.enableCopyStatusButton ?? Settings.enableCopyStatusButton)
-  Settings.favoriteCategory = so?.favoriteCategory ?? Settings.favoriteCategory
-  Settings.chosenExecType = so?.chosenExecType ?? Settings.chosenExecType
-  Settings.chosenShell = so?.chosenShell ?? Settings.chosenShell
-  Settings.volume = Number(so?.volume ?? Settings.volume)
+
+  for (const key of Object.keys(DEFAULT_SETTINGS) as (keyof SettingsType)[]) {
+    const defaultValue = DEFAULT_SETTINGS[key]
+    const rawValue = so[key] ?? defaultValue
+
+    if (typeof defaultValue === 'boolean') {
+      ;(Settings as any)[key] = Boolean(rawValue)
+    } else if (typeof defaultValue === 'number') {
+      ;(Settings as any)[key] = Number(rawValue)
+    } else {
+      ;(Settings as any)[key] = rawValue
+    }
+  }
 }
