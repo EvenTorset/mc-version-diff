@@ -21,8 +21,17 @@ const DEFAULT_SETTINGS = {
 export type SettingsType = typeof DEFAULT_SETTINGS
 export const Settings = reactive<SettingsType>({ ...DEFAULT_SETTINGS })
 
+function stored(): Record<string, unknown> {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
 export function loadSettings() {
-  const so = JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')
+  const so = stored()
 
   for (const key of Object.keys(DEFAULT_SETTINGS) as (keyof SettingsType)[]) {
     const defaultValue = DEFAULT_SETTINGS[key]
@@ -31,7 +40,10 @@ export function loadSettings() {
     if (typeof defaultValue === 'boolean') {
       ;(Settings as any)[key] = Boolean(rawValue)
     } else if (typeof defaultValue === 'number') {
-      ;(Settings as any)[key] = Number(rawValue)
+      const value = Number(rawValue)
+      ;(Settings as any)[key] = Number.isFinite(value) ? value : defaultValue
+    } else if (typeof defaultValue === 'object') {
+      ;(Settings as any)[key] = rawValue && typeof rawValue === 'object' ? rawValue : defaultValue
     } else {
       ;(Settings as any)[key] = rawValue
     }
