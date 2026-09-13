@@ -19,6 +19,7 @@ import { NProgress } from 'naive-ui'
 import type { Renderable } from '@/types'
 import { naturalCompare } from '@/util/sort'
 import { parseTag, TAG_PATH, tagsEquivalent } from '@/util/tag'
+import { sameOggAudio, vorbisSupported } from '@/viewers/sound/webcodecs'
 import type { ProgressList } from '@/components/progressList.tsx'
 import { findVersion } from './manifest'
 import { readMcmeta } from '@/util/animation'
@@ -337,6 +338,38 @@ export async function buildDelta(
         })
       )
       saveVerdicts(a, b, verdicts)
+    }
+
+    const reencoded = candidates.filter(candidate =>
+      candidate.kind === 'ogg' && !hashEquivalence.areEquivalent(candidate.entryA.crc, candidate.entryB.crc)
+    )
+
+    if (reencoded.length && await vorbisSupported(await reencoded[0].entryA.read() as Uint8Array<ArrayBuffer>)) {
+      const audioMisses = reencoded.filter(candidate => {
+        const cached = verdicts.get(verdictKey('ogg-audio', candidate.entryA.crc, candidate.entryB.crc))
+        if (cached) hashEquivalence.markEquivalent(candidate.entryA.crc, candidate.entryB.crc)
+        return cached === undefined
+      })
+
+      if (audioMisses.length) {
+        progressBar.progHandler.setMessage('Comparing audio...')
+        let decoded = 0
+        progressBar.progHandler.update(0, 0, audioMisses.length)
+
+        await Promise.all(
+          audioMisses.map(async candidate => {
+            const [ bytesA, bytesB ] = await Promise.all([ candidate.entryA.read(), candidate.entryB.read() ])
+            const same = await sameOggAudio(bytesA as Uint8Array<ArrayBuffer>, bytesB as Uint8Array<ArrayBuffer>)
+
+            verdicts.set(verdictKey('ogg-audio', candidate.entryA.crc, candidate.entryB.crc), same)
+            if (same) hashEquivalence.markEquivalent(candidate.entryA.crc, candidate.entryB.crc)
+
+            decoded++
+            progressBar.progHandler.update(decoded / audioMisses.length, decoded, audioMisses.length)
+          })
+        )
+        saveVerdicts(a, b, verdicts)
+      }
     }
 
     terminateCmpWorkers()
