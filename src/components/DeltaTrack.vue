@@ -19,6 +19,7 @@ import { basename } from '@/util/path.ts'
 import { saveAs } from 'file-saver'
 import Tooltip from './Tooltip.vue'
 import { getCopier } from '@/util/clipboard.ts'
+import { errorMessage } from '@/util/errorMessage.ts'
 import { holdFocus, isInitialFocus } from '@/util/trackFocus.ts'
 import { computed } from 'vue'
 import Notify from '@/notify.tsx'
@@ -73,6 +74,11 @@ function defaultViewer() {
   return <Dim style="padding: 4px;"><i>No viewer is registered for this file type.</i></Dim>
 }
 
+function failedViewer(err: unknown) {
+  const message = errorMessage(err)
+  return () => <div class="viewer-error">{message}</div>
+}
+
 let renderPromise: Promise<Renderable> | undefined
 
 function renderView() {
@@ -80,8 +86,9 @@ function renderView() {
     try {
       return (await viewer.value?.render(scopeToSubpack(props.dr, props.track), props.track)) ?? defaultViewer
     } catch (err) {
+      console.error(`Failed to render ${props.track.id}:`, err)
       renderPromise = undefined
-      throw err
+      return failedViewer(err)
     }
   })()
   return renderPromise
