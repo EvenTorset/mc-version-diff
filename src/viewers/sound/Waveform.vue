@@ -70,7 +70,7 @@ const SCRUB_FADE = 0.012
 const SCRUB_INTERVAL = 0.05
 const SCRUB_MIN_STEP = 0.001
 const CHUNK_SECONDS = 15
-const PEAK_RATE = 8000
+const CODEC_SECONDS = 30
 const REVEAL_SWEEP = 1.2
 const REVEAL_CATCHUP = 0.12
 const REVEAL_EDGE = 0.1
@@ -218,7 +218,7 @@ async function loadSources() {
       sources.slice(0, 2).map(async (src) => {
         const meta = { id: src.id, version: src.version, name: src.name, color: src.color, bytes: src.bytes }
         const split = splitOgg(src.bytes, CHUNK_SECONDS)
-        const codec = split ? await vorbisSupported(src.bytes) : false
+        const codec = split && split.duration > CODEC_SECONDS ? await vorbisSupported(src.bytes) : false
         if (split && (codec || split.chunks.length > 1)) {
           const cached = cachedPeaks(peaksKey(src.version, src.name, src.bytes.length, bucketCount))
           const track: ProcessedTrack = {
@@ -324,7 +324,7 @@ async function fillCodecPeaks(track: ProcessedTrack, bucketCount: number) {
 }
 
 async function fillPeaks(track: ProcessedTrack, split: OggSplit, bucketCount: number) {
-  const ctx = new OfflineAudioContext(1, 1, PEAK_RATE)
+  const ctx = new OfflineAudioContext(1, 1, split.sampleRate)
   for (const chunk of split.chunks) {
     if (!loadedTracks.value.includes(track)) return;
     await whenOnScreen()

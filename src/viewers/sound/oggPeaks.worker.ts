@@ -13,7 +13,6 @@ export interface PeaksProgress {
 
 const PACKET_TIMESTAMP = 20000
 const REPORT_FRAMES = 44100 * 10
-const WINDOWS_PER_BUCKET = 2
 
 self.onmessage = async (event: MessageEvent<PeaksRequest>) => {
   const { bytes, buckets } = event.data
@@ -36,18 +35,8 @@ self.onmessage = async (event: MessageEvent<PeaksRequest>) => {
   }
 
   const framesPerBucket = total / buckets
-  const window = framesPerBucket / WINDOWS_PER_BUCKET
-  let wanted = 0
-
   const onOutput = (data: AudioData) => {
     const count = data.numberOfFrames
-    if (frame + count <= wanted) {
-      frame += count
-      data.close()
-      return;
-    }
-    wanted = frame + Math.max(count, window)
-
     if (scratch.length < count) scratch = new Float32Array(count)
     for (let channel = 0; channel < channels; channel++) {
       data.copyTo(scratch.subarray(0, count), { planeIndex: channel, format: 'f32-planar' })
