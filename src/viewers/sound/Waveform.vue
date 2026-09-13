@@ -8,7 +8,7 @@ import Tooltip from '@/components/Tooltip.vue'
 import { Settings } from '@/settings'
 import { Pause16Filled, Play16Filled } from '@vicons/fluent'
 import Row from '@/components/Row.vue'
-import { splitOgg, type OggSplit } from './ogg'
+import { splitOgg, type OggChunk, type OggSplit } from './ogg'
 import { queueDecode } from './decodeQueue'
 import { cachePeaks, cachedPeaks, peaksKey } from './peaksStore'
 import { peaksFromOgg, vorbisSupported } from './webcodecs'
@@ -70,7 +70,7 @@ const SCRUB_FADE = 0.012
 const SCRUB_INTERVAL = 0.05
 const SCRUB_MIN_STEP = 0.001
 const CHUNK_SECONDS = 15
-const PEAK_RATE = 8000
+const CODEC_SECONDS = 30
 const REVEAL_SWEEP = 1.2
 const REVEAL_CATCHUP = 0.12
 const REVEAL_EDGE = 0.1
@@ -218,7 +218,7 @@ async function loadSources() {
       sources.slice(0, 2).map(async (src) => {
         const meta = { id: src.id, version: src.version, name: src.name, color: src.color, bytes: src.bytes }
         const split = splitOgg(src.bytes, CHUNK_SECONDS)
-        const codec = split ? await vorbisSupported(src.bytes) : false
+        const codec = split && split.duration > CODEC_SECONDS ? await vorbisSupported(src.bytes) : false
         if (split && (codec || split.chunks.length > 1)) {
           const cached = cachedPeaks(peaksKey(src.version, src.name, src.bytes.length, bucketCount))
           const track: ProcessedTrack = {
@@ -271,14 +271,18 @@ async function loadSources() {
   }
 }
 
-function writePeaks(peaks: Float32Array, buffer: AudioBuffer, from: number, to: number) {
+function writePeaks(peaks: Float32Array, buffer: AudioBuffer, chunk: OggChunk, duration: number, buckets: number): number {
   const channels: Float32Array[] = []
   for (let c = 0; c < buffer.numberOfChannels; c++) channels.push(buffer.getChannelData(c))
-  const perBucket = buffer.length / (to - from)
+
+  const rate = chunk.lead ? buffer.sampleRate : buffer.length / (chunk.end - chunk.start)
+  const startTime = chunk.lead ? chunk.end - buffer.length / buffer.sampleRate : chunk.start
+  const from = Math.max(0, Math.floor((chunk.start / duration) * buckets))
+  const to = Math.min(buckets, Math.max(from + 1, Math.round((chunk.end / duration) * buckets)))
 
   for (let bucket = from; bucket < to; bucket++) {
-    const start = Math.floor((bucket - from) * perBucket)
-    const end = bucket === to - 1 ? buffer.length : Math.floor((bucket - from + 1) * perBucket)
+    const start = Math.max(0, Math.round(((bucket / buckets) * duration - startTime) * rate))
+    const end = Math.min(buffer.length, Math.round((((bucket + 1) / buckets) * duration - startTime) * rate))
     let min = 0
     let max = 0
     for (const channel of channels) {
@@ -291,6 +295,8 @@ function writePeaks(peaks: Float32Array, buffer: AudioBuffer, from: number, to: 
     peaks[bucket * 2] = min
     peaks[bucket * 2 + 1] = max
   }
+
+  return to
 }
 
 const waiting = new Set<() => void>()
@@ -324,7 +330,7 @@ async function fillCodecPeaks(track: ProcessedTrack, bucketCount: number) {
 }
 
 async function fillPeaks(track: ProcessedTrack, split: OggSplit, bucketCount: number) {
-  const ctx = new OfflineAudioContext(1, 1, PEAK_RATE)
+  const ctx = new OfflineAudioContext(1, 1, split.sampleRate)
   for (const chunk of split.chunks) {
     if (!loadedTracks.value.includes(track)) return;
     await whenOnScreen()
@@ -337,10 +343,7 @@ async function fillPeaks(track: ProcessedTrack, split: OggSplit, bucketCount: nu
       return;
     }
     if (!loadedTracks.value.includes(track)) return;
-    const from = Math.floor((chunk.start / split.duration) * bucketCount)
-    const to = Math.min(bucketCount, Math.max(from + 1, Math.round((chunk.end / split.duration) * bucketCount)))
-    writePeaks(track.peaks, buffer, from, to)
-    track.filled = to
+    track.filled = writePeaks(track.peaks, buffer, chunk, split.duration, bucketCount)
     ensureRevealLoop()
   }
 
