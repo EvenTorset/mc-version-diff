@@ -17,6 +17,7 @@ import { DISCLAIMER } from '@/util/eula'
   line-height: 1.5;
   text-align: center;
   text-wrap: balance;
+  user-select: none;
 }
 
 </style>

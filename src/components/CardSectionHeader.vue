@@ -18,6 +18,7 @@ defineProps<{
   font-size: 12px;
   font-weight: 600;
   line-height: 22px;
+  user-select: none;
 
   &:first-child {
     margin-top: 0;

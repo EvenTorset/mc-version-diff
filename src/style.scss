@@ -159,6 +159,7 @@ input::placeholder,.n-input__placeholder {
   color: var(--color-4) !important;
   opacity: 1 !important;
   font-weight: 500;
+  user-select: none;
 }
 
 h1 {
@@ -721,6 +722,10 @@ body {
 }
 
 .n-upload-dragger {
+  user-select: none;
+}
+
+.n-card-header__main {
   user-select: none;
 }
 
