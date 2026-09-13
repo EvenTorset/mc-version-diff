@@ -49,7 +49,7 @@ export const javaCategories: DeltaProviderCategory[] = [
     }
   },
   {
-    name: 'Sound definitions',
+    name: 'Sound events',
     sort: 6,
     expand: true,
     test(_dr, track) {
