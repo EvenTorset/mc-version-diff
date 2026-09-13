@@ -5,7 +5,8 @@ import Col from '@/components/Col.vue'
 import Row from '@/components/Row.vue'
 import SiteDisclaimer from '@/components/SiteDisclaimer.vue'
 import VersionDiffLogo from '@/components/VersionDiffLogo.vue'
-import { acceptEula, EULA_URL } from '@/util/eula'
+import { EULA_URL } from '@/util/eula'
+import { Settings } from '@/settings'
 
 const agreed = ref(false)
 </script>
@@ -40,7 +41,12 @@ const agreed = ref(false)
               <NCheckbox v-model:checked="agreed" class="terms">
                 I have read the End User License Agreement and I agree to its terms
               </NCheckbox>
-              <NButton class="accent" :disabled="!agreed" style="flex: 0 0 auto;" @click="acceptEula()">Continue</NButton>
+              <NButton
+                class="accent"
+                :disabled="!agreed"
+                style="flex: 0 0 auto;"
+                @click="Settings.eulaAccepted = true"
+              >Continue</NButton>
             </Row>
           </Col>
         </NCard>

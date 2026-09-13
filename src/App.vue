@@ -7,7 +7,6 @@ import { loadSettings, Settings, SETTINGS_STORAGE_KEY } from '@/settings'
 import { assets } from '@/delta_providers/loader'
 import { NotifyProvider } from '@/notify'
 import Splash from '@/components/Splash.vue'
-import { eulaAccepted } from '@/util/eula'
 
 const route = useRoute()
 
@@ -118,7 +117,7 @@ watch(Settings, () => {
     <NNotificationProvider placement="bottom-right">
       <NotifyProvider>
         <RouterView :key="routerViewKey"/>
-        <Splash v-if="!eulaAccepted" />
+        <Splash v-if="!Settings.eulaAccepted" />
       </NotifyProvider>
     </NNotificationProvider>
   </NConfigProvider>
