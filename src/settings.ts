@@ -19,7 +19,7 @@ export type SettingsType = {
 }
 
 export const Settings = reactive<SettingsType>({
-  eulaAccepted: false,
+  eulaAccepted: import.meta.env.DEV,
   lightMode: false,
   pixelFont: false,
   formatJSON: false,
