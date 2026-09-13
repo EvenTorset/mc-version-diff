@@ -19,6 +19,7 @@ export interface TrackSource {
   id: string
   version: string
   name: string
+  path?: string
   color?: string
   bytes: Uint8Array<ArrayBuffer>
 }
@@ -27,6 +28,7 @@ interface ProcessedTrack {
   id: string
   version: string
   name: string
+  path?: string
   color?: string
   duration: number
   bytes: Uint8Array<ArrayBuffer>
@@ -193,36 +195,41 @@ async function loadSources() {
 
   try {
     const pending: { track: ProcessedTrack, split: OggSplit | null }[] = []
-    const fetchedTracks = await Promise.all(
+    const fetchedTracks = (await Promise.all(
       sources.slice(0, 2).map(async (src) => {
-        const meta = { id: src.id, version: src.version, name: src.name, color: src.color, bytes: src.bytes }
-        const split = splitOgg(src.bytes, CHUNK_SECONDS)
-        const codec = split && split.duration > CODEC_SECONDS ? await vorbisSupported(src.bytes) : false
-        if (split && (codec || split.chunks.length > 1)) {
-          const cached = cachedPeaks(peaksKey(src.version, src.name, src.bytes.length, bucketCount))
-          const track: ProcessedTrack = {
-            ...meta,
-            duration: split.duration,
-            buffer: null,
-            peaks: cached ?? new Float32Array(bucketCount * 2),
-            filled: cached ? bucketCount : 0,
-            reveal: cached ? bucketCount : 0
+        const meta = { id: src.id, version: src.version, name: src.name, path: src.path, color: src.color, bytes: src.bytes }
+        const key = peaksKey(src.version, src.path ?? src.name, src.bytes.length, bucketCount)
+        try {
+          const split = splitOgg(src.bytes, CHUNK_SECONDS)
+          const codec = split && split.duration > CODEC_SECONDS ? await vorbisSupported(src.bytes) : false
+          if (split && (codec || split.chunks.length > 1)) {
+            const cached = cachedPeaks(key)
+            const track: ProcessedTrack = {
+              ...meta,
+              duration: split.duration,
+              buffer: null,
+              peaks: cached ?? new Float32Array(bucketCount * 2),
+              filled: cached ? bucketCount : 0,
+              reveal: cached ? bucketCount : 0
+            }
+            if (!cached) pending.push({ track, split: codec ? null : split })
+            return track
           }
-          if (!cached) pending.push({ track, split: codec ? null : split })
-          return track
+          const wav = readWav(src.bytes)
+          if (wav) {
+            const peaks = cachedPeaks(key) ?? wavPeaks(src.bytes, wav, bucketCount)
+            cachePeaks(key, peaks)
+            return { ...meta, duration: wav.duration, buffer: null, peaks, filled: bucketCount, reveal: bucketCount }
+          }
+          const buffer = await getAudioBuffer(src.bytes)
+          const peaks = await getPeaks(buffer, bucketCount)
+          return { ...meta, duration: buffer.duration, buffer, peaks, filled: bucketCount, reveal: bucketCount }
+        } catch (err) {
+          console.error(`Failed to process ${src.name} from ${src.version}:`, err)
+          return null
         }
-        const wav = readWav(src.bytes)
-        if (wav) {
-          const key = peaksKey(src.version, src.name, src.bytes.length, bucketCount)
-          const peaks = cachedPeaks(key) ?? wavPeaks(src.bytes, wav, bucketCount)
-          cachePeaks(key, peaks)
-          return { ...meta, duration: wav.duration, buffer: null, peaks, filled: bucketCount, reveal: bucketCount }
-        }
-        const buffer = await getAudioBuffer(src.bytes)
-        const peaks = await getPeaks(buffer, bucketCount)
-        return { ...meta, duration: buffer.duration, buffer, peaks, filled: bucketCount, reveal: bucketCount }
       })
-    )
+    )).filter(track => track !== null)
 
     loadedTracks.value = fetchedTracks
 
@@ -305,7 +312,7 @@ async function fillCodecPeaks(track: ProcessedTrack, bucketCount: number) {
   })
 
   if (!loadedTracks.value.includes(track)) return;
-  cachePeaks(peaksKey(track.version, track.name, track.bytes.length, bucketCount), track.peaks)
+  cachePeaks(peaksKey(track.version, track.path ?? track.name, track.bytes.length, bucketCount), track.peaks)
 }
 
 async function fillPeaks(track: ProcessedTrack, split: OggSplit, bucketCount: number) {
@@ -326,7 +333,7 @@ async function fillPeaks(track: ProcessedTrack, split: OggSplit, bucketCount: nu
     ensureRevealLoop()
   }
 
-  cachePeaks(peaksKey(track.version, track.name, track.bytes.length, bucketCount), track.peaks)
+  cachePeaks(peaksKey(track.version, track.path ?? track.name, track.bytes.length, bucketCount), track.peaks)
 }
 
 function ensureRevealLoop() {
