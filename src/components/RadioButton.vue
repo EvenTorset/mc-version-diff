@@ -30,6 +30,7 @@ const handleClick = () => {
     :class="{
       selected: isSelected,
       dim: group?.dimUnselected && !isSelected && group?.selectedValue.value !== null,
+      nullable: group?.nullable
     }"
     @click="handleClick"
   >
@@ -96,11 +97,15 @@ const handleClick = () => {
     text-shadow: 0 1px 2px #000;
     box-shadow: 0 0 8px rgb(from var(--intr-color) calc(1.2 * r) calc(1.2 * g) calc(1.2 * b) / 0.333);
 
+    &:not(.nullable) {
+      cursor: default;
+    }
+
     &::after {
       border-color: rgb(from var(--intr-color) calc(1.2 * r) calc(1.2 * g) calc(1.2 * b) / 0.3);
     }
 
-    &:hover {
+    &.nullable:hover {
       --intr-color: oklch(from var(--color-accent) l calc(c * 1.3) h / 0.6);
       --intr-gradient-start: var(--intr-color);
       --intr-gradient-end-alpha: 0.15;

@@ -58,16 +58,7 @@ defineProps<{
   .n-card-header__extra {
     flex: 1 0 auto;
     display: flex;
-  }
-
-  .mode-group,
-  .n-radio-group {
-    flex: 1;
-    display: flex;
-  }
-
-  .n-radio-button {
-    flex: 1;
+    justify-content: flex-end;
   }
 }
 
