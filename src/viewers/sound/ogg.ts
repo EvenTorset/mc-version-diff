@@ -2,6 +2,7 @@ export interface OggChunk {
   bytes: Uint8Array<ArrayBuffer>
   start: number
   end: number
+  lead: boolean
 }
 
 export interface OggSplit {
@@ -9,6 +10,8 @@ export interface OggSplit {
   sampleRate: number
   chunks: OggChunk[]
 }
+
+const LEAD_IN = 0.5
 
 interface OggPage {
   start: number
@@ -63,13 +66,16 @@ export function splitOgg(bytes: Uint8Array<ArrayBuffer>, chunkSeconds: number): 
     const last = i === audio.length - 1
     if (!last && end - start < chunkSeconds) continue
 
-    const first = audio[from]
+    let lead = from
+    while (lead > 0 && audio[lead - 1].granule / sampleRate > start - LEAD_IN) lead--
+
+    const first = audio[lead]
     const final = audio[i]
     const body = bytes.subarray(first.start, final.start + final.size)
     const chunk = new Uint8Array(header.length + body.length)
     chunk.set(header, 0)
     chunk.set(body, header.length)
-    chunks.push({ bytes: chunk, start, end })
+    chunks.push({ bytes: chunk, start, end, lead: lead < from })
     from = i + 1
     start = end
   }
