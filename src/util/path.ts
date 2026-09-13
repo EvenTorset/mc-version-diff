@@ -1,6 +1,12 @@
 export function resolve(...paths: string[]): string {
   const lastAbs = Math.max(0, paths.findLastIndex(path => path.startsWith('/')))
-  return decodeURIComponent(new URL(join(...paths.slice(lastAbs)), location.origin).pathname)
+  const parts: string[] = []
+  for (const part of join(...paths.slice(lastAbs)).split('/')) {
+    if (!part || part === '.') continue
+    if (part === '..') parts.pop()
+    else parts.push(part)
+  }
+  return `/${parts.join('/')}`
 }
 
 export function join(...parts: string[]): string {
