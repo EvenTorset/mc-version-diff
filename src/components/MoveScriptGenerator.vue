@@ -95,11 +95,11 @@ async function copy() {
           <td>Specifies that the script should be executed using the Bash shell environment.</td>
         </tr>
         <tr>
-          <td><code>if [ -f "old/path" ]; then</code></td>
+          <td><code>if [ -f 'old/path' ]; then</code></td>
           <td>Checks if the source file exists before trying to move it.</td>
         </tr>
         <tr>
-          <td><code>mkdir -p "new/folder"</code></td>
+          <td><code>mkdir -p 'new/folder'</code></td>
           <td>Creates the destination directory if it does not already exist.</td>
         </tr>
         <tr>
@@ -107,7 +107,7 @@ async function copy() {
           <td>Makes the following command only run if the previous command finished successfully.</td>
         </tr>
         <tr>
-          <td><code>mv "old" "new"</code></td>
+          <td><code>mv 'old' 'new'</code></td>
           <td>Moves the file from its source path to its destination path.</td>
         </tr>
         <tr>
@@ -119,7 +119,7 @@ async function copy() {
     <template v-if="Settings.chosenShell === 'bash' && Settings.chosenExecType === 'command'">
       <table class="explanation">
         <tr>
-          <td><code>[ -f "old/path" ]</code></td>
+          <td><code>[ -f 'old/path' ]</code></td>
           <td>Checks if the source file exists before trying to move it.</td>
         </tr>
         <tr>
@@ -127,11 +127,11 @@ async function copy() {
           <td>Makes the following command only run if the previous command finished successfully.</td>
         </tr>
         <tr>
-          <td><code>mkdir -p "new/folder"</code></td>
+          <td><code>mkdir -p 'new/folder'</code></td>
           <td>Creates the destination directory if it does not already exist.</td>
         </tr>
         <tr>
-          <td><code>mv "old" "new"</code></td>
+          <td><code>mv 'old' 'new'</code></td>
           <td>Moves the file from its source path to its destination path.</td>
         </tr>
         <tr>
@@ -147,11 +147,11 @@ async function copy() {
     <template v-if="Settings.chosenShell === 'powershell' && Settings.chosenExecType === 'script'">
       <table class="explanation">
         <tr>
-          <td><code>if (Test-Path -LiteralPath "old\path")</code></td>
+          <td><code>if (Test-Path -LiteralPath 'old\path')</code></td>
           <td>Checks if the source file exists before trying to move it.</td>
         </tr>
         <tr>
-          <td><code>New-Item -ItemType Directory -Force -Path "new\folder"</code></td>
+          <td><code>New-Item -ItemType Directory -Force -Path 'new\folder'</code></td>
           <td>Creates the destination directory if it does not already exist.</td>
         </tr>
         <tr>
@@ -159,7 +159,7 @@ async function copy() {
           <td>Suppresses directory creation confirmation messages from printing to the console.</td>
         </tr>
         <tr>
-          <td><code>Move-Item -LiteralPath "old" -Destination "new"</code></td>
+          <td><code>Move-Item -LiteralPath 'old' -Destination 'new'</code></td>
           <td>Moves the file from its source path to its destination path.</td>
         </tr>
         <tr>
@@ -171,11 +171,11 @@ async function copy() {
     <template v-if="Settings.chosenShell === 'powershell' && Settings.chosenExecType === 'command'">
       <table class="explanation">
         <tr>
-          <td><code>if (Test-Path -LiteralPath "old\path")</code></td>
+          <td><code>if (Test-Path -LiteralPath 'old\path')</code></td>
           <td>Checks if the source file exists before trying to move it.</td>
         </tr>
         <tr>
-          <td><code>New-Item -ItemType Directory -Force -Path "new\folder"</code></td>
+          <td><code>New-Item -ItemType Directory -Force -Path 'new\folder'</code></td>
           <td>Creates the destination directory if it does not already exist.</td>
         </tr>
         <tr>
@@ -183,7 +183,7 @@ async function copy() {
           <td>Suppresses directory creation confirmation messages from printing to the console.</td>
         </tr>
         <tr>
-          <td><code>Move-Item -LiteralPath "old" -Destination "new"</code></td>
+          <td><code>Move-Item -LiteralPath 'old' -Destination 'new'</code></td>
           <td>Moves the file from its source path to its destination path.</td>
         </tr>
         <tr>
