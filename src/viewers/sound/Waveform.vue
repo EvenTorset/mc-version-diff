@@ -8,6 +8,11 @@ import Tooltip from '@/components/Tooltip.vue'
 import { Settings } from '@/settings'
 import { Pause16Filled, Play16Filled } from '@vicons/fluent'
 import Row from '@/components/Row.vue'
+import { splitOgg, type OggSplit } from './ogg'
+import { queueDecode } from './decodeQueue'
+import { cachePeaks, cachedPeaks, peaksKey } from './peaksStore'
+import { peaksFromOgg, vorbisSupported } from './webcodecs'
+import { readWav, wavPeaks } from './wav'
 
 export interface TrackSource {
   id: string
@@ -22,12 +27,17 @@ interface ProcessedTrack {
   version: string
   name: string
   color?: string
-  buffer: AudioBuffer
+  duration: number
+  bytes: Uint8Array<ArrayBuffer>
+  buffer: AudioBuffer | null
   peaks: Float32Array
+  filled: number
+  reveal: number
 }
 
 interface PlaybackState {
   isPlaying: boolean
+  waiting: boolean
   currentTime: number
   currentOffset: number
 }
@@ -44,6 +54,28 @@ interface TrackEnvelope {
   bottomPoints: number[]
 }
 
+interface Scrub {
+  id: string
+  pointerId: number
+  wasPlaying: boolean
+}
+
+interface ScrubVoice {
+  source: AudioBufferSourceNode
+  gain: GainNode
+}
+
+const SCRUB_GRAIN = 0.12
+const SCRUB_FADE = 0.012
+const SCRUB_INTERVAL = 0.05
+const SCRUB_MIN_STEP = 0.001
+const CHUNK_SECONDS = 15
+const PEAK_RATE = 8000
+const REVEAL_SWEEP = 1.2
+const REVEAL_CATCHUP = 0.12
+const REVEAL_EDGE = 0.1
+const REVEAL_FRAME = 1000 / 30
+
 const props = withDefaults(
   defineProps<{
     sources: TrackSource[]
@@ -59,10 +91,12 @@ const waveformCanvasRef = ref<HTMLCanvasElement | null>(null)
 const overlayCanvasRef = ref<HTMLCanvasElement | null>(null)
 
 const isVisible = useElementVisible(containerRef)
+const isOnScreen = useElementVisible(containerRef, { rootMargin: '0px' })
 
 const loadedTracks = ref<ProcessedTrack[]>([])
 const isLoading = ref(false)
 const hoverX = ref<number | null>(null)
+const scrubbing = ref<Scrub | null>(null)
 const playback = reactive<Record<string, PlaybackState>>({})
 
 const audioBufferCache = new WeakMap<Uint8Array, Promise<AudioBuffer>>()
@@ -70,7 +104,11 @@ const peaksCache = new WeakMap<AudioBuffer, Map<number, Promise<Float32Array>>>(
 
 let sharedAudioCtx: AudioContext | null = null
 const transientByTrack = new Map<string, Transient>()
+const scrubVoices = new Set<ScrubVoice>()
+let lastGrainAt = 0
+let lastScrubTime = 0
 let animFrameId: number | null = null
+let revealFrameId: number | null = null
 let resizeObserver: ResizeObserver | null = null
 
 const canvasHeight = computed(() => {
@@ -79,8 +117,20 @@ const canvasHeight = computed(() => {
 
 const maxDuration = computed(() => {
   if (loadedTracks.value.length === 0) return 0
-  return Math.max(...loadedTracks.value.map((t) => t.buffer.duration))
+  return Math.max(...loadedTracks.value.map((t) => t.duration))
 })
+
+let palette: Record<string, string> = {}
+let paletteAt = 0
+
+function themeColor(name: string): string {
+  const now = performance.now()
+  if (now - paletteAt > 250) {
+    palette = {}
+    paletteAt = now
+  }
+  return palette[name] ??= getCSSVar(name)
+}
 
 function getAudioContext(): AudioContext {
   if (!sharedAudioCtx) {
@@ -122,11 +172,11 @@ function processPeaksInWorker(
 function getAudioBuffer(bytes: Uint8Array<ArrayBuffer>): Promise<AudioBuffer> {
   let cached = audioBufferCache.get(bytes)
   if (!cached) {
-    cached = (async () => {
+    cached = queueDecode(0, () => {
       const ctx = getAudioContext()
       const copy = bytes.slice(0)
       return ctx.decodeAudioData(copy.buffer)
-    })()
+    })
     audioBufferCache.set(bytes, cached)
   }
   return cached
@@ -163,22 +213,44 @@ async function loadSources() {
   const bucketCount = Math.max(1, Math.floor(containerWidth * dpr))
 
   try {
+    const pending: { track: ProcessedTrack, split: OggSplit | null }[] = []
     const fetchedTracks = await Promise.all(
       sources.slice(0, 2).map(async (src) => {
+        const meta = { id: src.id, version: src.version, name: src.name, color: src.color, bytes: src.bytes }
+        const split = splitOgg(src.bytes, CHUNK_SECONDS)
+        const codec = split ? await vorbisSupported(src.bytes) : false
+        if (split && (codec || split.chunks.length > 1)) {
+          const cached = cachedPeaks(peaksKey(src.version, src.name, src.bytes.length, bucketCount))
+          const track: ProcessedTrack = {
+            ...meta,
+            duration: split.duration,
+            buffer: null,
+            peaks: cached ?? new Float32Array(bucketCount * 2),
+            filled: cached ? bucketCount : 0,
+            reveal: cached ? bucketCount : 0
+          }
+          if (!cached) pending.push({ track, split: codec ? null : split })
+          return track
+        }
+        const wav = readWav(src.bytes)
+        if (wav) {
+          const key = peaksKey(src.version, src.name, src.bytes.length, bucketCount)
+          const peaks = cachedPeaks(key) ?? wavPeaks(src.bytes, wav, bucketCount)
+          cachePeaks(key, peaks)
+          return { ...meta, duration: wav.duration, buffer: null, peaks, filled: bucketCount, reveal: bucketCount }
+        }
         const buffer = await getAudioBuffer(src.bytes)
         const peaks = await getPeaks(buffer, bucketCount)
-        return {
-          id: src.id,
-          version: src.version,
-          name: src.name,
-          color: src.color,
-          buffer,
-          peaks
-        }
+        return { ...meta, duration: buffer.duration, buffer, peaks, filled: bucketCount, reveal: bucketCount }
       })
     )
 
     loadedTracks.value = fetchedTracks
+
+    for (const { track, split } of pending) {
+      if (split) fillPeaks(track, split, bucketCount)
+      else fillCodecPeaks(track, bucketCount)
+    }
 
     const validIds = new Set(fetchedTracks.map((t) => t.id))
     for (const id of Object.keys(playback)) {
@@ -186,7 +258,7 @@ async function loadSources() {
     }
     for (const track of fetchedTracks) {
       if (!playback[track.id]) {
-        playback[track.id] = { isPlaying: false, currentTime: 0, currentOffset: 0 }
+        playback[track.id] = { isPlaying: false, waiting: false, currentTime: 0, currentOffset: 0 }
       }
     }
   } catch (err) {
@@ -199,14 +271,124 @@ async function loadSources() {
   }
 }
 
+function writePeaks(peaks: Float32Array, buffer: AudioBuffer, from: number, to: number) {
+  const channels: Float32Array[] = []
+  for (let c = 0; c < buffer.numberOfChannels; c++) channels.push(buffer.getChannelData(c))
+  const perBucket = buffer.length / (to - from)
+
+  for (let bucket = from; bucket < to; bucket++) {
+    const start = Math.floor((bucket - from) * perBucket)
+    const end = bucket === to - 1 ? buffer.length : Math.floor((bucket - from + 1) * perBucket)
+    let min = 0
+    let max = 0
+    for (const channel of channels) {
+      for (let i = start; i < end; i++) {
+        const sample = channel[i]
+        if (sample < min) min = sample
+        if (sample > max) max = sample
+      }
+    }
+    peaks[bucket * 2] = min
+    peaks[bucket * 2 + 1] = max
+  }
+}
+
+const waiting = new Set<() => void>()
+
+function whenOnScreen(): Promise<void> {
+  if (isOnScreen.value) return Promise.resolve()
+  return new Promise((resolve) => {
+    const stop = watch(isOnScreen, (visible) => {
+      if (!visible) return;
+      stop()
+      waiting.delete(stop)
+      resolve()
+    })
+    waiting.add(stop)
+  })
+}
+
+async function fillCodecPeaks(track: ProcessedTrack, bucketCount: number) {
+  await whenOnScreen()
+  if (!loadedTracks.value.includes(track)) return;
+
+  await peaksFromOgg(track.bytes, bucketCount, (peaks, filled) => {
+    if (!loadedTracks.value.includes(track)) return;
+    track.peaks = peaks
+    track.filled = filled
+    ensureRevealLoop()
+  })
+
+  if (!loadedTracks.value.includes(track)) return;
+  cachePeaks(peaksKey(track.version, track.name, track.bytes.length, bucketCount), track.peaks)
+}
+
+async function fillPeaks(track: ProcessedTrack, split: OggSplit, bucketCount: number) {
+  const ctx = new OfflineAudioContext(1, 1, PEAK_RATE)
+  for (const chunk of split.chunks) {
+    if (!loadedTracks.value.includes(track)) return;
+    await whenOnScreen()
+    if (!loadedTracks.value.includes(track)) return;
+    let buffer: AudioBuffer
+    try {
+      buffer = await queueDecode(1, () => ctx.decodeAudioData(chunk.bytes.slice(0).buffer))
+    } catch (err) {
+      console.error('Failed to decode audio chunk:', err)
+      return;
+    }
+    if (!loadedTracks.value.includes(track)) return;
+    const from = Math.floor((chunk.start / split.duration) * bucketCount)
+    const to = Math.min(bucketCount, Math.max(from + 1, Math.round((chunk.end / split.duration) * bucketCount)))
+    writePeaks(track.peaks, buffer, from, to)
+    track.filled = to
+    ensureRevealLoop()
+  }
+
+  cachePeaks(peaksKey(track.version, track.name, track.bytes.length, bucketCount), track.peaks)
+}
+
+function ensureRevealLoop() {
+  if (revealFrameId !== null) return;
+
+  let last = performance.now()
+  let drawn = 0
+  const step = (now: number) => {
+    const elapsed = Math.min(now - last, 100) / 1000
+    last = now
+
+    const rect = containerRef.value?.getBoundingClientRect()
+    const onScreen = !!rect && rect.bottom > 0 && rect.top < window.innerHeight
+
+    let animating = false
+    for (const track of loadedTracks.value) {
+      if (track.reveal >= track.filled) continue
+      if (!onScreen) {
+        track.reveal = track.filled
+        continue
+      }
+      const buckets = track.peaks.length / 2
+      const speed = Math.max(buckets * REVEAL_SWEEP, (track.filled - track.reveal) / REVEAL_CATCHUP)
+      track.reveal = Math.min(track.filled, track.reveal + speed * elapsed)
+      if (track.reveal < track.filled) animating = true
+    }
+
+    if (!animating || now - drawn >= REVEAL_FRAME) {
+      drawn = now
+      renderWaveform()
+    }
+    revealFrameId = animating ? requestAnimationFrame(step) : null
+  }
+
+  revealFrameId = requestAnimationFrame(step)
+}
+
 function unloadTracks() {
   stopAll()
   loadedTracks.value = []
 }
 
 function computeEnvelope(track: ProcessedTrack, width: number, maxDur: number): TrackEnvelope {
-  const trackWidth = width * (track.buffer.duration / maxDur)
-  const centerY = props.laneHeight / 2
+  const trackWidth = width * (track.duration / maxDur)
   const halfHeight = props.laneHeight / 2 - 10
 
   let peakAmp = 0
@@ -222,16 +404,16 @@ function computeEnvelope(track: ProcessedTrack, width: number, maxDur: number): 
   const bottomPoints: number[] = []
 
   for (let x = 0; x < renderWidth; x++) {
-    const tStart = (x / trackWidth) * track.buffer.duration
+    const tStart = (x / trackWidth) * track.duration
     const tEnd = Math.min(
-      track.buffer.duration,
-      ((x + 1) / trackWidth) * track.buffer.duration
+      track.duration,
+      ((x + 1) / trackWidth) * track.duration
     )
 
-    const startBucket = Math.floor((tStart / track.buffer.duration) * numPairs)
+    const startBucket = Math.floor((tStart / track.duration) * numPairs)
     const endBucket = Math.min(
       numPairs - 1,
-      Math.floor((tEnd / track.buffer.duration) * numPairs)
+      Math.floor((tEnd / track.duration) * numPairs)
     )
 
     let min = 0
@@ -248,38 +430,116 @@ function computeEnvelope(track: ProcessedTrack, width: number, maxDur: number): 
       }
     }
 
-    topPoints.push(centerY - (max * scaleFactor) * halfHeight - 0.5)
-    bottomPoints.push(centerY - (min * scaleFactor) * halfHeight + 0.5)
+    topPoints.push(-(max * scaleFactor) * halfHeight)
+    bottomPoints.push(-(min * scaleFactor) * halfHeight)
   }
 
   return { trackWidth, topPoints, bottomPoints }
 }
 
+const envelopeCache = new WeakMap<ProcessedTrack, { key: string, envelope: TrackEnvelope }>()
+
+function trackEnvelope(track: ProcessedTrack, width: number, maxDur: number): TrackEnvelope {
+  const key = `${width}|${maxDur}|${track.filled}`
+  const cached = envelopeCache.get(track)
+  if (cached?.key === key) return cached.envelope
+  const envelope = computeEnvelope(track, width, maxDur)
+  envelopeCache.set(track, { key, envelope })
+  return envelope
+}
+
+function centred(points: number[], offset: number): number[] {
+  const centerY = props.laneHeight / 2
+  return points.map((value) => centerY + value + offset)
+}
+
+const layerCache = new WeakMap<ProcessedTrack, { key: string, layer: HTMLCanvasElement }>()
+
+function trackLayer(track: ProcessedTrack, index: number, width: number, maxDur: number): HTMLCanvasElement {
+  const tracks = loadedTracks.value
+  const other = tracks.length === 2 ? tracks[index === 0 ? 1 : 0] : null
+  const key = `${width}|${maxDur}|${track.filled}|${other?.filled ?? ''}|${themeColor('--color-6')}`
+  const cached = layerCache.get(track)
+  if (cached?.key === key) return cached.layer
+
+  const base = trackEnvelope(track, width, maxDur)
+  const topPoints = centred(base.topPoints, -0.5)
+  const bottomPoints = centred(base.bottomPoints, 0.5)
+
+  const layer = document.createElement('canvas')
+  layer.width = Math.max(1, Math.ceil(width))
+  layer.height = Math.max(1, Math.ceil(props.laneHeight))
+  const lctx = layer.getContext('2d')!
+
+  if (other) {
+    const otherBase = trackEnvelope(other, width, maxDur)
+    drawDiffWaveform(
+      lctx,
+      topPoints,
+      bottomPoints,
+      centred(otherBase.topPoints, -0.5),
+      centred(otherBase.bottomPoints, 0.5),
+      Math.min(base.trackWidth, otherBase.trackWidth),
+      themeColor(index === 0 ? '--color-danger' : '--color-success'),
+      themeColor('--color-6')
+    )
+  } else {
+    drawPlainWaveform(lctx, topPoints, bottomPoints, themeColor(track.color ?? '--color-accent'))
+  }
+
+  layerCache.set(track, { key, layer })
+  return layer
+}
+
+function compositeLayer(ctx: CanvasRenderingContext2D, layer: HTMLCanvasElement, track: ProcessedTrack, laneY: number, trackWidth: number) {
+  const height = props.laneHeight
+  const buckets = track.peaks.length / 2
+
+  if (track.reveal >= buckets) {
+    ctx.drawImage(layer, 0, laneY)
+    return;
+  }
+
+  const front = (track.reveal / buckets) * trackWidth
+  const edge = Math.max(1, REVEAL_EDGE * trackWidth)
+  const solid = Math.max(0, front - edge)
+
+  if (solid >= 1) ctx.drawImage(layer, 0, 0, solid, height, 0, laneY, solid, height)
+
+  const bands = 12
+  for (let band = 0; band < bands; band++) {
+    const from = solid + (edge * band) / bands
+    const to = Math.min(solid + (edge * (band + 1)) / bands, front)
+    if (to - from < 0.5) continue
+    const eased = 1 - (from - solid) / edge
+    const open = eased * eased * (3 - 2 * eased)
+    const bandHeight = height * open
+    if (bandHeight < 0.5) continue
+    ctx.drawImage(layer, from, 0, to - from, height, from, laneY + (height - bandHeight) / 2, to - from, bandHeight)
+  }
+}
+
 function drawPlainWaveform(
   ctx: CanvasRenderingContext2D,
-  laneY: number,
   topPoints: number[],
   bottomPoints: number[],
   color: string
 ) {
   ctx.fillStyle = color
   ctx.beginPath()
-  ctx.moveTo(0, laneY + topPoints[0])
+  ctx.moveTo(0, topPoints[0])
   for (let i = 1; i < topPoints.length; i++) {
-    ctx.lineTo(i, laneY + topPoints[i])
+    ctx.lineTo(i, topPoints[i])
   }
   for (let i = bottomPoints.length - 1; i >= 0; i--) {
-    ctx.lineTo(i, laneY + bottomPoints[i])
+    ctx.lineTo(i, bottomPoints[i])
   }
   ctx.closePath()
   ctx.fill()
 }
 
 function drawDiffWaveform(
-  mainCtx: CanvasRenderingContext2D,
-  width: number,
-  laneHeight: number,
-  laneY: number,
+  lctx: CanvasRenderingContext2D,
   topPoints: number[],
   bottomPoints: number[],
   otherTop: number[],
@@ -288,12 +548,6 @@ function drawDiffWaveform(
   highlightColor: string,
   color: string
 ) {
-  const layer = document.createElement('canvas')
-  layer.width = Math.max(1, Math.ceil(width))
-  layer.height = Math.max(1, Math.ceil(laneHeight))
-  const lctx = layer.getContext('2d')
-  if (!lctx) return;
-
   lctx.fillStyle = highlightColor
   lctx.beginPath()
   lctx.moveTo(0, topPoints[0])
@@ -348,8 +602,6 @@ function drawDiffWaveform(
     lctx.fill()
     lctx.globalCompositeOperation = 'source-over'
   }
-
-  mainCtx.drawImage(layer, 0, laneY)
 }
 
 function syncCanvasSize(canvas: HTMLCanvasElement, width: number, height: number, dpr: number) {
@@ -390,20 +642,15 @@ function renderWaveform() {
     return;
   }
 
-  const isComparison = loadedTracks.value.length === 2
-  const envelopes = loadedTracks.value.map((track) => computeEnvelope(track, width, maxDur))
-
   for (let i = 0; i < loadedTracks.value.length; i++) {
+    const track = loadedTracks.value[i]
     const laneY = i * props.laneHeight
-    const { trackWidth, topPoints, bottomPoints } = envelopes[i]
 
-    // Background
-    ctx.fillStyle = getCSSVar('--color-0-alt')
+    ctx.fillStyle = themeColor('--color-0-alt')
     ctx.fillRect(0, laneY, width, props.laneHeight)
 
-    // Lane divider
     if (i > 0) {
-      ctx.strokeStyle = getCSSVar('--color-2')
+      ctx.strokeStyle = themeColor('--color-2')
       ctx.lineWidth = 1
       ctx.beginPath()
       ctx.moveTo(0, laneY)
@@ -411,30 +658,9 @@ function renderWaveform() {
       ctx.stroke()
     }
 
-    if (topPoints.length === 0) return;
-
-    if (isComparison) {
-      const otherIndex = i === 0 ? 1 : 0
-      const other = envelopes[otherIndex]
-      const overlapWidth = Math.min(trackWidth, other.trackWidth)
-      const highlightColor = i === 0 ? getCSSVar('--color-danger') : getCSSVar('--color-success')
-
-      drawDiffWaveform(
-        ctx,
-        width,
-        props.laneHeight,
-        laneY,
-        topPoints,
-        bottomPoints,
-        other.topPoints,
-        other.bottomPoints,
-        overlapWidth,
-        highlightColor,
-        getCSSVar('--color-6')
-      )
-    } else {
-      drawPlainWaveform(ctx, laneY, topPoints, bottomPoints, getCSSVar(loadedTracks.value[i].color ?? '--color-accent'))
-    }
+    const { trackWidth } = trackEnvelope(track, width, maxDur)
+    if (trackWidth < 1) continue
+    compositeLayer(ctx, trackLayer(track, i, width, maxDur), track, laneY, trackWidth)
   }
 
   ctx.restore()
@@ -462,19 +688,19 @@ function drawOverlay() {
   if (maxDur > 0) {
     loadedTracks.value.forEach((track, index) => {
       const state = playback[track.id]
-      if (!state) return;
+      if (!state || state.currentTime <= 0) return;
 
       const laneY = index * props.laneHeight
       const x = (state.currentTime / maxDur) * width
 
-      ctx.strokeStyle = getCSSVar('--color-5')
+      ctx.strokeStyle = themeColor('--color-5')
       ctx.lineWidth = 2
       ctx.beginPath()
       ctx.moveTo(x, laneY)
       ctx.lineTo(x, laneY + props.laneHeight)
       ctx.stroke()
 
-      ctx.fillStyle = getCSSVar('--color-5')
+      ctx.fillStyle = themeColor('--color-5')
       ctx.beginPath()
       ctx.moveTo(x - 5, laneY)
       ctx.lineTo(x + 5, laneY)
@@ -488,10 +714,10 @@ function drawOverlay() {
     ctx.beginPath()
     ctx.moveTo(hoverX.value + 0.5, 0)
     ctx.lineTo(hoverX.value + 0.5, height)
-    ctx.strokeStyle = getCSSVar('--color-0')
+    ctx.strokeStyle = themeColor('--color-0')
     ctx.lineWidth = 3
     ctx.stroke()
-    ctx.strokeStyle = getCSSVar('--color-6')
+    ctx.strokeStyle = themeColor('--color-6')
     ctx.lineWidth = 1
     ctx.stroke()
   }
@@ -501,7 +727,7 @@ function drawOverlay() {
 
 function ensurePlaybackState(id: string): PlaybackState {
   if (!playback[id]) {
-    playback[id] = { isPlaying: false, currentTime: 0, currentOffset: 0 }
+    playback[id] = { isPlaying: false, waiting: false, currentTime: 0, currentOffset: 0 }
   }
   return playback[id]
 }
@@ -522,14 +748,14 @@ function findTrack(id: string): ProcessedTrack | null {
 function playTrack(id: string) {
   const track = findTrack(id)
   const state = ensurePlaybackState(id)
-  if (!track || state.isPlaying) return;
+  if (!track?.buffer || state.isPlaying) return;
 
   const ctx = getAudioContext()
   if (ctx.state === 'suspended') {
     ctx.resume()
   }
 
-  if (state.currentOffset >= track.buffer.duration) {
+  if (state.currentOffset >= track.duration) {
     state.currentOffset = 0
   }
 
@@ -588,15 +814,39 @@ function stopTrack(id: string) {
 }
 
 function stopAll() {
+  scrubbing.value = null
+  stopScrubVoices()
   for (const id of Object.keys(playback)) {
     stopTrack(id)
   }
 }
 
-function toggleTrackPlay(id: string) {
+function ensureBuffer(track: ProcessedTrack): Promise<AudioBuffer | null> {
+  if (track.buffer) return Promise.resolve(track.buffer)
+  return getAudioBuffer(track.bytes).then((buffer) => {
+    if (loadedTracks.value.includes(track)) track.buffer = buffer
+    return buffer
+  }).catch((err) => {
+    console.error('Failed to decode audio:', err)
+    return null
+  })
+}
+
+async function toggleTrackPlay(id: string) {
   const state = ensurePlaybackState(id)
-  if (state.isPlaying) pauseTrack(id)
-  else playTrack(id)
+  if (state.isPlaying) {
+    pauseTrack(id)
+    return;
+  }
+  const track = findTrack(id)
+  if (track && !track.buffer) {
+    if (state.waiting) return;
+    state.waiting = true
+    await ensureBuffer(track)
+    state.waiting = false
+    if (!loadedTracks.value.includes(track)) return;
+  }
+  playTrack(id)
 }
 
 function seekTrack(id: string, timeInSeconds: number) {
@@ -605,7 +855,7 @@ function seekTrack(id: string, timeInSeconds: number) {
 
   const state = ensurePlaybackState(id)
   const wasPlaying = state.isPlaying
-  const clampedTime = Math.max(0, Math.min(timeInSeconds, track.buffer.duration))
+  const clampedTime = Math.max(0, Math.min(timeInSeconds, track.duration))
 
   pauseTrack(id)
   state.currentOffset = clampedTime
@@ -632,7 +882,7 @@ function ensureAnimationLoop() {
       const elapsed = ctx.currentTime - transient.playbackStartTime
       const total = state.currentOffset + elapsed
 
-      if (total >= track.buffer.duration) {
+      if (total >= track.duration) {
         stopTrack(id)
       } else {
         state.currentTime = total
@@ -647,32 +897,111 @@ function ensureAnimationLoop() {
   animFrameId = requestAnimationFrame(step)
 }
 
-function handleCanvasClick(e: MouseEvent) {
+function playScrubGrain(track: ProcessedTrack, time: number) {
+  if (!track.buffer) return;
+  const ctx = getAudioContext()
+  if (ctx.state === 'suspended') ctx.resume()
+  if (ctx.currentTime - lastGrainAt < SCRUB_INTERVAL) return;
+
+  const offset = Math.max(0, Math.min(time, track.duration))
+  const duration = Math.min(SCRUB_GRAIN, track.duration - offset)
+  if (duration <= 0) return;
+
+  lastGrainAt = ctx.currentTime
+  const fade = Math.min(SCRUB_FADE, duration / 3)
+  const peak = volumeToGain(Settings.volume)
+  const start = ctx.currentTime
+
+  const source = ctx.createBufferSource()
+  source.buffer = track.buffer
+  const gain = ctx.createGain()
+  gain.gain.setValueAtTime(0, start)
+  gain.gain.linearRampToValueAtTime(peak, start + fade)
+  gain.gain.setValueAtTime(peak, start + duration - fade)
+  gain.gain.linearRampToValueAtTime(0, start + duration)
+  gain.connect(ctx.destination)
+  source.connect(gain)
+
+  const voice = { source, gain }
+  scrubVoices.add(voice)
+  source.onended = () => {
+    source.disconnect()
+    gain.disconnect()
+    scrubVoices.delete(voice)
+  }
+  source.start(start, offset, duration)
+}
+
+function stopScrubVoices() {
+  if (!scrubVoices.size) return;
+  const ctx = getAudioContext()
+  const now = ctx.currentTime
+  for (const { source, gain } of scrubVoices) {
+    gain.gain.cancelScheduledValues(now)
+    gain.gain.setValueAtTime(gain.gain.value, now)
+    gain.gain.linearRampToValueAtTime(0, now + SCRUB_FADE)
+    source.stop(now + SCRUB_FADE)
+  }
+}
+
+function timeAt(clientX: number, rect: DOMRect): number {
+  return ((clientX - rect.left) / rect.width) * maxDuration.value
+}
+
+function handlePointerDown(e: PointerEvent) {
   const canvas = overlayCanvasRef.value
-  if (!canvas) return;
+  if (!canvas || e.button !== 0) return;
 
   const rect = canvas.getBoundingClientRect()
-  const x = e.clientX - rect.left
-  const y = e.clientY - rect.top
-
-  const laneIndex = Math.floor(y / props.laneHeight)
+  const laneIndex = Math.floor((e.clientY - rect.top) / props.laneHeight)
   const track = loadedTracks.value[laneIndex]
   if (!track) return;
 
-  const clickedTime = (x / rect.width) * maxDuration.value
-  seekTrack(track.id, clickedTime)
+  e.preventDefault()
+  const state = ensurePlaybackState(track.id)
+  scrubbing.value = { id: track.id, pointerId: e.pointerId, wasPlaying: state.isPlaying }
+  canvas.setPointerCapture(e.pointerId)
+
+  pauseTrack(track.id)
+  ensureBuffer(track)
+  hoverX.value = e.clientX - rect.left
+  seekTrack(track.id, timeAt(e.clientX, rect))
+  lastScrubTime = state.currentTime
 }
 
-function handleCanvasMouseMove(e: MouseEvent) {
+function handlePointerMove(e: PointerEvent) {
   const canvas = overlayCanvasRef.value
   if (!canvas) return;
 
   const rect = canvas.getBoundingClientRect()
   hoverX.value = e.clientX - rect.left
+
+  const active = scrubbing.value
+  const track = active ? findTrack(active.id) : null
+  if (active && track && active.pointerId === e.pointerId) {
+    seekTrack(active.id, timeAt(e.clientX, rect))
+    const time = playback[active.id].currentTime
+    if (Math.abs(time - lastScrubTime) > SCRUB_MIN_STEP) {
+      lastScrubTime = time
+      playScrubGrain(track, time)
+    }
+  }
+
   drawOverlay()
 }
 
-function handleCanvasMouseLeave() {
+function handlePointerUp(e: PointerEvent) {
+  const active = scrubbing.value
+  if (!active || active.pointerId !== e.pointerId) return;
+
+  scrubbing.value = null
+  overlayCanvasRef.value?.releasePointerCapture(e.pointerId)
+  stopScrubVoices()
+  if (active.wasPlaying) playTrack(active.id)
+}
+
+function handlePointerLeave() {
+  if (scrubbing.value) return;
   hoverX.value = null
   drawOverlay()
 }
@@ -740,13 +1069,13 @@ onUnmounted(() => {
 
       <template v-for="(track, index) in loadedTracks" :key="'hatch-' + track.id">
         <div
-          v-if="maxDuration > 0 && track.buffer.duration < maxDuration"
+          v-if="maxDuration > 0 && track.duration < maxDuration"
           class="hatch-overlay"
           :style="{
             top: `${index * laneHeight}px`,
             height: `${laneHeight}px`,
-            left: `${(track.buffer.duration / maxDuration) * 100}%`,
-            width: `${(1 - track.buffer.duration / maxDuration) * 100}%`
+            left: `${(track.duration / maxDuration) * 100}%`,
+            width: `${(1 - track.duration / maxDuration) * 100}%`
           }"
         ></div>
       </template>
@@ -754,9 +1083,12 @@ onUnmounted(() => {
       <canvas
         ref="overlayCanvasRef"
         class="overlay-canvas"
-        @click="handleCanvasClick"
-        @mousemove="handleCanvasMouseMove"
-        @mouseleave="handleCanvasMouseLeave"
+        :class="{ scrubbing }"
+        @pointerdown="handlePointerDown"
+        @pointermove="handlePointerMove"
+        @pointerup="handlePointerUp"
+        @pointercancel="handlePointerUp"
+        @pointerleave="handlePointerLeave"
       ></canvas>
 
       <div class="lanes-overlay">
@@ -778,17 +1110,18 @@ onUnmounted(() => {
                     v-bind="tooltipProps"
                     class="accent"
                     style="pointer-events: auto;"
+                    :disabled="playback[track.id]?.waiting"
                     @click.stop="toggleTrackPlay(track.id)"
                   >
                     <Pause16Filled v-if="playback[track.id]?.isPlaying" />
                     <Play16Filled v-else />
                   </IconButton>
                 </template>
-                <h3>{{ playback[track.id]?.isPlaying ? 'Pause' : 'Play' }}</h3>
+                <h3>{{ playback[track.id]?.waiting ? 'Decoding' : playback[track.id]?.isPlaying ? 'Pause' : 'Play' }}</h3>
               </Tooltip>
 
               <span class="time-display">
-                {{ formatTime(playback[track.id]?.currentTime ?? 0) }} / {{ formatTime(track.buffer.duration) }}
+                {{ formatTime(playback[track.id]?.currentTime ?? 0) }} / {{ formatTime(track.duration) }}
               </span>
             </Row>
           </div>
@@ -843,6 +1176,12 @@ onUnmounted(() => {
 
 .overlay-canvas {
   cursor: pointer;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.overlay-canvas.scrubbing {
+  cursor: grabbing;
 }
 
 .lanes-overlay {
