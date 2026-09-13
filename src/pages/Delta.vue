@@ -234,12 +234,16 @@ const imageDisplayOptions = computed(() => [
   ...categoryHasAnimations.value ? [ { id: 'preview', heading: 'Animation' } ] : [],
 ])
 
-const stateFilter = ref<DeltaTrackStateName | null>(
-  param('state') as DeltaTrackStateName ?? null
-)
+const STATE_NAMES: DeltaTrackStateName[] = [ 'Added', 'Edited', 'Moved', 'Removed' ]
+
+function stateParam(value: string | undefined): DeltaTrackStateName | null {
+  return STATE_NAMES.find(name => name.toLowerCase() === value?.toLowerCase()) ?? null
+}
+
+const stateFilter = ref<DeltaTrackStateName | null>(stateParam(param('state')))
 
 watch(() => param('state'), value => {
-  const next = (value as DeltaTrackStateName) ?? null
+  const next = stateParam(value)
   if (stateFilter.value !== next) stateFilter.value = next
 })
 
