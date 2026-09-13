@@ -43,6 +43,9 @@ function areBytesEqual(a: Uint8Array, b: Uint8Array): boolean {
 }
 
 registerViewer('sound', {
+  predictedHeight(track) {
+    return track.state === DeltaTrackState.Edited ? 200 : 100
+  },
   test(_dr, track) {
     return /\.(ogg|fsb)$/.test(track.id)
   },
