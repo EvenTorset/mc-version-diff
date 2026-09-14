@@ -2,6 +2,7 @@ import { registerViewer } from '../registry'
 import { renderJsonTab } from '../jsonTab'
 import { effectiveToggles, listBedrockUiControls, renderBedrockUi, UI_SCALE, type UiRender, type UiUse } from '@/util/bedrockUi'
 import { useElementVisible } from '@/util/useElementVisible'
+import { yieldToMain } from '@/util/yieldToMain'
 import { popupable } from '@/util/popupable'
 import { asyncRenderable } from '@/util/asyncRenderable'
 import { trackTab } from '@/util/trackFocus'
@@ -21,6 +22,14 @@ function displayScale(width: number) {
   if (width * UI_SCALE <= MAX_WIDTH) return UI_SCALE
   if (width <= MAX_WIDTH) return 1
   return MAX_WIDTH / width
+}
+
+let renderQueue: Promise<unknown> = Promise.resolve()
+
+function queuedRender(task: () => Promise<UiRender | null>): Promise<UiRender | null> {
+  const run = renderQueue.then(task)
+  renderQueue = run.then(yieldToMain, yieldToMain)
+  return run
 }
 
 const UiPreview = defineComponent({
@@ -44,7 +53,7 @@ const UiPreview = defineComponent({
     function render() {
       const current = ++generation
       loading.value = true
-      renderBedrockUi(props.dr, props.dr[props.version], props.track[props.version], props.id, { ...props.overrides }).then(rendered => {
+      queuedRender(() => renderBedrockUi(props.dr, props.dr[props.version], props.track[props.version], props.id, { ...props.overrides })).then(rendered => {
         if (current !== generation) return
         result.value = rendered
         if (!rendered) error.value = 'Nothing to preview'

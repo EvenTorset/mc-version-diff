@@ -2,6 +2,7 @@ import type { DeltaResult } from '@/delta_providers'
 import { listFiles, parseJson } from '@/util/bedrockFiles'
 import { imageFromBytes } from '@/util/imageFromBytes'
 import { loadBedrockFont, LINE, type BitmapFont } from '@/util/bedrockFont'
+import { createBudget } from '@/util/yieldToMain'
 
 export const SCREEN_WIDTH = 376
 export const SCREEN_HEIGHT = 250
@@ -78,12 +79,16 @@ export function uiIndex(dr: DeltaResult, version: string): Promise<UiIndex> {
   return pending
 }
 
+const INDEX_BUDGET = 8
+
 async function buildIndex(dr: DeltaResult, version: string): Promise<UiIndex> {
   const namespaces = new Map<string, Namespace>()
   const files = new Map<string, { namespace: string, names: string[] }>()
   let globals: Vars = {}
   const paths = (await listFiles(dr, version, 'resource_pack/ui')).filter(path => path.endsWith('.json'))
+  const breathe = createBudget(INDEX_BUDGET)
   for (const path of paths) {
+    await breathe()
     let json: any
     try {
       json = parseJson(await dr.getEntry(version, path))
