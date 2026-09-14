@@ -14,6 +14,7 @@ const props = defineProps<{
   dr: DeltaResult
   version: 'a' | 'b'
   eventId: string
+  index: number
   soundPath: string
   pitch: number
   volume: number
@@ -21,7 +22,7 @@ const props = defineProps<{
   old?: boolean
 }>()
 
-const key = computed(() => `${props.version},${props.eventId},${props.soundPath}`)
+const key = computed(() => `${props.version},${props.eventId},${props.index}`)
 
 async function playSound() {
   if (audioStates[key.value] === AudioState.Unplayable) return;

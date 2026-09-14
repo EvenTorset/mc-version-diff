@@ -217,8 +217,16 @@ function shown(diff: Line[]) {
       </div>
       <div v-if="event.subtitle" class="subtitle"><code>{{ event.subtitle }}</code></div>
       <div class="sounds">
-        <Row v-for="line of lines(event)" class="sound" gap="8px">
-          <PlayButton v-if="dr" :dr version="b" :event-id="key" :soundPath="line.name" :pitch="line.pitch" :volume="line.volume" />
+        <Row v-for="line, i of lines(event)" class="sound" gap="8px">
+          <PlayButton
+            v-if="dr"
+            :dr version="b"
+            :event-id="key"
+            :soundPath="line.name"
+            :pitch="line.pitch"
+            :volume="line.volume"
+            :index="i"
+          />
           {{ line.name }}
           <span v-if="line.value" class="value">{{ line.value }}</span>
           <Row>
@@ -249,7 +257,7 @@ function shown(diff: Line[]) {
       </div>
       <div v-else-if="after.subtitle" class="subtitle"><code>{{ after.subtitle }}</code></div>
       <div class="sounds">
-        <Row v-for="line of shown(diff)" class="sound" :class="line.state" gap="8px">
+        <Row v-for="line, i of shown(diff)" class="sound" :class="line.state" gap="8px">
           <PlayButton
             v-if="dr && line.state !== 'added'"
             :dr
@@ -259,6 +267,7 @@ function shown(diff: Line[]) {
             :soundPath="line.name"
             :pitch="line.oldPitch ?? line.pitch"
             :volume="line.oldVolume ?? line.volume"
+            :index="i"
           />
           <PlayButton
             v-if="dr && line.state !== 'removed'"
@@ -269,6 +278,7 @@ function shown(diff: Line[]) {
             :soundPath="line.name"
             :pitch="line.pitch"
             :volume="line.volume"
+            :index="i"
           />
           {{ line.name }}
           <span v-if="line.was" class="value">
@@ -302,8 +312,17 @@ function shown(diff: Line[]) {
       </div>
       <div v-if="event.subtitle" class="subtitle"><code>{{ event.subtitle }}</code></div>
       <div class="sounds">
-        <Row v-for="line of lines(event)" class="sound" gap="8px">
-          <PlayButton v-if="dr" :dr version="a" :event-id="key" :soundPath="line.name" :pitch="line.pitch" :volume="line.volume" />
+        <Row v-for="line, i of lines(event)" class="sound" gap="8px">
+          <PlayButton
+            v-if="dr"
+            :dr
+            version="a"
+            :event-id="key"
+            :soundPath="line.name"
+            :pitch="line.pitch"
+            :volume="line.volume"
+            :index="i"
+          />
           {{ line.name }}
           <span v-if="line.value" class="value">{{ line.value }}</span>
           <Row>
