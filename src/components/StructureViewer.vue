@@ -5,6 +5,7 @@ import { deltaVirtualHandler } from '@/util/virtualHandler'
 import { NSpin } from 'naive-ui'
 import { nextTick, onBeforeUnmount, ref, watch, Transition } from 'vue'
 import { useIframeBudget } from '@/util/iframeBudget'
+import { errorMessage } from '@/util/errorMessage'
 
 const structureViewerUrl = 'https://structure-viewer.ewanhowell.com/?minimal&manual&nosky&background=transparent'
 
@@ -21,6 +22,7 @@ const emit = defineEmits<{
 }>()
 
 const doneLoading = ref(false)
+const failed = ref('')
 const container = ref<HTMLElement>()
 const iframeRef = ref<HTMLIFrameElement>()
 const active = useIframeBudget(container)
@@ -46,6 +48,20 @@ async function load() {
 
   const current = embed = new StructureViewerEmbed(iframeRef.value)
 
+  try {
+    await loadInto(current)
+  } catch (err) {
+    console.error(`Failed to load ${props.track.id}:`, err)
+    if (embed !== current) return;
+    failed.value = errorMessage(err)
+    doneLoading.value = true
+    return;
+  }
+
+  if (embed === current) doneLoading.value = true
+}
+
+async function loadInto(current: StructureViewerEmbed) {
   if (props.version) {
     const version = props.dr[props.version]
     const path = props.track[props.version]!
@@ -83,14 +99,13 @@ async function load() {
     if (embed !== current) return;
     emit('counts', comparison.counts)
   }
-
-  if (embed === current) doneLoading.value = true
 }
 
 function unload() {
   embed?.destroy()
   embed = undefined
   doneLoading.value = false
+  failed.value = ''
 }
 
 watch(active, async isActive => {
@@ -123,6 +138,7 @@ onBeforeUnmount(unload)
         <NSpin size="large" />
       </div>
     </Transition>
+    <div v-if="failed" class="viewer-error structure-error">{{ failed }}</div>
   </div>
 </template>
 
@@ -145,6 +161,12 @@ iframe {
 
 .iframe-container {
   position: relative;
+}
+
+.structure-error {
+  position: absolute;
+  inset: 0;
+  background-color: var(--color-0);
 }
 
 .loading-cover {
