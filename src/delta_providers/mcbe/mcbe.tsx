@@ -2,6 +2,7 @@ import { expandSingleLanguage } from '../category'
 import { registerDeltaProvider } from '../registry'
 import { editionProvider, REHASH_OPTION, type VersionEntry } from '../versions'
 import { bedrockEdition } from './edition'
+import { DEFINITIONS_PATH, EVENTS_PATH, MUSIC_PATH } from '@/viewers/sound_events/mcbe_sound_events'
 
 const decoder = new TextDecoder()
 
@@ -58,8 +59,16 @@ registerDeltaProvider('mcbe', editionProvider(bedrockEdition, {
       }
     },
     {
-      name: 'Sounds',
+      name: 'Sound events',
       sort: 3,
+      expand: true,
+      test(_dr, track) {
+        return DEFINITIONS_PATH.test(track.id) || EVENTS_PATH.test(track.id) || MUSIC_PATH.test(track.id)
+      }
+    },
+    {
+      name: 'Sounds',
+      sort: 3.5,
       isSounds: true,
       test(_dr, track) {
         return /^resource_pack\/sounds(?:\.json$|\/)/.test(track.id)
