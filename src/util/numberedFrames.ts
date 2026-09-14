@@ -18,6 +18,9 @@ const GLYPH_HEIGHT = 7
 const SPACING = 1
 const PADDING = 3
 
+// browsers cap a canvas at 65535 pixels per side, beyond that it silently draws nothing
+const MAX_HEIGHT = 32767
+
 export interface FrameStrip {
   canvas: HTMLCanvasElement
   width: number
@@ -27,21 +30,29 @@ export interface FrameStrip {
 
 const strips = new Map<number, FrameStrip>()
 
-export function numberedFrames(frames: number, exact: boolean) {
-  if (!exact) {
-    for (const [ count, strip ] of strips) {
-      if (count >= frames) return strip
-    }
-  }
-  if (!strips.has(frames)) strips.set(frames, buildStrip(frames))
-  return strips.get(frames)!
-}
-
-function buildStrip(frames: number): FrameStrip {
+function frameSize(frames: number) {
   const digits = String(frames).length
   const widest = digits * (GLYPH_WIDTH + SPACING) - SPACING
   // the glyphs are an odd number of pixels wide and tall, so the frame has to be too to centre them
-  const size = Math.max(15, widest + PADDING * 2)
+  return Math.max(15, widest + PADDING * 2)
+}
+
+export function numberedFrames(frames: number, exact: boolean) {
+  const wanted = Math.max(1, Math.min(
+    Math.floor(frames) || 1,
+    Math.floor(MAX_HEIGHT / frameSize(frames))
+  ))
+  if (!exact) {
+    for (const [ count, strip ] of strips) {
+      if (count >= wanted) return strip
+    }
+  }
+  if (!strips.has(wanted)) strips.set(wanted, buildStrip(wanted))
+  return strips.get(wanted)!
+}
+
+function buildStrip(frames: number): FrameStrip {
+  const size = frameSize(frames)
 
   const strip = document.createElement('canvas')
   strip.width = size
