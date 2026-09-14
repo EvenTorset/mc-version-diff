@@ -14,11 +14,15 @@ function pump() {
 
 export function queueDecode<T>(priority: 0 | 1, task: () => Promise<T>): Promise<T> {
   return new Promise<T>((resolve, reject) => {
-    queues[priority].push(() => {
-      task().then(resolve, reject).finally(() => {
+    queues[priority].push(async () => {
+      try {
+        resolve(await task())
+      } catch (err) {
+        reject(err)
+      } finally {
         running--
         pump()
-      })
+      }
     })
     pump()
   })
