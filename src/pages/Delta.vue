@@ -8,6 +8,7 @@ import { getTrackCategory } from '@/delta_providers/category'
 import { NButton, NCard, NCheckbox, NIcon, NInput, NRadio, NRadioGroup, NSelect, NSlider, NSpin, type InputInst } from 'naive-ui'
 import { computed, nextTick, onBeforeUnmount, onMounted, provide, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { rememberDelta } from '@/util/documentTitle'
 import Row from '@/components/Row.vue'
 import TreeList from '@/components/TreeList.vue'
 import { createProgressList } from '@/components/progressList'
@@ -398,6 +399,7 @@ onMounted(async () => {
     const b = route.params.b as string
     const { contentA, contentB } = await provider.value.fetch(a, b, progressDisplay)
     dr.value = await provider.value.compare(a, b, contentA, contentB, progressDisplay)
+    rememberDelta(route.path, dr.value.a, dr.value.b)
     prefetchTextViews()
     prefetchRenderers()
   } catch (err: any) {
