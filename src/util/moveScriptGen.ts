@@ -12,6 +12,18 @@ function toWinPath(filePath: string): string {
   return filePath.replace(/\//g, '\\')
 }
 
+function sh(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`
+}
+
+function ps(value: string): string {
+  return `'${value.replace(/'/g, `''`)}'`
+}
+
+function batch(value: string, script: boolean): string {
+  return `"${script ? value.replace(/%/g, '%%') : value}"`
+}
+
 export function generateMoveScript(tracks: DeltaTrack[], format: Shell): string {
   switch (format) {
     case 'bash':
@@ -29,9 +41,9 @@ function generateBashScript(tracks: DeltaTrack[]): string {
   for (const { a, b } of tracks) {
     const dir = getDirName(b)
     if (dir) {
-      lines.push(`if [ -f "${a}" ]; then mkdir -p "${dir}" && mv "${a}" "${b}" 2>/dev/null; fi`)
+      lines.push(`if [ -f ${sh(a)} ]; then mkdir -p ${sh(dir)} && mv ${sh(a)} ${sh(b)} 2>/dev/null; fi`)
     } else {
-      lines.push(`if [ -f "${a}" ]; then mv "${a}" "${b}" 2>/dev/null; fi`)
+      lines.push(`if [ -f ${sh(a)} ]; then mv ${sh(a)} ${sh(b)} 2>/dev/null; fi`)
     }
   }
 
@@ -48,14 +60,14 @@ function generatePowerShellScript(tracks: DeltaTrack[]): string {
 
     if (winDir) {
       lines.push(
-        `if (Test-Path -LiteralPath "${winA}") { ` +
-        `New-Item -ItemType Directory -Force -Path "${winDir}" | Out-Null; ` +
-        `Move-Item -LiteralPath "${winA}" -Destination "${winB}" -ErrorAction SilentlyContinue }`
+        `if (Test-Path -LiteralPath ${ps(winA)}) { ` +
+        `New-Item -ItemType Directory -Force -Path ${ps(winDir)} | Out-Null; ` +
+        `Move-Item -LiteralPath ${ps(winA)} -Destination ${ps(winB)} -ErrorAction SilentlyContinue }`
       )
     } else {
       lines.push(
-        `if (Test-Path -LiteralPath "${winA}") { ` +
-        `Move-Item -LiteralPath "${winA}" -Destination "${winB}" -ErrorAction SilentlyContinue }`
+        `if (Test-Path -LiteralPath ${ps(winA)}) { ` +
+        `Move-Item -LiteralPath ${ps(winA)} -Destination ${ps(winB)} -ErrorAction SilentlyContinue }`
       )
     }
   }
@@ -67,14 +79,14 @@ function generateBatchScript(tracks: DeltaTrack[]): string {
   const lines = ['@echo off', '']
 
   for (const { a, b } of tracks) {
-    const winA = toWinPath(a)
-    const winB = toWinPath(b)
-    const winDir = toWinPath(getDirName(b))
+    const winA = batch(toWinPath(a), true)
+    const winB = batch(toWinPath(b), true)
+    const winDir = getDirName(b)
 
     if (winDir) {
-      lines.push(`mkdir "${winDir}" 2>nul & move /Y "${winA}" "${winB}" >nul 2>&1`)
+      lines.push(`mkdir ${batch(toWinPath(winDir), true)} 2>nul & move /Y ${winA} ${winB} >nul 2>&1`)
     } else {
-      lines.push(`move /Y "${winA}" "${winB}" >nul 2>&1`)
+      lines.push(`move /Y ${winA} ${winB} >nul 2>&1`)
     }
   }
 
@@ -87,8 +99,8 @@ export function generateMoveCommand(tracks: DeltaTrack[], format: Shell): string
       return tracks
         .map(({ a, b }) => {
           const dir = getDirName(b)
-          const mkdir = dir ? `mkdir -p "${dir}" && ` : ''
-          return `[ -f "${a}" ] && ${mkdir}mv "${a}" "${b}" 2>/dev/null`
+          const mkdir = dir ? `mkdir -p ${sh(dir)} && ` : ''
+          return `[ -f ${sh(a)} ] && ${mkdir}mv ${sh(a)} ${sh(b)} 2>/dev/null`
         })
         .join('; ')
 
@@ -98,19 +110,19 @@ export function generateMoveCommand(tracks: DeltaTrack[], format: Shell): string
           const winA = toWinPath(a)
           const winB = toWinPath(b)
           const winDir = toWinPath(getDirName(b))
-          const mkdir = winDir ? `New-Item -ItemType Directory -Force -Path "${winDir}" | Out-Null; ` : ''
-          return `if (Test-Path -LiteralPath "${winA}") { ${mkdir}Move-Item -LiteralPath "${winA}" -Destination "${winB}" -ErrorAction SilentlyContinue }`
+          const mkdir = winDir ? `New-Item -ItemType Directory -Force -Path ${ps(winDir)} | Out-Null; ` : ''
+          return `if (Test-Path -LiteralPath ${ps(winA)}) { ${mkdir}Move-Item -LiteralPath ${ps(winA)} -Destination ${ps(winB)} -ErrorAction SilentlyContinue }`
         })
         .join('; ')
 
     case 'cmd':
       return tracks
         .map(({ a, b }) => {
-          const winA = toWinPath(a)
-          const winB = toWinPath(b)
-          const winDir = toWinPath(getDirName(b))
-          const mkdir = winDir ? `mkdir "${winDir}" 2>nul & ` : ''
-          return `${mkdir}move /Y "${winA}" "${winB}" >nul 2>&1`
+          const winA = batch(toWinPath(a), false)
+          const winB = batch(toWinPath(b), false)
+          const winDir = getDirName(b)
+          const mkdir = winDir ? `mkdir ${batch(toWinPath(winDir), false)} 2>nul & ` : ''
+          return `${mkdir}move /Y ${winA} ${winB} >nul 2>&1`
         })
         .join(' & ')
   }
