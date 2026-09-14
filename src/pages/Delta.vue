@@ -254,7 +254,10 @@ const defaultSortBy = (searching: boolean): SortBy => searching ? 'closest_match
 const sortBy = ref<SortBy>(param('sortBy') as SortBy ?? defaultSortBy(!!param('search')))
 let sortBeforeSearch: SortBy | null = null
 
+let restoringUrl = false
+
 watch(() => debouncedPathFilter.value.trim(), (query, previous) => {
+  if (restoringUrl) return;
   if (query && !previous) {
     if (sortBy.value !== 'closest_match') sortBeforeSearch = sortBy.value
     sortBy.value = 'closest_match'
@@ -297,6 +300,35 @@ provide('path-highlight', pathHighlight)
 
 watch([debouncedPathFilter, stateFilter], () => {
   window.scrollTo({ top: 0, behavior: 'instant' })
+})
+
+watch(() => route.query, async () => {
+  restoringUrl = true
+
+  const search = param('search') ?? ''
+  if (pathFilter.value !== search) pathFilter.value = search
+  if (debouncedPathFilter.value !== search) debouncedPathFilter.value = search
+
+  const regex = param('regex') === '1'
+  if (findRegex.value !== regex) findRegex.value = regex
+
+  const sort = (param('sortBy') as SortBy) ?? defaultSortBy(!!search)
+  if (sortBy.value !== sort) sortBy.value = sort
+
+  const dir = param('sortDir') === 'desc' ? 'desc' : 'asc'
+  if (sortDir.value !== dir) sortDir.value = dir
+
+  const mode = imageModes.find(option => option === param('mode')) ?? 'rgba'
+  if (imageViewMode.value !== mode) imageViewMode.value = mode
+
+  const animate = param('animate') === '1'
+  if (animateTextures.value !== animate) animateTextures.value = animate
+
+  const animtexture = param('animtexture') === '1'
+  if (mcmetaTexture.value !== animtexture) mcmetaTexture.value = animtexture
+
+  await nextTick()
+  restoringUrl = false
 })
 
 function onKeydown(event: KeyboardEvent) {
