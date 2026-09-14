@@ -6,7 +6,7 @@ import { renderImageWithMode } from '@/shared_renderer'
 import type { ImageViewMode } from '@/types'
 import { popupable } from '@/util/popupable'
 import { deltaVirtualHandler } from '@/util/virtualHandler'
-import { animationStats, arrayFrames, type Playhead } from '@/util/animation'
+import { animationStats, arrayFrames, normalizeMcmeta, type Playhead } from '@/util/animation'
 import { formatBytes } from '@/util/bytes'
 import { imageFromBytes, imageFromBytesOwned } from '@/util/imageFromBytes'
 import { NSpin } from 'naive-ui'
@@ -77,11 +77,7 @@ async function source(read: (path: string) => Promise<Uint8Array | null>) {
 }
 
 function playedMeta() {
-  if (!props.numbered) return props.mcmeta
-  const meta = JSON.parse(props.mcmeta)
-  delete meta.animation.width
-  delete meta.animation.height
-  return JSON.stringify(meta)
+  return normalizeMcmeta(props.mcmeta, props.numbered)
 }
 
 let buildRun = 0
