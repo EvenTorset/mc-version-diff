@@ -9,6 +9,7 @@ let initPromise: Promise<typeof import('./wasm').convertFsb5> | null = null
 
 type AudioSample = {
   name: string
+  path: string
   bytes: Uint8Array<ArrayBuffer>
 }
 
@@ -17,18 +18,23 @@ async function getAudioSamples(
   track: DeltaTrack,
   version: 'a' | 'b'
 ): Promise<AudioSample[]> {
-  const rawContent = await dr.getEntry(dr[version], track[version])
+  const path = track[version]
+  const rawContent = await dr.getEntry(dr[version], path)
   if (track.id.endsWith('.fsb')) {
     const convertFsb5 = await (initPromise ??= (async () => {
       const wasm = await import('./wasm')
       await wasm.default()
       return wasm.convertFsb5
     })())
-    return convertFsb5(rawContent)
+    return convertFsb5(rawContent).map((sample: { name: string, bytes: Uint8Array<ArrayBuffer> }) => ({
+      ...sample,
+      path: `${path}/${sample.name}`,
+    }))
   }
   return [
     {
-      name: basename(track[version]),
+      name: basename(path),
+      path,
       bytes: rawContent,
     }
   ]
@@ -59,9 +65,8 @@ registerViewer('sound', {
             <Waveform
               sources={[{
                 id: 'b',
-                name: samples[0].name,
+                ...samples[0],
                 version: dr.b,
-                bytes: samples[0].bytes,
                 color: track.state === DeltaTrackState.Added ? '--color-success' : '--color-accent',
               }]}
             />
@@ -74,9 +79,8 @@ registerViewer('sound', {
                 <Waveform
                   sources={[{
                     id: 'b',
-                    name: sample.name,
+                    ...sample,
                     version: dr.b,
-                    bytes: sample.bytes,
                     color: track.state === DeltaTrackState.Added ? '--color-success' : '--color-accent',
                   }]}
                 />
@@ -92,9 +96,8 @@ registerViewer('sound', {
             <Waveform
               sources={[{
                 id: 'a',
-                name: samples[0].name,
+                ...samples[0],
                 version: dr.a,
-                bytes: samples[0].bytes,
                 color: '--color-danger',
               }]}
             />
@@ -107,9 +110,8 @@ registerViewer('sound', {
                 <Waveform
                   sources={[{
                     id: 'a',
-                    name: sample.name,
+                    ...sample,
                     version: dr.a,
-                    bytes: sample.bytes,
                     color: '--color-danger',
                   }]}
                 />
@@ -130,15 +132,13 @@ registerViewer('sound', {
               sources={[
                 {
                   id: 'a',
-                  name: samplesA[0].name,
+                  ...samplesA[0],
                   version: dr.a,
-                  bytes: samplesA[0].bytes,
                 },
                 {
                   id: 'b',
-                  name: samplesB[0].name,
+                  ...samplesB[0],
                   version: dr.b,
-                  bytes: samplesB[0].bytes,
                 },
               ]}
             />
@@ -276,18 +276,16 @@ registerViewer('sound', {
                     if (row.sampleA) {
                       sources.push({
                         id: 'a',
-                        name: row.sampleA.name,
+                        ...row.sampleA,
                         version: dr.a,
-                        bytes: row.sampleA.bytes,
                         ...(row.state === 'removed' ? { color: '--color-danger' } : {}),
                       })
                     }
                     if (row.sampleB) {
                       sources.push({
                         id: 'b',
-                        name: row.sampleB.name,
+                        ...row.sampleB,
                         version: dr.b,
-                        bytes: row.sampleB.bytes,
                         ...(row.state === 'added' ? { color: '--color-success' } : {}),
                       })
                     }
