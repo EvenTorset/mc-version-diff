@@ -59,12 +59,14 @@ const listForMode = computed<ManifestVersion[]>(() => {
 })
 
 function matching(list: ManifestVersion[], query: string) {
+  const wanted = query.toLowerCase()
   const starts: ManifestVersion[] = []
   const contains: ManifestVersion[] = []
   for (const version of list) {
+    const id = version.id.toLowerCase()
     const label = versionLabel(edition, version).toLowerCase()
-    if (version.id.startsWith(query) || label.startsWith(query)) starts.push(version)
-    else if (version.id.includes(query) || label.includes(query)) contains.push(version)
+    if (id.startsWith(wanted) || label.startsWith(wanted)) starts.push(version)
+    else if (id.includes(wanted) || label.includes(wanted)) contains.push(version)
   }
   return starts.concat(contains)
 }
