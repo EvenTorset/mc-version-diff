@@ -7,6 +7,8 @@ import { getAudioBuffer, getAudioContext } from '@/util/audioBuffers'
 import { Settings } from '@/settings'
 import Tooltip from '@/components/Tooltip.vue'
 import { NIcon } from 'naive-ui'
+import Notify from '@/notify'
+import { errorMessage } from '@/util/errorMessage'
 
 const props = defineProps<{
   dr: DeltaResult
@@ -51,7 +53,8 @@ async function playSound() {
     audioStates[key.value] = AudioState.Playing
     source.start(0, 0)
   } catch (err) {
-    //TODO: show error notif
+    Notify.error(`Failed to play sound.\n\n${errorMessage(err)}`)
+    console.error(err)
     audioStates[key.value] = AudioState.Unplayable
   }
 }
