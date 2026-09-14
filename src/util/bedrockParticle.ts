@@ -190,10 +190,13 @@ export function registerParticleLoader() {
       scene.global_options.tick_rate = TICK_RATE
       const emitter = new Wintersky.Emitter(scene, new Wintersky.Config(scene, entry.json), { loop_mode: 'auto', parent_mode: 'world' })
       Object.assign((emitter as any).Molang.global_variables, entry.variables)
-      if (entry.json.particle_effect.components?.['minecraft:particle_motion_collision'] && !emitter.config.space_local_position) {
-        const anchor = new THREE.Object3D()
-        anchor.add(emitter.local_space)
-        emitter.local_space.position.y = COLLISION_HEIGHT
+      if (entry.json.particle_effect.components?.['minecraft:particle_motion_collision']) {
+        if (emitter.config.space_local_position) emitter.ground_collision = false
+        else {
+          const anchor = new THREE.Object3D()
+          anchor.add(emitter.local_space)
+          emitter.local_space.position.y = COLLISION_HEIGHT
+        }
       }
       group.add(scene.space)
       const state: ParticleState = { scene, emitter, started: false, last: 0, ticks: 0, idle: 0 }
