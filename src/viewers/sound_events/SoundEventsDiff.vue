@@ -5,22 +5,20 @@ import Row from '@/components/Row.vue'
 import type { DeltaResult } from '@/delta_providers/index.ts'
 import PlayButton from './PlayButton.vue'
 
+export type SoundValue = string | number | boolean | number[]
+
 export type Sound = string | {
   name: string
   volume?: number
   pitch?: number
-  weight?: number
-  stream?: boolean
-  preload?: boolean
-  attenuation_distance?: number
   type?: string
+  [key: string]: SoundValue | undefined
 }
 
 export type SoundEvent = {
   sounds?: Sound[]
   subtitle?: string
-  category?: string
-  replace?: boolean
+  [key: string]: SoundValue | Sound[] | undefined
 }
 
 export type SoundEvents = Record<string, SoundEvent>
@@ -36,6 +34,8 @@ type Chip = {
 
 type Line = {
   name: string
+  value: string
+  was: string
   state: State
   chips: Chip[]
   pitch: number
@@ -48,7 +48,7 @@ const props = defineProps<{
   original: SoundEvents
   modified: SoundEvents
   showUnchanged?: boolean
-  dr: DeltaResult
+  dr?: DeltaResult
 }>()
 
 const emit = defineEmits<{
@@ -59,29 +59,80 @@ function named(sound: Sound) {
   return typeof sound === 'string' ? { name: sound } : sound
 }
 
+const ORDER = [ 'sound', 'stream', 'preload', 'volume', 'pitch', 'weight', 'attenuation_distance' ]
+
+const LABELS: Record<string, string> = {
+  attenuation_distance: 'range',
+  is3D: '3d',
+}
+
+function flag(value: SoundValue) {
+  if (typeof value === 'boolean') return value
+  return value === 'true' ? true : value === 'false' ? false : null
+}
+
+function label(key: string) {
+  return LABELS[key] ?? key.replace(/^_+/, '').replace(/_/g, ' ')
+}
+
+function format(value: SoundValue) {
+  return Array.isArray(value) ? value.join(' to ') : String(value)
+}
+
+function scalar(value: unknown): value is SoundValue {
+  return typeof value !== 'object' || Array.isArray(value)
+}
+
+function rank(key: string) {
+  const at = ORDER.indexOf(key)
+  return at === -1 ? ORDER.length : at
+}
+
 function chipsOf(sound: Sound): Chip[] {
   const sides = named(sound)
   const parts: [ string, string ][] = []
   if (sides.type) parts.push([ sides.type, '' ])
-  if (sides.stream) parts.push([ 'stream', '' ])
-  if (sides.preload) parts.push([ 'preload', '' ])
-  if (sides.volume !== undefined) parts.push([ 'volume', String(sides.volume) ])
-  if (sides.pitch !== undefined) parts.push([ 'pitch', String(sides.pitch) ])
-  if (sides.weight !== undefined) parts.push([ 'weight', String(sides.weight) ])
-  if (sides.attenuation_distance !== undefined) parts.push([ 'range', String(sides.attenuation_distance) ])
+  for (const key of Object.keys(sides).sort((a, b) => rank(a) - rank(b))) {
+    if (key === 'name' || key === 'type' || key === 'sound') continue
+    const value = sides[key]
+    if (value === undefined || value === null || value === '' || !scalar(value)) continue
+    const state = flag(value)
+    if (state !== null) {
+      if (state) parts.push([ label(key), '' ])
+      continue
+    }
+    parts.push([ label(key), format(value) ])
+  }
   return parts.map(([ key, value ]) => ({ key, value, was: '', state: '' as const }))
 }
 
 function traits(event: SoundEvent): string[] {
   const parts: string[] = []
-  if (event.category) parts.push(event.category)
-  if (event.replace) parts.push('replace')
+  for (const key of Object.keys(event)) {
+    if (key === 'sounds' || key === 'subtitle') continue
+    const value = event[key]
+    if (value === undefined || value === null || value === '' || !scalar(value)) continue
+    if (Array.isArray(value) && !value.length) continue
+    const state = flag(value)
+    if (state !== null) {
+      if (state) parts.push(label(key))
+      continue
+    }
+    parts.push(key === 'category' ? String(value) : `${label(key)}: ${format(value)}`)
+  }
   return parts
+}
+
+function valueOf(sound: Sound) {
+  const value = named(sound).sound
+  return value === undefined || value === null ? '' : String(value)
 }
 
 function lines(event: SoundEvent): Line[] {
   return (event.sounds ?? []).map(sound => ({
     name: named(sound).name,
+    value: valueOf(sound),
+    was: '',
     state: '' as const,
     chips: chipsOf(sound),
     pitch: typeof sound === 'object' ? sound.pitch ?? 1 : 1,
@@ -110,12 +161,14 @@ function diffLines(before: SoundEvent, after: SoundEvent): Line[] {
     if (!previous) return { ...line, state: 'added' as const }
     kept.add(line.name)
     const chips = diffChips(previous.chips, line.chips)
+    const was = previous.value === line.value ? '' : previous.value
     return {
       ...line,
       oldPitch: previous.pitch,
       oldVolume: previous.volume,
       chips,
-      state: chips.some(chip => chip.state) ? 'edited' as const : '' as const,
+      was,
+      state: was || chips.some(chip => chip.state) ? 'edited' as const : '' as const,
     }
   })
   for (const line of old.values()) {
@@ -165,11 +218,12 @@ function shown(diff: Line[]) {
       <div v-if="event.subtitle" class="subtitle"><code>{{ event.subtitle }}</code></div>
       <div class="sounds">
         <Row v-for="line of lines(event)" class="sound" gap="8px">
-          <PlayButton :dr version="b" :event-id="key" :soundPath="line.name" :pitch="line.pitch" :volume="line.volume" />
+          <PlayButton v-if="dr" :dr version="b" :event-id="key" :soundPath="line.name" :pitch="line.pitch" :volume="line.volume" />
           {{ line.name }}
+          <span v-if="line.value" class="value">{{ line.value }}</span>
           <Row>
             <Row v-for="chip of line.chips" class="modifier">
-              <span>{{ chip.key }}</span>
+              <span>{{ chip.value ? chip.key + ':' : chip.key }}</span>
               <span v-if="chip.value">{{ chip.value }}</span>
             </Row>
           </Row>
@@ -197,7 +251,7 @@ function shown(diff: Line[]) {
       <div class="sounds">
         <Row v-for="line of shown(diff)" class="sound" :class="line.state" gap="8px">
           <PlayButton
-            v-if="line.state !== 'added'"
+            v-if="dr && line.state !== 'added'"
             :dr
             :old="line.state !== 'removed'"
             version="a"
@@ -207,7 +261,7 @@ function shown(diff: Line[]) {
             :volume="line.oldVolume ?? line.volume"
           />
           <PlayButton
-            v-if="line.state !== 'removed'"
+            v-if="dr && line.state !== 'removed'"
             :dr
             :new="line.state !== 'added'"
             version="b"
@@ -217,9 +271,15 @@ function shown(diff: Line[]) {
             :volume="line.volume"
           />
           {{ line.name }}
+          <span v-if="line.was" class="value">
+            <span class="was">{{ line.was }}</span>
+            <span>&rarr;</span>
+            <span class="now">{{ line.value }}</span>
+          </span>
+          <span v-else-if="line.value" class="value">{{ line.value }}</span>
           <Row>
             <Row v-for="chip of line.chips" class="modifier" :class="chip.state">
-              <span>{{ chip.key }}</span>
+              <span>{{ chip.value || chip.was ? chip.key + ':' : chip.key }}</span>
               <template v-if="chip.state === 'edited'">
                 <span class="was">{{ chip.was }}</span>
                 <span>&rarr;</span>
@@ -243,11 +303,12 @@ function shown(diff: Line[]) {
       <div v-if="event.subtitle" class="subtitle"><code>{{ event.subtitle }}</code></div>
       <div class="sounds">
         <Row v-for="line of lines(event)" class="sound" gap="8px">
-          <PlayButton :dr version="a" :event-id="key" :soundPath="line.name" :pitch="line.pitch" :volume="line.volume" />
+          <PlayButton v-if="dr" :dr version="a" :event-id="key" :soundPath="line.name" :pitch="line.pitch" :volume="line.volume" />
           {{ line.name }}
+          <span v-if="line.value" class="value">{{ line.value }}</span>
           <Row>
             <Row v-for="chip of line.chips" class="modifier">
-              <span>{{ chip.key }}</span>
+              <span>{{ chip.value ? chip.key + ':' : chip.key }}</span>
               <span v-if="chip.value">{{ chip.value }}</span>
             </Row>
           </Row>
@@ -321,6 +382,21 @@ function shown(diff: Line[]) {
 
   &.edited {
     color: var(--color-accent-suppl);
+  }
+}
+
+.value {
+  display: inline-flex;
+  gap: 4px;
+  color: var(--color-6);
+
+  .was {
+    color: var(--color-danger);
+    text-decoration: line-through;
+  }
+
+  .now {
+    color: var(--color-success);
   }
 }
 
