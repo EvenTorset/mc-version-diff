@@ -1,6 +1,6 @@
 import type { DeltaProviderCategory } from '..'
 import { expandSingleLanguage } from '../category'
-import { SOUNDS_PATH } from '@/viewers/mcje/sounds'
+import { SOUNDS_PATH } from '@/viewers/sound_events/mcje_sound_events'
 
 export const javaCategories: DeltaProviderCategory[] = [
   {
@@ -52,6 +52,7 @@ export const javaCategories: DeltaProviderCategory[] = [
     name: 'Sound events',
     sort: 6,
     expand: true,
+    isSounds: true,
     test(_dr, track) {
       return SOUNDS_PATH.test(track.id)
     }

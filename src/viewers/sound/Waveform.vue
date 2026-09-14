@@ -13,6 +13,7 @@ import { queueDecode } from './decodeQueue'
 import { cachePeaks, cachedPeaks, peaksKey } from './peaksStore'
 import { peaksFromOgg, vorbisSupported } from './webcodecs'
 import { readWav, wavPeaks } from './wav'
+import { getAudioBuffer, getAudioContext } from '@/util/audioBuffers'
 
 export interface TrackSource {
   id: string
@@ -99,10 +100,8 @@ const hoverX = ref<number | null>(null)
 const scrubbing = ref<Scrub | null>(null)
 const playback = reactive<Record<string, PlaybackState>>({})
 
-const audioBufferCache = new WeakMap<Uint8Array, Promise<AudioBuffer>>()
 const peaksCache = new WeakMap<AudioBuffer, Map<number, Promise<Float32Array>>>()
 
-let sharedAudioCtx: AudioContext | null = null
 const transientByTrack = new Map<string, Transient>()
 const scrubVoices = new Set<ScrubVoice>()
 let lastGrainAt = 0
@@ -130,13 +129,6 @@ function themeColor(name: string): string {
     paletteAt = now
   }
   return palette[name] ??= getCSSVar(name)
-}
-
-function getAudioContext(): AudioContext {
-  if (!sharedAudioCtx) {
-    sharedAudioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
-  }
-  return sharedAudioCtx
 }
 
 function processPeaksInWorker(
@@ -167,19 +159,6 @@ function processPeaksInWorker(
 
     worker.postMessage({ channelBuffers, numBuckets }, transferables)
   })
-}
-
-function getAudioBuffer(bytes: Uint8Array<ArrayBuffer>): Promise<AudioBuffer> {
-  let cached = audioBufferCache.get(bytes)
-  if (!cached) {
-    cached = queueDecode(0, () => {
-      const ctx = getAudioContext()
-      const copy = bytes.slice(0)
-      return ctx.decodeAudioData(copy.buffer)
-    })
-    audioBufferCache.set(bytes, cached)
-  }
-  return cached
 }
 
 function getPeaks(buffer: AudioBuffer, numBuckets: number): Promise<Float32Array> {

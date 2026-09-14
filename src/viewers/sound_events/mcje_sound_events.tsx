@@ -1,5 +1,5 @@
 import Content from '@/components/Content.vue'
-import SoundsDiff, { type SoundEvents } from '@/components/SoundsDiff.vue'
+import SoundEventsDiff, { type SoundEvents } from './SoundEventsDiff.vue'
 import type { DeltaResult } from '@/delta_providers'
 import { DeltaTrackState } from '@/delta_providers/states'
 import { trackTab } from '@/util/trackFocus'
@@ -15,7 +15,7 @@ async function readSide(dr: DeltaResult, version: string, path: string): Promise
   return JSON.parse(new TextDecoder().decode(await dr.getEntry(version, path)))
 }
 
-registerViewer('mcje_sounds', {
+registerViewer('mcje_sound_events', {
   edition: 'mcje',
   test(_dr, track) {
     return SOUNDS_PATH.test(track.id)
@@ -37,7 +37,8 @@ registerViewer('mcje_sounds', {
     const tab = trackTab(track.id, [ 'sounds', 'json' ])
 
     function view_sounds() {
-      return <SoundsDiff
+      return <SoundEventsDiff
+        dr={dr}
         original={before}
         modified={after}
         showUnchanged={showUnchanged.value}

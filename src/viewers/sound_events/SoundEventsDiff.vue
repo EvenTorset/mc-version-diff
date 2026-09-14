@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
-import MarkChanges from './MarkChanges.vue'
+import MarkChanges from '@/components/MarkChanges.vue'
+import Row from '@/components/Row.vue'
+import type { DeltaResult } from '@/delta_providers/index.ts'
+import PlayButton from './PlayButton.vue'
 
 export type Sound = string | {
   name: string
@@ -35,12 +38,17 @@ type Line = {
   name: string
   state: State
   chips: Chip[]
+  pitch: number
+  volume: number
+  oldPitch?: number
+  oldVolume?: number
 }
 
 const props = defineProps<{
   original: SoundEvents
   modified: SoundEvents
   showUnchanged?: boolean
+  dr: DeltaResult
 }>()
 
 const emit = defineEmits<{
@@ -72,7 +80,13 @@ function traits(event: SoundEvent): string[] {
 }
 
 function lines(event: SoundEvent): Line[] {
-  return (event.sounds ?? []).map(sound => ({ name: named(sound).name, state: '' as const, chips: chipsOf(sound) }))
+  return (event.sounds ?? []).map(sound => ({
+    name: named(sound).name,
+    state: '' as const,
+    chips: chipsOf(sound),
+    pitch: typeof sound === 'object' ? sound.pitch ?? 1 : 1,
+    volume: typeof sound === 'object' ? sound.volume ?? 1 : 1,
+  }))
 }
 
 function diffChips(before: Chip[], after: Chip[]): Chip[] {
@@ -96,7 +110,13 @@ function diffLines(before: SoundEvent, after: SoundEvent): Line[] {
     if (!previous) return { ...line, state: 'added' as const }
     kept.add(line.name)
     const chips = diffChips(previous.chips, line.chips)
-    return { ...line, chips, state: chips.some(chip => chip.state) ? 'edited' as const : '' as const }
+    return {
+      ...line,
+      oldPitch: previous.pitch,
+      oldVolume: previous.volume,
+      chips,
+      state: chips.some(chip => chip.state) ? 'edited' as const : '' as const,
+    }
   })
   for (const line of old.values()) {
     if (!kept.has(line.name)) changed.push({ ...line, state: 'removed' })
@@ -144,13 +164,16 @@ function shown(diff: Line[]) {
       </div>
       <div v-if="event.subtitle" class="subtitle"><code>{{ event.subtitle }}</code></div>
       <div class="sounds">
-        <div v-for="line of lines(event)" class="sound">
+        <Row v-for="line of lines(event)" class="sound" gap="8px">
+          <PlayButton :dr version="b" :event-id="key" :soundPath="line.name" :pitch="line.pitch" :volume="line.volume" />
           {{ line.name }}
-          <span v-for="chip of line.chips" class="modifier">
-            <span>{{ chip.key }}</span>
-            <span v-if="chip.value">{{ chip.value }}</span>
-          </span>
-        </div>
+          <Row>
+            <Row v-for="chip of line.chips" class="modifier">
+              <span>{{ chip.key }}</span>
+              <span v-if="chip.value">{{ chip.value }}</span>
+            </Row>
+          </Row>
+        </Row>
       </div>
     </div>
   </div>
@@ -172,18 +195,40 @@ function shown(diff: Line[]) {
       </div>
       <div v-else-if="after.subtitle" class="subtitle"><code>{{ after.subtitle }}</code></div>
       <div class="sounds">
-        <div v-for="line of shown(diff)" class="sound" :class="line.state">
+        <Row v-for="line of shown(diff)" class="sound" :class="line.state" gap="8px">
+          <PlayButton
+            v-if="line.state !== 'added'"
+            :dr
+            :old="line.state !== 'removed'"
+            version="a"
+            :event-id="key"
+            :soundPath="line.name"
+            :pitch="line.oldPitch ?? line.pitch"
+            :volume="line.oldVolume ?? line.volume"
+          />
+          <PlayButton
+            v-if="line.state !== 'removed'"
+            :dr
+            :new="line.state !== 'added'"
+            version="b"
+            :event-id="key"
+            :soundPath="line.name"
+            :pitch="line.pitch"
+            :volume="line.volume"
+          />
           {{ line.name }}
-          <span v-for="chip of line.chips" class="modifier" :class="chip.state">
-            <span>{{ chip.key }}</span>
-            <template v-if="chip.state === 'edited'">
-              <span class="was">{{ chip.was }}</span>
-              <span class="arrow">&rarr;</span>
-              <span class="now">{{ chip.value }}</span>
-            </template>
-            <span v-else-if="chip.value">{{ chip.value }}</span>
-          </span>
-        </div>
+          <Row>
+            <Row v-for="chip of line.chips" class="modifier" :class="chip.state">
+              <span>{{ chip.key }}</span>
+              <template v-if="chip.state === 'edited'">
+                <span class="was">{{ chip.was }}</span>
+                <span>&rarr;</span>
+                <span class="now">{{ chip.value }}</span>
+              </template>
+              <span v-else-if="chip.value">{{ chip.value }}</span>
+            </Row>
+          </Row>
+        </Row>
       </div>
     </div>
   </div>
@@ -197,13 +242,16 @@ function shown(diff: Line[]) {
       </div>
       <div v-if="event.subtitle" class="subtitle"><code>{{ event.subtitle }}</code></div>
       <div class="sounds">
-        <div v-for="line of lines(event)" class="sound">
+        <Row v-for="line of lines(event)" class="sound" gap="8px">
+          <PlayButton :dr version="a" :event-id="key" :soundPath="line.name" :pitch="line.pitch" :volume="line.volume" />
           {{ line.name }}
-          <span v-for="chip of line.chips" class="modifier">
-            <span>{{ chip.key }}</span>
-            <span v-if="chip.value">{{ chip.value }}</span>
-          </span>
-        </div>
+          <Row>
+            <Row v-for="chip of line.chips" class="modifier">
+              <span>{{ chip.key }}</span>
+              <span v-if="chip.value">{{ chip.value }}</span>
+            </Row>
+          </Row>
+        </Row>
       </div>
     </div>
   </div>
@@ -277,17 +325,14 @@ function shown(diff: Line[]) {
 }
 
 .modifier {
-  display: inline-flex;
-  gap: 4px;
-  margin-left: 6px;
   padding: 0 5px;
   border-radius: 4px;
   white-space: nowrap;
   background-color: var(--color-2);
-  color: var(--color-6);
+  color: var(--color-5);
   font-family: var(--font-family);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
 
   &.added {
     background-color: rgb(from var(--color-success) r g b / 0.2);
@@ -303,10 +348,6 @@ function shown(diff: Line[]) {
   .was {
     color: var(--color-danger);
     text-decoration: line-through;
-  }
-
-  .arrow {
-    color: var(--color-4);
   }
 
   .now {

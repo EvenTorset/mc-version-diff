@@ -163,7 +163,7 @@ function markChanges(original: string, modified: string): Renderable {
   &>.content {
     flex: 1;
 
-    &>:deep(mark) {
+    &>:deep(mark),&>code>:deep(mark) {
       color: var(--color-6);
       position: relative;
       border-radius: 3px;
@@ -174,11 +174,11 @@ function markChanges(original: string, modified: string): Renderable {
   }
 }
 
-.original>.content>:deep(mark) {
+.original>.content>:deep(mark),.original>.content>code>:deep(mark) {
   --background: rgb(from var(--color-danger) r g b / 0.33);
 }
 
-.modified>.content>:deep(mark) {
+.modified>.content>:deep(mark),.modified>.content>code>:deep(mark) {
   --background: rgb(from var(--color-success) r g b / 0.33);
 }
 
