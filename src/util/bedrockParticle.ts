@@ -9,6 +9,7 @@ const RESTART_TICKS = 8
 const COLLISION_HEIGHT = 48
 const FIT_SECONDS = 8
 const FIT_MAX_PARTICLES = 50
+const LIVE_MAX_PARTICLES = 200
 
 const ATLAS_TEXTURES: Record<string, string> = {
   'atlas.terrain': 'textures/blocks/stone',
@@ -141,14 +142,16 @@ export async function loadBedrockParticle(dr: DeltaResult, version: string, path
     const manual = emitter.config.emitter_rate_mode === 'manual'
     const once = emitter.config.emitter_lifetime_mode === 'once'
     const collides = !!emitter.config.particle_collision_toggle
+    const cap = fit ? FIT_MAX_PARTICLES : Math.min(emitter.calculate(emitter.config.emitter_rate_maximum, emitter.params()) || LIVE_MAX_PARTICLES, LIVE_MAX_PARTICLES)
     for (let i = 0; i < ticks; i++) {
       emitter.tick()
       state.ticks++
       if (collides) for (let p = emitter.particles.length - 1; p >= 0; p--) if (emitter.particles[p].position.y < 0) emitter.particles[p].remove()
       if (fit) while (emitter.particles.length > FIT_MAX_PARTICLES) emitter.particles[emitter.particles.length - 1].remove()
-      if (emitter.particles.length || !(manual ? emitter.enabled : once && !emitter.enabled)) continue
+      if (!(manual ? emitter.enabled : once && !emitter.enabled)) continue
       if (++state.idle < RESTART_TICKS) continue
       state.idle = 0
+      if (emitter.particles.length >= cap) continue
       if (manual) emitter.spawnParticles(1)
       else emitter.start()
     }
