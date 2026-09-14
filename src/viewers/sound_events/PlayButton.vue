@@ -63,7 +63,16 @@ async function playSound() {
 <template>
   <Tooltip>
     <template #trigger="{ props }">
-      <div v-bind="props" class="button" :class="{ new: $props['new'], old }">
+      <div
+        v-bind="props"
+        @click="playSound()"
+        class="button"
+          :class="{
+          new: $props['new'],
+          old,
+          error: audioStates[key] === AudioState.Unplayable,
+        }"
+      >
         <NIcon
           :component="
             audioStates[key] === AudioState.Playing
@@ -73,7 +82,6 @@ async function playSound() {
                 : Play16Filled
           "
           :size="16"
-          @click="playSound()"
         />
       </div>
     </template>
@@ -91,9 +99,14 @@ async function playSound() {
 .button {
   color: var(--color-5);
   cursor: pointer;
+  user-select: none;
 
   &:hover {
     color: var(--color-6);
+  }
+
+  &.error {
+    color: var(--color-danger) !important;
   }
 
   &.new,&.old {
