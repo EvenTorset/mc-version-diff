@@ -218,7 +218,12 @@ function toggle() {
     @focusin="interacted = true"
   >
     <div class="delta-track-bar">
-      <IconButton @click="toggle" style="align-self: flex-start;">
+      <IconButton
+        @click="toggle"
+        style="align-self: flex-start;"
+        :aria-label="`${expanded ? 'Collapse' : 'Expand'} ${basename(track.id)}`"
+        :aria-expanded="expanded"
+      >
         <ChevronDown20Filled :style="{
           transition: 'rotate .2s',
           rotate: expanded ? '180deg' : '0deg'
@@ -266,7 +271,7 @@ function toggle() {
           )
         ">
           <template #trigger="{ props }">
-            <IconButton v-bind="props" class="accent" @click="copy('a')">
+            <IconButton v-bind="props" class="accent" :aria-label="`Copy ${basename(track.a)} from ${dr.a}`" @click="copy('a')">
               <Copy24Regular />
             </IconButton>
           </template>
@@ -275,7 +280,7 @@ function toggle() {
         </Tooltip>
         <Tooltip v-if="track.state === DeltaTrackState.Removed || track.state === DeltaTrackState.Edited">
           <template #trigger="{ props }">
-            <IconButton v-bind="props" class="accent" @click="download('a')">
+            <IconButton v-bind="props" class="accent" :aria-label="`Download ${basename(track.a)} from ${dr.a}`" @click="download('a')">
               <ArrowDownload24Regular />
             </IconButton>
           </template>
@@ -290,7 +295,7 @@ function toggle() {
           )
         ">
           <template #trigger="{ props }">
-            <IconButton v-bind="props" class="accent" @click="copy('b')">
+            <IconButton v-bind="props" class="accent" :aria-label="`Copy ${basename(track.b)} from ${dr.b}`" @click="copy('b')">
               <Copy24Regular />
             </IconButton>
           </template>
@@ -303,7 +308,7 @@ function toggle() {
           track.state === DeltaTrackState.Moved
         ">
           <template #trigger="{ props }">
-            <IconButton v-bind="props" class="accent" @click="download('b')">
+            <IconButton v-bind="props" class="accent" :aria-label="`Download ${basename(track.b)} from ${dr.b}`" @click="download('b')">
               <ArrowDownload24Regular />
             </IconButton>
           </template>
