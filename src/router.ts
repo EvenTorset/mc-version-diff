@@ -3,6 +3,7 @@ import { getDiffSuggestions } from './delta_providers/manifest'
 import { javaEdition } from './delta_providers/mcje/edition'
 import { URL_BASE } from '@/../urlBase'
 import DeltaRoute from '@/pages/DeltaRoute.vue'
+import { DEFAULT_TITLE, deltaTitle } from '@/util/documentTitle'
 
 const routes: RouteRecordRaw[] = [
   { name: 'delta', path: '/:provider/:a/:b?', component: DeltaRoute },
@@ -14,11 +15,9 @@ export const router = createRouter({
   routes,
 })
 
-const DEFAULT_TITLE = 'Version Diff - Asset Comparison for Minecraft'
-
 router.afterEach(to => {
   document.title = to.name === 'delta'
-    ? `Minecraft ${to.params.a} vs ${to.params.b} | Version Diff`
+    ? deltaTitle(to.path, to.params.provider as string, to.params.a as string, to.params.b as string)
     : DEFAULT_TITLE
   document.querySelector('link[rel="canonical"]')
     ?.setAttribute('href', `https://cccode.pages.dev/version-diff${to.path}`)
