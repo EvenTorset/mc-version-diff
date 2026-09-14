@@ -1,5 +1,5 @@
 import PeaksWorker from './oggPeaks.worker?worker'
-import type { PeaksProgress, PeaksRequest } from './oggPeaks.worker'
+import type { CompareRequest, CompareResult, PeaksProgress, PeaksRequest } from './oggPeaks.worker'
 import { readStream } from './ogg'
 
 const MAX_WORKERS = Math.max(2, Math.min(8, Math.floor((navigator.hardwareConcurrency || 4) / 2)))
@@ -44,6 +44,22 @@ function releaseWorker(worker: Worker) {
   const next = waiting.shift()
   if (next) next(worker)
   else idle.push(worker)
+}
+
+export function sameOggAudio(
+  a: Uint8Array<ArrayBuffer>,
+  b: Uint8Array<ArrayBuffer>
+): Promise<boolean> {
+  return takeWorker().then((worker) => new Promise<boolean>((resolve) => {
+    worker.onmessage = (event: MessageEvent<CompareResult>) => {
+      worker.onmessage = null
+      releaseWorker(worker)
+      resolve(event.data.same)
+    }
+    const copyA = a.slice(0)
+    const copyB = b.slice(0)
+    worker.postMessage({ a: copyA, b: copyB } satisfies CompareRequest, [copyA.buffer, copyB.buffer])
+  }))
 }
 
 export function peaksFromOgg(
