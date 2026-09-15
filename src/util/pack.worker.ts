@@ -19,7 +19,7 @@ const received: PackWorkerFile[] = []
 self.onmessage = async (event: MessageEvent<PackWorkerInput>) => {
   if (event.data.type === 'files') {
     received.push(...event.data.files)
-    return
+    return;
   }
   const files = received.sort((a, b) => naturalCompare(a.path, b.path))
   let lastPercent = -1

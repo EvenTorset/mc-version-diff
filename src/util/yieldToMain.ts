@@ -5,7 +5,7 @@ export function yieldToMain(): Promise<void> {
 export function createBudget(milliseconds: number) {
   let deadline = performance.now() + milliseconds
   return async () => {
-    if (performance.now() < deadline) return
+    if (performance.now() < deadline) return;
     await yieldToMain()
     deadline = performance.now() + milliseconds
   }

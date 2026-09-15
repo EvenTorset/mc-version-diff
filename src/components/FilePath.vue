@@ -45,7 +45,7 @@ const pathEl = ref<HTMLElement>()
 const isOverflowing = ref(false)
 
 function checkOverflow() {
-  if (!pathEl.value) return
+  if (!pathEl.value) return;
   isOverflowing.value = pathEl.value.scrollWidth > pathEl.value.clientWidth
 }
 

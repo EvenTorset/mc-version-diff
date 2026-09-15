@@ -30,7 +30,7 @@ export async function saveVerdicts(a: string, b: string, verdicts: Map<string, b
     await writable.write(JSON.stringify(Object.fromEntries(verdicts)))
     await writable.close()
   } catch {
-    return
+    return;
   }
 }
 

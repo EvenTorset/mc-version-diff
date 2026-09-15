@@ -58,7 +58,7 @@ onMounted(load)
 watch(() => [ props.dr.a, props.dr.b ], load)
 
 function go(a: string, b: string) {
-  if (a === b) return
+  if (a === b) return;
   router.push({ name: 'delta', params: { provider: props.edition.id, a, b } })
 }
 

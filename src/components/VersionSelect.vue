@@ -35,7 +35,7 @@ function hide() {
 }
 
 function onTriggerMousedown(event: MouseEvent) {
-  if (!open.value) return
+  if (!open.value) return;
   event.preventDefault()
   hide()
 }
@@ -47,7 +47,7 @@ function onBlur() {
 function itemSelected() {
   if (props.mode === 'popover') {
     hide()
-    return
+    return;
   }
   const stillFocused = input.value?.inputElRef === document.activeElement
   if (stillFocused || performance.now() - blurredAt < REFOCUS_WINDOW) {
@@ -56,7 +56,7 @@ function itemSelected() {
 }
 
 watch(open, value => {
-  if (props.mode !== 'popover') return
+  if (props.mode !== 'popover') return;
   if (value) {
     nextTick(() => input.value?.focus())
   } else {

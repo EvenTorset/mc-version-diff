@@ -113,13 +113,13 @@ const full = computed(() => props.max > 1 && selectedVersions.value.size >= prop
 const disabledIds = computed(() => new Set(props.disabledVersions))
 
 function toggle(version: ManifestVersion) {
-  if (disabledIds.value.has(version.id)) return
+  if (disabledIds.value.has(version.id)) return;
   if (props.max === 1) {
     selectedVersions.value = new Set([ version ])
     emit('select', version)
-    return
+    return;
   }
-  if (full.value && !selectedVersions.value.has(version)) return
+  if (full.value && !selectedVersions.value.has(version)) return;
 
   if (selectedVersions.value.has(version)) {
     const set = new Set(selectedVersions.value)

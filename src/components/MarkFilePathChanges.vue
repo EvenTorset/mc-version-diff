@@ -202,7 +202,7 @@ const originalOverflowing = ref(false)
 const modifiedOverflowing = ref(false)
 
 function checkOverflow(el: HTMLElement | undefined, target: typeof originalOverflowing) {
-  if (!el) return
+  if (!el) return;
   target.value = el.scrollWidth > el.clientWidth
 }
 

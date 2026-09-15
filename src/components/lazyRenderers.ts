@@ -11,7 +11,7 @@ export const TextureAnimation = defineAsyncComponent(loadTextureAnimation)
 let prefetched = false
 
 export function prefetchRenderers() {
-  if (prefetched) return
+  if (prefetched) return;
   prefetched = true
 
   const warm = () => {

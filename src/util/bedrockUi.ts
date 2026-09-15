@@ -162,7 +162,7 @@ export async function listBedrockUiControls(dr: DeltaResult, version: string, pa
   const closure = (name: string) => {
     const seen = new Set<string>()
     const visit = (current: string) => {
-      if (seen.has(current) || !ns.has(current)) return
+      if (seen.has(current) || !ns.has(current)) return;
       seen.add(current)
       references.get(current)?.forEach(visit)
     }
@@ -667,7 +667,7 @@ function measure(node: Node, box: [ number, number ], layout: Layout, depth = 0)
   if (typeof sw === 'string' && sw.includes('%y')) w = parseSize(sw, 0, box[0], self, content, intrinsic) ?? w
   const clamp = (limitKey: string, pick: (a: number, b: number) => number) => {
     const limit = Array.isArray(props[limitKey]) ? props[limitKey] : null
-    if (!limit) return
+    if (!limit) return;
     const lw = parseSize(limit[0], 0, box[0], self, content, intrinsic)
     const lh = parseSize(limit[1], 1, box[1], self, content, intrinsic)
     if (lw !== null) w = pick(w!, lw)
@@ -733,7 +733,7 @@ function arrange(node: Node, box: [ number, number ], layout: Layout, depth = 0,
   node.w = override ? override[0] : measured.w
   node.h = override ? override[1] : measured.h
   if (measured.lines) node.props.__lines = measured.lines
-  if (depth > MAX_DEPTH) return
+  if (depth > MAX_DEPTH) return;
   const inner: [ number, number ] = [ node.w, node.h ]
   const sizes = node.children.map((child): [ number, number ] => {
     const size = measure(child, inner, layout, depth + 1)
@@ -787,7 +787,7 @@ function arrangePanel(node: Node, inner: [ number, number ], sizes: [ number, nu
     if (cell) {
       child.x = cell[0] * inner[0] / cell[2] + ox
       child.y = cell[1] * inner[1] / cell[3] + oy
-      return
+      return;
     }
     const from = anchorOf(child.props.anchor_from, [ 0.5, 0.5 ])
     const to = anchorOf(child.props.anchor_to, [ 0.5, 0.5 ])
@@ -805,7 +805,7 @@ function arrangeStack(node: Node, inner: [ number, number ], sizes: [ number, nu
   const fillSize = fillCount ? Math.max(0, inner[axis] - fixed) / fillCount : 0
   let cursor = 0
   node.children.forEach((child, i) => {
-    if (!child.visible) return
+    if (!child.visible) return;
     const size: [ number, number ] = [ sizes[i][0], sizes[i][1] ]
     if (fills[i]) size[axis] = fillSize
     arrange(child, inner, layout, depth + 1, size)
@@ -889,7 +889,7 @@ function cssColor(color: [ number, number, number ], alpha = 1) {
 type Command = { z: number, order: number, clip: Rect | null, draw: (ctx: OffscreenCanvasRenderingContext2D) => void }
 
 function collect(node: Node, ox: number, oy: number, z: number, alpha: number, clip: Rect | null, layout: Layout, commands: Command[]) {
-  if (!node.visible) return
+  if (!node.visible) return;
   const x = ox + node.x
   const y = oy + node.y
   const layer = typeof node.props.layer === 'number' ? node.props.layer : 0
@@ -950,7 +950,7 @@ function drawImage(ctx: OffscreenCanvasRenderingContext2D, node: Node, texture: 
   const dy = y * UI_SCALE
   const dw = node.w * UI_SCALE
   const dh = node.h * UI_SCALE
-  if (dw <= 0 || dh <= 0 || sw <= 0 || sh <= 0) return
+  if (dw <= 0 || dh <= 0 || sw <= 0 || sh <= 0) return;
   ctx.globalAlpha = alpha
   const slice = texture.nineslice
   if (slice && !Array.isArray(props.uv_size)) {
@@ -1005,7 +1005,7 @@ function drawImage(ctx: OffscreenCanvasRenderingContext2D, node: Node, texture: 
 
 function drawLabel(ctx: OffscreenCanvasRenderingContext2D, node: Node, x: number, y: number, alpha: number, layout: Layout) {
   const lines: string[] = node.props.__lines ?? [ labelText(node, layout.index) ]
-  if (!lines.some(line => line)) return
+  if (!lines.some(line => line)) return;
   const { scale, bold, line } = fontOf(node)
   const color = colorOf(node.props.color) ?? [ 1, 1, 1 ]
   const alignment = typeof node.props.text_alignment === 'string' ? node.props.text_alignment : /left/.test(String(node.props.anchor_to ?? '')) ? 'left' : /right/.test(String(node.props.anchor_to ?? '')) ? 'right' : 'center'

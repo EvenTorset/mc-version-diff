@@ -29,7 +29,7 @@ export const TextDiff = withSuspense(AsyncTextDiff)
 let prefetched = false
 
 export function prefetchTextViews() {
-  if (prefetched) return
+  if (prefetched) return;
   prefetched = true
 
   const warm = () => {

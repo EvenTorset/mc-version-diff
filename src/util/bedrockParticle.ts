@@ -126,7 +126,7 @@ export async function loadBedrockParticle(dr: DeltaResult, version: string, path
   let state: ParticleState | null = null
   const animate = (group: any, time: number, camera?: any) => {
     if (!state) state = stateOf(group)
-    if (!state) return
+    if (!state) return;
     const { scene, emitter } = state
     const fit = !camera
     if (!state.started || time < state.last) {
@@ -155,7 +155,7 @@ export async function loadBedrockParticle(dr: DeltaResult, version: string, path
       if (manual) emitter.spawnParticles(1)
       else emitter.start()
     }
-    if (!camera) return
+    if (!camera) return;
     if (ticks > 0) cullOffscreen(group, emitter, camera)
     scene.updateFacingRotation(camera)
   }
@@ -170,7 +170,7 @@ export async function loadBedrockParticle(dr: DeltaResult, version: string, path
 }
 
 export function registerParticleLoader() {
-  if (ModelLoader.list().some((loader: any) => loader.name === 'mcbe_particle')) return
+  if (ModelLoader.list().some((loader: any) => loader.name === 'mcbe_particle')) return;
   ModelLoader.register({
     name: 'mcbe_particle',
     priority: 10,

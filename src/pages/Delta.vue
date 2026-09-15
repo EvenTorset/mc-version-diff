@@ -186,11 +186,11 @@ watch(categories, newCategories => {
 watch(() => param('category'), value => {
   if (!value) {
     if (selectedCategory.value !== 'Overview') selectedCategory.value = 'Overview'
-    return
+    return;
   }
   if (value === 'generate-move-script') {
     selectedCategory.value = 'generate-move-script'
-    return
+    return;
   }
   const match = categories.value.find(([ name ]) =>
     name.toLowerCase() === value.toLowerCase())
@@ -204,7 +204,7 @@ watch(selectedCategory, () => {
 })
 
 function onCategoryTransitionEnd() {
-  if (!pendingScrollReset) return
+  if (!pendingScrollReset) return;
   pendingScrollReset = false
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
@@ -453,7 +453,7 @@ function updateCountWidth() {
     const countEls = document.querySelectorAll<HTMLElement>(
       '.category-list .transition-list-item:not(.transition-list-leave-active) .category-tab-count'
     )
-    if (!countEls.length) return
+    if (!countEls.length) return;
 
     let max = 0
     for (const el of countEls) {
