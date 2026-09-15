@@ -477,6 +477,11 @@ onMounted(() => {
 
 const autoToggle = ref<null | 'expand' | 'collapse'>(null)
 provide('autoToggle', autoToggle)
+
+const visibleCategories = computed(() =>
+  categories.value.filter(([name, tracks]) =>
+    tracks.length > 0 || name === 'Overview' || name === selectedCategory.value)
+)
 </script>
 
 <template>
@@ -589,14 +594,13 @@ provide('autoToggle', autoToggle)
                 <Col align="stretch" gap="0">
                   <AnimatedHeight style="overflow: visible;">
                     <TransitionList
-                      :items="categories"
+                      :items="visibleCategories"
                       :key-field="0"
                       class="category-list"
                       :style="{ '--count-col-width': countColWidth }"
                     >
                       <template #default="{ item: [ name, tracks ] }">
                         <CategoryTab
-                          v-if="tracks.length > 0 || name === 'Overview' || name === selectedCategory"
                           :count="tracks.length"
                           :name
                           :selected="selectedCategory === name"
