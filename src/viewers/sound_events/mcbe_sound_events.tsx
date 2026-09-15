@@ -114,6 +114,7 @@ function soundsViewer(id: string, test: RegExp, read: (json: any) => SoundEvents
 
       function view_sounds() {
         return <SoundEventsDiff
+          dr={track.id.endsWith('/sounds.json') ? undefined : dr}
           original={before}
           modified={after}
           showUnchanged={showUnchanged.value}

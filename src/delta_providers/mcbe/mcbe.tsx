@@ -62,6 +62,7 @@ registerDeltaProvider('mcbe', editionProvider(bedrockEdition, {
       name: 'Sound events',
       sort: 3,
       expand: true,
+      isSounds: true,
       test(_dr, track) {
         return DEFINITIONS_PATH.test(track.id) || EVENTS_PATH.test(track.id) || MUSIC_PATH.test(track.id)
       }
