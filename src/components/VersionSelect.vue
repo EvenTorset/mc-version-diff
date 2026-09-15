@@ -137,7 +137,9 @@ defineExpose({ hide, itemSelected })
         @keydown.escape="hide"
       >
         <template #prefix v-if="!open && $slots.label">
-          <slot name="label"></slot>
+          <span style="overflow: visible; max-width: 0; white-space: nowrap;">
+            <slot name="label"></slot>
+          </span>
         </template>
         <template #suffix>
           <NIcon :component="ChevronDown16Filled" class="chevron" />
@@ -164,6 +166,10 @@ defineExpose({ hide, itemSelected })
 
   &.open :deep(input) {
     cursor: text;
+  }
+
+  :deep(.n-input__prefix) {
+    margin-right: 0 !important;
   }
 
   :deep(.n-input__suffix) {
