@@ -34,12 +34,6 @@ function hide() {
   input.value?.blur()
 }
 
-function onTriggerMousedown(event: MouseEvent) {
-  if (!open.value) return;
-  event.preventDefault()
-  hide()
-}
-
 function onBlur() {
   blurredAt = performance.now()
 }
@@ -73,6 +67,16 @@ function onKeydown(event: KeyboardEvent) {
     event.preventDefault()
     input.value?.select()
   }
+}
+
+function onClickOutside(event: MouseEvent) {
+  const target = event.target as HTMLElement | null
+  const triggerEl = (input.value as any | undefined)?.$el as HTMLElement | undefined
+  const isSuffixClick = target?.closest('.n-input__suffix')
+  if (triggerEl && triggerEl.contains(target) && !isSuffixClick) {
+    return
+  }
+  hide()
 }
 
 onMounted(() => {
@@ -122,7 +126,7 @@ defineExpose({ hide, itemSelected })
     width="trigger"
     class="version-select-popover"
     :show-arrow="false"
-    @clickoutside="hide"
+    @clickoutside="onClickOutside"
   >
     <template #trigger>
       <NInput
@@ -133,7 +137,6 @@ defineExpose({ hide, itemSelected })
         :placeholder="open ? label ?? placeholder : ($slots.label ? '' : placeholder)"
         @update:value="value => filter = value"
         @focus="show"
-        @mousedown="onTriggerMousedown"
         @keydown.escape="hide"
       >
         <template #prefix v-if="!open && $slots.label">
