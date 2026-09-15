@@ -1,1 +1,1 @@
-export const URL_BASE = '/version-diff-v5-preview'
+export const URL_BASE = '/version-diff'
