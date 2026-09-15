@@ -226,7 +226,7 @@ onMounted(async () => {
     line-height: 1.5;
   }
 
-  :deep(a) {
+  a {
     color: var(--color-6);
     text-decoration: underline;
   }
