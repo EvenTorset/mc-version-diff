@@ -53,7 +53,7 @@ onMounted(() => {
   const updateHeight = () => editorHeight.value = `${Math.max(
     origEditor.getContentHeight(),
     modEditor.getContentHeight(),
-  )}px`
+  ) + 12}px`
   editor.onDidUpdateDiff(() => {
     requestAnimationFrame(() => {
       updateHeight()
