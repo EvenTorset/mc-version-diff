@@ -93,7 +93,14 @@ for (const edition of editions) {
         <div class="separator" />
         <NTabs v-model:value="cacheTab">
           <template #suffix>
-            <NPopconfirm @positive-click="clearAll" positive-text="Clear" negative-text="Cancel">
+            <NPopconfirm
+              @positive-click="clearAll"
+              positive-text="Clear"
+              negative-text="Cancel"
+              :positive-button-props="({
+                class: 'danger',
+              } as any)"
+            >
               <template #trigger>
                 <NButton class="danger" size="small">Clear all</NButton>
               </template>
@@ -123,11 +130,20 @@ for (const edition of editions) {
                 <NSpin v-if="!caches[edition].total" size="small"/>
                 <template v-else>{{ formatBytes(caches[edition].total!.size) }} ({{ caches[edition].total!.files }} file{{ caches[edition].total!.files === 1 ? '' : 's' }})</template>
               </Row>
-              <NPopconfirm @positive-click="clearVersionCache(edition)" positive-text="Clear" negative-text="Cancel">
+              <NPopconfirm
+                @positive-click="clearVersionCache(edition)"
+                positive-text="Clear"
+                negative-text="Cancel"
+                :positive-button-props="({
+                  class: 'danger',
+                } as any)"
+              >
                 <template #trigger>
                   <NButton class="danger" style="align-self: flex-start;">Clear {{ caches[edition].title }} cache</NButton>
                 </template>
-                Delete every cached {{ caches[edition].title }} version? They will be downloaded again when you next compare them.
+                <div :style="{
+                  maxWidth: '500px',
+                }">Delete every cached {{ caches[edition].title }} version? They will be downloaded again when you next compare them.</div>
               </NPopconfirm>
             </Col>
           </NTabPane>
