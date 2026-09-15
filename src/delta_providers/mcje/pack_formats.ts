@@ -42,13 +42,13 @@ export function getPackFormats(id: string): PackFormats | null {
 }
 
 export async function readPackFormats(id: string, entries: Map<string, Readable>): Promise<void> {
-  if (formats.has(id)) return
+  if (formats.has(id)) return;
 
   const version = await readJson(entries, 'version.json')
   const fromVersion = version ? fromPackVersion(version.pack_version) : null
   if (fromVersion) {
     formats.set(id, fromVersion)
-    return
+    return;
   }
 
   const packFormat = (await readJson(entries, 'pack.mcmeta'))?.pack?.pack_format

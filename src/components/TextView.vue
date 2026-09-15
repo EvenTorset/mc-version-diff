@@ -18,7 +18,7 @@ let observer: ResizeObserver | undefined
 function fit() {
   if (!editor) return;
   editor.layout()
-  editor.layout({ height: editor.getContentHeight(), width: editor.getLayoutInfo().width })
+  editor.layout({ height: editor.getContentHeight() + 12, width: editor.getLayoutInfo().width })
 }
 
 onMounted(() => {

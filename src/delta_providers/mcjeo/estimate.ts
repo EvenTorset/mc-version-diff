@@ -14,7 +14,7 @@ const targets = shallowRef<Record<string, string> | null>(null)
 let loading = false
 
 function load() {
-  if (loading) return
+  if (loading) return;
   loading = true
   assets('java').manifest.versions().then(all => {
     const map: Record<string, string> = {}

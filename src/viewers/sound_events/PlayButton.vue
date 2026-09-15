@@ -24,6 +24,32 @@ const props = defineProps<{
 
 const key = computed(() => `${props.version},${props.eventId},${props.index}`)
 
+let initPromise: Promise<typeof import('@/viewers/sound/wasm').convertFsb5> | null = null
+
+async function convertFsb(bytes: Uint8Array<ArrayBuffer>): Promise<Uint8Array<ArrayBuffer>> {
+  const convertFsb5 = await (initPromise ??= (async () => {
+    const wasm = await import('@/viewers/sound/wasm')
+    await wasm.default()
+    return wasm.convertFsb5
+  })())
+  return convertFsb5(bytes)[0].bytes // bedrock doesn't currently have any banks with multiple samples
+}
+
+async function getSoundBytes(): Promise<Uint8Array<ArrayBuffer>> {
+  if (props.dr.edition.id === 'mcbe') {
+    const bytes = await props.dr.getEntry(
+      props.dr[props.version],
+      `resource_pack/${props.soundPath}.fsb`
+    )
+    return convertFsb(bytes)
+  } else {
+    return props.dr.getEntry(
+      props.dr[props.version],
+      `assets/minecraft/sounds/${props.soundPath}.ogg`
+    )
+  }
+}
+
 async function playSound() {
   if (audioStates[key.value] === AudioState.Unplayable) return;
   if (audioStates[key.value] === AudioState.Playing) {
@@ -34,7 +60,7 @@ async function playSound() {
   }
 
   try {
-    const bytes = await props.dr.getEntry(props.dr[props.version], `assets/minecraft/sounds/${props.soundPath}.ogg`)
+    const bytes = await getSoundBytes()
     const ctx = getAudioContext()
     const source = ctx.createBufferSource()
     source.detune.value = 1200 * Math.log2(props.pitch)

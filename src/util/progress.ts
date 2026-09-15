@@ -20,7 +20,7 @@ export class ProgressHandler {
   }
 
   #send() {
-    if (this.#pending) return
+    if (this.#pending) return;
     this.#pending = true
     requestAnimationFrame(() => {
       this.#pending = false

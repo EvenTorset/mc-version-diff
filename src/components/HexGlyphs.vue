@@ -16,7 +16,7 @@ const columns = ref(1)
 let observer: ResizeObserver | null = null
 
 onMounted(() => {
-  if (!container.value) return
+  if (!container.value) return;
   observer = new ResizeObserver(([ entry ]) => {
     columns.value = Math.max(1, Math.floor(entry.contentRect.width / CELL))
   })

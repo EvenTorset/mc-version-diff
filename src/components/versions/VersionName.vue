@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { ManifestVersion } from 'minecraft-asset-loader'
-import VersionNumber from './VersionNumber.vue'
 import { useEdition } from './edition'
 
 const props = defineProps<{
@@ -15,7 +14,7 @@ const tag = computed(() => edition.tag?.(props.version) ?? null)
 
 <template>
   <span class="version-name">
-    <VersionNumber :id="version.id" />
+    {{ version.id }}
     <span v-if="tag" class="version-tag">{{ tag }}</span>
   </span>
 </template>
@@ -25,7 +24,7 @@ const tag = computed(() => edition.tag?.(props.version) ?? null)
 .version-name {
   display: inline-flex;
   align-items: baseline;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 6px;
 }
 

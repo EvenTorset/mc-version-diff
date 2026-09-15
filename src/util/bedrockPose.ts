@@ -280,7 +280,7 @@ function activeAnimations(description: any, sets: AnimationSets, evaluate: Evalu
   const entriesOf = (entries: any[]): [string, any][] => (entries ?? []).flatMap(entry => typeof entry === 'string' ? [ [ entry, null ] ] : Object.entries<any>(entry ?? {}))
   const runController = (id: string, depth: number) => {
     const controller = sets.controllers.get(id)
-    if (!controller?.states) return
+    if (!controller?.states) return;
     const initial = controller.initial_state ?? 'default'
     let name = initial
     const visited = new Set<string>()
@@ -296,7 +296,7 @@ function activeAnimations(description: any, sets: AnimationSets, evaluate: Evalu
   }
 
   const run = (entries: any[], depth: number) => {
-    if (depth > 4) return
+    if (depth > 4) return;
     for (const [ key, condition ] of entriesOf(entries)) {
       if (!key) continue
       if (condition !== null && !evaluate(condition)) continue

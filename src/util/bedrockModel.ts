@@ -250,7 +250,7 @@ async function readBlocks(dr: DeltaResult, version: string) {
   const visit = (components: any) => {
     const geometry = components?.['minecraft:geometry']
     const id = typeof geometry === 'string' ? geometry : geometry?.identifier
-    if (typeof id !== 'string') return
+    if (typeof id !== 'string') return;
     const block = blocks.get(id.replace(/^minecraft:/, '')) ?? { slots: {}, doubleSided: false }
     for (const [ slot, instance ] of Object.entries<any>(components['minecraft:material_instances'] ?? {})) {
       const name = typeof instance === 'string' ? instance : instance?.texture
@@ -608,7 +608,7 @@ export async function loadBedrockAnimation(dr: DeltaResult, version: string, pat
   let bones: Map<string, any> | null = null
   const animate = (group: any, time: number) => {
     if (!bones) group.traverse((object: any) => { if (object.userData.mcbeBones) bones = object.userData.mcbeBones })
-    if (!bones) return
+    if (!bones) return;
     const sample = step(time)
     const hidden = geometryName ? visibleParts(evaluate, description, index.controllers, geometryName, boneNames) : new Set<string>()
     for (const [ boneName, g ] of bones) {
@@ -838,7 +838,7 @@ async function buildEntry(group: any, entry: Entry, helpers: any) {
     built.position.copy(position).negate().addScalar(8)
     if (!rotation) {
       parent.add(built)
-      return
+      return;
     }
     const holder = new THREE.Group()
     holder.position.copy(position)
@@ -906,7 +906,7 @@ async function buildEntry(group: any, entry: Entry, helpers: any) {
 }
 
 export function registerBedrockLoader() {
-  if (ModelLoader.list().some((loader: any) => loader.name === 'mcbe')) return
+  if (ModelLoader.list().some((loader: any) => loader.name === 'mcbe')) return;
   ModelLoader.register({
     name: 'mcbe',
     priority: 10,

@@ -1,10 +1,15 @@
-# Minecraft Version Diff
+# Version Diff
 
 A web-based asset and data comparison tool built for Minecraft resource pack creators, data pack authors, and modders.
 
-The [Minecraft Version Diff comparison tool](https://cccode.pages.dev/version-diff/) lets you inspect exact asset changes across different Minecraft versions, user-uploaded resource packs, data packs, and mods. It highlights what was added, edited, moved, or removed, covering far more detail than official changelogs.
+Compare any two versions of Minecraft side by side. Instantly preview changes across textures, models, sounds, recipes, structures, and more.
 
-**Privacy Note:** All comparisons are processed entirely in your browser. Uploaded files are never sent to a server.
+Works on Java Edition, Bedrock Edition, and resource or data packs you upload yourself.
+
+You can use [Version Diff online](https://cccode.pages.dev/version-diff/). Unlike official changelogs that only give a high-level overview, it shows you the exact files that were added, modified, moved, or removed between updates.
+
+> [!NOTE]
+> All comparisons are processed entirely in your browser. Uploaded files are never sent to a server.
 
 ## Key Features
 
@@ -15,6 +20,7 @@ The [Minecraft Version Diff comparison tool](https://cccode.pages.dev/version-di
   - **Models:** Interactive 3D previews of block and item models.
   - **Structures:** 3D inspection and highlighted changes for structure files.
   - **Localization:** String diffs highlighting changed words and punctuation, grouped into added, edited, and removed entries.
+  - **Sounds**: Changed sound files can be listened to and the differences in their waveforms are highlighted. Sound events can play the sounds with their pitch and volume modifiers.
   - **Data Files:** Detailed loot table stats, visual recipe previews, and more.
 
 ## Local Development
@@ -40,3 +46,7 @@ The [Minecraft Version Diff comparison tool](https://cccode.pages.dev/version-di
     ```sh
     npm run dev
     ```
+
+## Disclaimer
+
+NOT AN OFFICIAL MINECRAFT WEBSITE. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.

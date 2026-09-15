@@ -52,7 +52,7 @@ export type WorkerCompareMessage = {
 self.onmessage = async (event: MessageEvent<WorkerComparePayload>) => {
   if ('type' in event.data) {
     resolveModule(event.data.module)
-    return
+    return;
   }
   const { tasks, data } = event.data
   await ready

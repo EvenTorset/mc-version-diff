@@ -153,7 +153,7 @@ export async function clearDirectory(name: string): Promise<void> {
   memoryDirs.delete(name)
   dirHandleCache.delete(name)
 
-  if (!(await isOpfsAvailable())) return
+  if (!(await isOpfsAvailable())) return;
 
   try {
     const root = await navigator.storage.getDirectory()

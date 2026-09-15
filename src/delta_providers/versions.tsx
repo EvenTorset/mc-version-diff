@@ -478,17 +478,17 @@ export async function buildDelta(
     b,
     tracks,
     async getEntry(versionId: string, path: string | null) {
-      if (!path) return Promise.reject('[MCJE getEntry] No path')
+      if (!path) return Promise.reject('[getEntry] No path')
 
       const entries = versionId === a ? jarA.entries : versionId === b ? jarB.entries : null
-      if (!entries) return Promise.reject(`[MCJE getEntry] Invalid version ID: ${versionId}`)
+      if (!entries) return Promise.reject(`[getEntry] Invalid version ID: ${versionId}`)
 
       const entry = entries.get(path)
       if (entry) return entry.read() as Promise<Uint8Array<ArrayBuffer>>
 
       const found = await edition.fallback?.read(versionId, path)
       if (found) return found
-      return Promise.reject(`[MCJE getEntry] File not found: ${path}`)
+      return Promise.reject(`File not found: ${path}`)
     },
     getCategory(track) {
       return getTrackCategory(provider, this, track)

@@ -54,12 +54,12 @@ const UiPreview = defineComponent({
       const current = ++generation
       loading.value = true
       queuedRender(() => renderBedrockUi(props.dr, props.dr[props.version], props.track[props.version], props.id, { ...props.overrides })).then(rendered => {
-        if (current !== generation) return
+        if (current !== generation) return;
         result.value = rendered
         if (!rendered) error.value = 'Nothing to preview'
         else props.report(rendered.uses)
       }).catch(err => {
-        if (current !== generation) return
+        if (current !== generation) return;
         console.error(err)
         error.value = err instanceof Error ? err.message : String(err)
       }).finally(() => {
@@ -67,7 +67,7 @@ const UiPreview = defineComponent({
       })
     }
     watch(visible, value => {
-      if (!value || started) return
+      if (!value || started) return;
       started = true
       render()
     }, { immediate: true })

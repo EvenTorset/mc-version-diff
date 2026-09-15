@@ -30,32 +30,32 @@ async function ensureDecoded() {
   if (!props.bytes) {
     decodedBitmap = null
     decodedForBytes = null
-    return
+    return;
   }
 
-  if (decodedForBytes === props.bytes && decodedBitmap) return
+  if (decodedForBytes === props.bytes && decodedBitmap) return;
 
   const bytes = props.bytes
   const bitmap = await imageFromBytes(bytes)
 
   // Bail out if bytes changed again while we were decoding
-  if (props.bytes !== bytes) return
+  if (props.bytes !== bytes) return;
 
   decodedBitmap = bitmap
   decodedForBytes = bytes
 }
 
 async function render() {
-  if (!canvas.value) return
+  if (!canvas.value) return;
 
   if (!isIntersecting) {
     isDirty = true
-    return
+    return;
   }
 
   if (isRendering) {
     isDirty = true
-    return
+    return;
   }
 
   isRendering = true
@@ -68,7 +68,7 @@ async function render() {
 
     if (requestId !== currentRequestId || !decodedBitmap || !canvas.value) {
       isDirty = true
-      return
+      return;
     }
 
     const width = props.width ?? decodedBitmap.width
@@ -92,7 +92,7 @@ async function render() {
       if (requestId !== currentRequestId || !canvas.value) {
         workerBitmap.close()
         isDirty = true
-        return
+        return;
       }
 
       const renderedBitmap = await renderImageWithMode(

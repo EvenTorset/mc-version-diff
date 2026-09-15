@@ -31,7 +31,7 @@ function triggerMount() {
 function triggerRetire(event: Event) {
   const el = leafRef.value
   const height = (event as CustomEvent<number>).detail
-  if (!el || !height) return
+  if (!el || !height) return;
   retiredHeight.value = `${height}px`
   retireTrack(props.track)
 }
@@ -62,7 +62,7 @@ watch([leafRef, isMounted], ([newEl, mountedState], [oldEl]) => {
     props.observer.unobserve(previous)
     props.retireObserver.unobserve(previous)
   }
-  if (!newEl) return
+  if (!newEl) return;
   if (mountedState) props.retireObserver.observe(newEl)
   else props.observer.observe(newEl)
 }, { immediate: true })
