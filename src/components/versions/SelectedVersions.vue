@@ -74,7 +74,7 @@ function cancel() {
 
 function slide(card: HTMLElement, from: DOMRect, to: DOMRect, layer: string) {
   card.style.transition = 'none'
-  card.style.transform = `translate(${from.left - to.left}px, ${from.top - to.top}px)`
+  card.style.transform = `translateX(${from.left - to.left}px)`
   card.style.width = `${from.width}px`
   card.style.zIndex = layer
 
@@ -111,7 +111,7 @@ function ghost(card: HTMLElement, from: DOMRect, to: DOMRect) {
   clone.getBoundingClientRect()
 
   clone.style.transition = `transform ${SPLIT_MS}ms ease, width ${SPLIT_MS}ms ease, opacity ${SPLIT_MS}ms ease`
-  clone.style.transform = `translate(${to.left - from.left}px, ${to.top - from.top}px)`
+  clone.style.transform = `translateX(${to.left - from.left}px)`
   clone.style.width = `${to.width}px`
   clone.style.opacity = '0'
   setTimeout(() => clone.remove(), SPLIT_MS + 100)
