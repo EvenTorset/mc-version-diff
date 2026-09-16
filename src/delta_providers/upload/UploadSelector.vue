@@ -265,7 +265,7 @@ onMounted(async () => {
         <div class="options">
           <template v-for="option, i in comparatorProvider.upload?.options">
             <Transition name="reveal">
-              <div v-if="option.type === 'bool' && optionShown(option)" class="option">
+              <div v-if="option.type === 'bool' && optionShown(option)" class="option reveal-slot">
                 <div class="option-body">
                   <Tooltip>
                     <template #trigger="{ props }">
@@ -309,15 +309,6 @@ onMounted(async () => {
   align-self: flex-start;
 }
 
-.option {
-  display: grid;
-  grid-template-rows: 1fr;
-}
-
-.option-body {
-  min-height: 0;
-}
-
 .option + .option {
   padding-top: 4px;
 
@@ -325,30 +316,6 @@ onMounted(async () => {
   &.reveal-leave-to {
     padding-top: 0;
   }
-}
-
-.reveal-enter-active,
-.reveal-leave-active {
-  transition: grid-template-rows 300ms cubic-bezier(0.16, 1, 0.3, 1),
-              padding-top 300ms cubic-bezier(0.16, 1, 0.3, 1),
-              opacity 300ms cubic-bezier(0.16, 1, 0.3, 1),
-              transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
-
-  .option-body {
-    overflow: hidden;
-  }
-}
-
-.reveal-enter-from {
-  grid-template-rows: 0fr;
-  opacity: 0;
-  transform: translateY(24px);
-}
-
-.reveal-leave-to {
-  grid-template-rows: 0fr;
-  opacity: 0;
-  transform: translateY(-24px);
 }
 
 </style>

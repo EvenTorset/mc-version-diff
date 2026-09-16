@@ -12,12 +12,13 @@ export type CompareFact = {
 
 export type CompareLink = {
   label: string
-  url: string
-  icon: Component
+  url?: string
+  icon?: Component
   download?: boolean
 }
 
 export type CompareSide = {
+  key?: string
   facts: CompareFact[]
   links: CompareLink[]
 }
@@ -25,7 +26,7 @@ export type CompareSide = {
 
 <script setup lang="ts">
 import { computed, h, ref } from 'vue'
-import { NButton, NCard, NIcon, NTime } from 'naive-ui'
+import { NButton, NCard, NIcon, NSkeleton, NTime } from 'naive-ui'
 import { ArrowRight24Regular } from '@vicons/fluent'
 import Dim from './Dim.vue'
 import Tooltip from './Tooltip.vue'
@@ -37,12 +38,13 @@ import ContextMenu from './ContextMenu.vue'
 const flipped = ref(false)
 
 const downloads = (side: CompareSide) => side.links.filter(link => link.download)
+const pending = (links: CompareLink[]) => links.some(link => !link.url)
 
 const jarMenu = ref<InstanceType<typeof ContextMenu>>()
 const jarSide = ref<CompareSide>()
-const jarOptions = computed(() => downloads(jarSide.value ?? { facts: [], links: [] }).map(link => ({
+const jarOptions = computed(() => downloads(jarSide.value ?? { facts: [], links: [] }).filter(link => link.url).map(link => ({
   label: link.label,
-  key: link.url,
+  key: link.url!,
   icon: () => h(NIcon, { component: link.icon }),
 })))
 
@@ -75,48 +77,55 @@ defineEmits<{
 
 <template>
   <div class="compare" :class="{ single: sides.length < 2 }">
-    <NCard v-for="(side, i) of sides" :key="i" class="version-card" size="small">
+    <NCard v-for="(side, i) of sides" :key="side.key ?? i" class="version-card" size="small">
       <slot name="picker" :index="i"></slot>
 
-      <div v-if="side.facts.length > 0" class="facts">
-        <Row v-for="fact of side.facts" :key="fact.label" class="fact">
-          <Tooltip :disabled="!fact.tip">
-            <template #trigger="{ props: tip }"><Dim v-bind="tip" class="label">{{ fact.label }}</Dim></template>
-            <h3>{{ fact.label }}</h3>
-            <p>{{ fact.tip }}</p>
-          </Tooltip>
-          <Spacer bridge />
-          <Tooltip v-if="fact.time">
-            <template #trigger="{ props: tip }">
-              <span v-bind="tip">
-                <NTime :time="fact.time" :to="Date.now()" type="relative" />
-              </span>
-            </template>
-            <NTime :time="fact.time" />
-          </Tooltip>
-          <span v-else>{{ fact.value }}</span>
-        </Row>
-      </div>
+      <TransitionGroup v-if="side.facts.length > 0" name="reveal" tag="div" class="facts">
+        <div v-for="fact of side.facts" :key="fact.label" class="fact-slot reveal-slot">
+          <Row class="fact">
+            <Tooltip :disabled="!fact.tip">
+              <template #trigger="{ props: tip }"><Dim v-bind="tip" class="label">{{ fact.label }}</Dim></template>
+              <h3>{{ fact.label }}</h3>
+              <p>{{ fact.tip }}</p>
+            </Tooltip>
+            <Spacer bridge />
+            <Tooltip v-if="fact.time">
+              <template #trigger="{ props: tip }">
+                <span v-bind="tip">
+                  <NTime :time="fact.time" :to="Date.now()" type="relative" />
+                </span>
+              </template>
+              <NTime :time="fact.time" />
+            </Tooltip>
+            <span v-else-if="fact.value !== undefined">{{ fact.value }}</span>
+            <NSkeleton v-else text width="72px" height="14px" :sharp="false" />
+          </Row>
+        </div>
+      </TransitionGroup>
 
-      <div v-if="side.links.length > 0" class="links">
-        <NButton v-if="downloads(side).length > 0" size="small" @click="openJars(side, $event)">
-          <template #icon><NIcon :component="downloads(side)[0].icon" /></template>
-          Download jar
-        </NButton>
-        <NButton
-          v-for="link of side.links.filter(link => !link.download)"
-          size="small"
-          tag="a"
-          :key="link.label"
-          :href="link.url"
-          rel="noreferrer"
-          :download="link.download"
-          :target="!link.download ? '_blank' : undefined"
-        >
-          <template #icon><NIcon :component="link.icon" /></template>
-          {{ link.label }}
-        </NButton>
-      </div>
+      <TransitionGroup v-if="side.links.length > 0" name="reveal" tag="div" class="links">
+        <div v-if="downloads(side).length > 0" key="download" class="link-slot reveal-slot">
+          <NSkeleton v-if="pending(downloads(side))" height="28px" :sharp="false" />
+          <NButton v-else size="small" @click="openJars(side, $event)">
+            <template #icon><NIcon :component="downloads(side)[0].icon" /></template>
+            Download jar
+          </NButton>
+        </div>
+        <div v-for="link of side.links.filter(link => !link.download)" :key="link.label" class="link-slot reveal-slot">
+          <NSkeleton v-if="!link.url" height="28px" :sharp="false" />
+          <NButton
+            v-else
+            size="small"
+            tag="a"
+            :href="link.url"
+            rel="noreferrer"
+            target="_blank"
+          >
+            <template #icon><NIcon :component="link.icon" /></template>
+            {{ link.label }}
+          </NButton>
+        </div>
+      </TransitionGroup>
     </NCard>
 
     <div v-if="sides.length > 1" class="compare-arrow">
@@ -163,7 +172,15 @@ defineEmits<{
 .facts {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+}
+
+.fact-slot + .fact-slot {
+  padding-top: 4px;
+
+  &.reveal-enter-from,
+  &.reveal-leave-to {
+    padding-top: 0;
+  }
 }
 
 .fact {
@@ -181,13 +198,13 @@ defineEmits<{
   flex-wrap: wrap;
   gap: 8px;
 
-  > * {
-    flex: 1;
-  }
-
   a {
     text-decoration: none;
   }
+}
+
+.link-slot {
+  flex: 1;
 }
 
 .compare-arrow {

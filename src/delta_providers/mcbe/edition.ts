@@ -66,6 +66,10 @@ export const bedrockEdition: Edition = {
   lineSegments: 3,
   tooltip: MCBEVersionTooltip,
   summary: MCBEVersionFacts,
+  skeleton: {
+    facts: [ { label: 'Size', tip: TIPS.size } ],
+    links: [ { label: 'GitHub release' } ],
+  },
   async overview(version, details) {
     const size = await knownZipSize(version, details)
     const changelog = changelogUrl(details)
