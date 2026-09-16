@@ -5,10 +5,11 @@ import { deltaVirtualHandler } from '@/util/virtualHandler'
 import { NSpin } from 'naive-ui'
 import { nextTick, onBeforeUnmount, ref, watch, Transition } from 'vue'
 import { useRoute } from 'vue-router'
+import { getCSSVar } from '@/util/getCSSVar'
 import { useIframeBudget } from '@/util/iframeBudget'
 import { errorMessage } from '@/util/errorMessage'
 
-const structureViewerUrl = 'https://structure-viewer.ewanhowell.com/?minimal&manual&nosky&background=transparent'
+const structureViewerUrl = `https://structure-viewer.ewanhowell.com/?minimal&manual&nosky&background=${encodeURIComponent(getCSSVar('--color-0-alt'))}`
 
 const props = defineProps<{
   dr: DeltaResult
