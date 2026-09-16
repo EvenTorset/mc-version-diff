@@ -201,6 +201,10 @@ watch(() => props.versions, async (now, before) => {
   position: relative;
 }
 
+.selected :deep(.links) {
+  flex-direction: column;
+}
+
 .header {
   min-height: 34px;
 }

@@ -24,22 +24,36 @@ export type CompareSide = {
 </script>
 
 <script setup lang="ts">
-import { h, ref } from 'vue'
-import { NButton, NCard, NDropdown, NIcon, NTime } from 'naive-ui'
+import { computed, h, ref } from 'vue'
+import { NButton, NCard, NIcon, NTime } from 'naive-ui'
 import { ArrowRight24Regular } from '@vicons/fluent'
 import Dim from './Dim.vue'
 import Tooltip from './Tooltip.vue'
 import Row from './Row.vue'
 import Spacer from './Spacer.vue'
 import SwapToggle from './SwapToggle.vue'
+import ContextMenu from './ContextMenu.vue'
 
 const flipped = ref(false)
 
 const downloads = (side: CompareSide) => side.links.filter(link => link.download)
 
-function download(url: string) {
+const jarMenu = ref<InstanceType<typeof ContextMenu>>()
+const jarSide = ref<CompareSide>()
+const jarOptions = computed(() => downloads(jarSide.value ?? { facts: [], links: [] }).map(link => ({
+  label: link.label,
+  key: link.url,
+  icon: () => h(NIcon, { component: link.icon }),
+})))
+
+function openJars(side: CompareSide, event: MouseEvent) {
+  jarSide.value = side
+  jarMenu.value?.show(event)
+}
+
+function download(url: string | number) {
   const link = document.createElement('a')
-  link.href = url
+  link.href = String(url)
   link.download = ''
   link.rel = 'noreferrer'
   link.click()
@@ -85,18 +99,10 @@ defineEmits<{
       </div>
 
       <div v-if="side.links.length > 0" class="links">
-        <NDropdown
-          v-if="downloads(side).length > 0"
-          trigger="click"
-          placement="bottom"
-          :options="downloads(side).map(link => ({ label: link.label, key: link.url, icon: () => h(NIcon, { component: link.icon }) }))"
-          @select="download"
-        >
-          <NButton size="small">
-            <template #icon><NIcon :component="downloads(side)[0].icon" /></template>
-            Download jar
-          </NButton>
-        </NDropdown>
+        <NButton v-if="downloads(side).length > 0" size="small" @click="openJars(side, $event)">
+          <template #icon><NIcon :component="downloads(side)[0].icon" /></template>
+          Download jar
+        </NButton>
         <NButton
           v-for="link of side.links.filter(link => !link.download)"
           size="small"
@@ -126,6 +132,7 @@ defineEmits<{
         <Content v-else :content="line" />
       </template>
     </div>
+    <ContextMenu ref="jarMenu" :options="jarOptions" @select="download" />
   </div>
 </template>
 
