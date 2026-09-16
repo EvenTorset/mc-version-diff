@@ -1,4 +1,5 @@
 import type { ProgressList } from '@/components/progressList'
+import type { RawBytes } from 'minecraft-asset-loader'
 import type { DeltaTrackState } from './states'
 import type { Renderable, StaticOrSync } from '@/types'
 import type { Component } from 'vue'
@@ -17,12 +18,21 @@ export type DeltaTrack = {
   absSizeDiff: number
 }
 
+export type StoredEntry = {
+  path: string
+  size: number
+  crc: number | string
+  read(): Promise<Uint8Array>
+  raw(): Promise<RawBytes>
+}
+
 export type DeltaResult = {
   edition: Edition
   a: string
   b: string
   tracks: DeltaTrack[]
   getEntry: (versionId: string, path: string | null) => Promise<Uint8Array<ArrayBuffer>>
+  getStoredEntry?: (versionId: string, path: string) => StoredEntry | null
   listEntries: (versionId: string, path: string) => Promise<string[]>
   getCategory: (track: DeltaTrack) => DeltaProviderCategory | null
   fileCount: (versionId: string) => number
