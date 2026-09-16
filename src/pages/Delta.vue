@@ -5,7 +5,7 @@ import VersionDiffLogo from '@/components/VersionDiffLogo.vue'
 import type { DeltaProvider, DeltaProviderCategory, DeltaResult, DeltaTrack } from '@/delta_providers'
 import { getDeltaProvider, listDeltaProviders } from '@/delta_providers/registry'
 import { getTrackCategory } from '@/delta_providers/category'
-import { NButton, NCard, NCheckbox, NDropdown, NIcon, NInput, NRadio, NRadioGroup, NSelect, NSlider, NSpin, type InputInst } from 'naive-ui'
+import { NButton, NCard, NCheckbox, NIcon, NInput, NRadio, NRadioGroup, NSelect, NSlider, NSpin, type InputInst } from 'naive-ui'
 import { computed, nextTick, onBeforeUnmount, onMounted, provide, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { rememberDelta } from '@/util/documentTitle'
@@ -39,6 +39,7 @@ import MoveScriptGenerator from '@/components/MoveScriptGenerator.vue'
 import RadioGroup from '@/components/RadioGroup.vue'
 import RadioButton from '@/components/RadioButton.vue'
 import { downloadableTracks, downloadCategory } from '@/util/categoryZip'
+import ContextMenu from '@/components/ContextMenu.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -484,7 +485,8 @@ const visibleCategories = computed(() =>
     tracks.length > 0 || name === 'Overview' || name === selectedCategory.value)
 )
 
-const categoryMenu = ref<{ name: string, tracks: DeltaTrack[], x: number, y: number } | null>(null)
+const categoryMenu = ref<{ name: string, tracks: DeltaTrack[] } | null>(null)
+const categoryMenuRef = ref<InstanceType<typeof ContextMenu>>()
 
 const categoryMenuOptions = computed(() => {
   const count = categoryMenu.value ? downloadableTracks(categoryMenu.value.tracks).length : 0
@@ -497,18 +499,13 @@ const categoryMenuOptions = computed(() => {
   ]
 })
 
-const categoryMenuOpen = ref(false)
-const menuLayer = ref<HTMLElement>()
-
 function openCategoryMenu(event: MouseEvent, name: string, tracks: DeltaTrack[]) {
   if (name === 'Overview') return;
-  categoryMenu.value = { name, tracks, x: event.clientX, y: event.clientY }
-  categoryMenuOpen.value = true
-  window.addEventListener('scroll', () => categoryMenuOpen.value = false, { once: true, capture: true, passive: true })
+  categoryMenu.value = { name, tracks }
+  categoryMenuRef.value?.show(event)
 }
 
 function runCategoryMenu() {
-  categoryMenuOpen.value = false
   const menu = categoryMenu.value
   if (!dr.value || !menu) return;
   downloadCategory(dr.value, route.params.provider as string, menu.name, menu.tracks)
@@ -641,22 +638,7 @@ function runCategoryMenu() {
                       </template>
                     </TransitionList>
                   </AnimatedHeight>
-                  <Teleport to="body">
-                    <div ref="menuLayer" class="menu-layer"></div>
-                  </Teleport>
-                  <NDropdown
-                    trigger="manual"
-                    placement="bottom-start"
-                    :to="menuLayer ?? 'body'"
-                    :show="categoryMenuOpen"
-                    :x="categoryMenu?.x ?? 0"
-                    :y="categoryMenu?.y ?? 0"
-                    :options="categoryMenuOptions"
-                    @select="runCategoryMenu"
-                    @clickoutside="categoryMenuOpen = false"
-                  >
-                    <span style="display: none;"></span>
-                  </NDropdown>
+                  <ContextMenu ref="categoryMenuRef" :options="categoryMenuOptions" @select="runCategoryMenu" />
                 </Col>
                 <CardSectionHeader text="View" />
                 <Row>
@@ -904,13 +886,6 @@ function runCategoryMenu() {
       margin-top: -4px;
     }
   }
-}
-
-.menu-layer {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 2000;
 }
 
 .category-list {
