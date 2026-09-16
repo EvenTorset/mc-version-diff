@@ -19,7 +19,7 @@ import Col from '@/components/Col.vue'
 import Row from '@/components/Row.vue'
 import Spacer from '@/components/Spacer.vue'
 import Dim from '@/components/Dim.vue'
-import { manifestProgress } from '@/delta_providers/loader'
+import { manifestProgress, manifestUpdated } from '@/delta_providers/loader'
 import { getCSSVar } from '@/util/getCSSVar'
 
 const props = withDefaults(defineProps<{
@@ -135,7 +135,7 @@ function toggle(version: ManifestVersion) {
   }
 }
 
-onMounted(async () => {
+async function loadVersions() {
   try {
     const manifest = edition.assets.manifest
     ;[ allVersions.value, releasesOnly.value, mainVersions.value ] = await Promise.all([
@@ -147,7 +147,10 @@ onMounted(async () => {
   } catch {
     // Errors with loading the manifest will be handled by the selector component.
   }
-})
+}
+
+onMounted(loadVersions)
+watch(manifestUpdated, loadVersions)
 
 let debounceTimer: ReturnType<typeof setTimeout> | undefined
 
