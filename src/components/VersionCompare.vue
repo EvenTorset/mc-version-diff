@@ -46,7 +46,7 @@ defineEmits<{
 </script>
 
 <template>
-  <div class="compare">
+  <div class="compare" :class="{ single: sides.length < 2 }">
     <NCard v-for="(side, i) of sides" :key="i" class="version-card" size="small">
       <slot name="picker" :index="i"></slot>
 
@@ -87,7 +87,7 @@ defineEmits<{
       </div>
     </NCard>
 
-    <div class="compare-arrow">
+    <div v-if="sides.length > 1" class="compare-arrow">
       <Tooltip v-if="swappable">
         <template #trigger="{ props: tip }">
           <button v-bind="tip" type="button" class="swap" @click="$emit('swap')">
@@ -110,7 +110,7 @@ defineEmits<{
 
 .compare {
   display: grid;
-  grid-template-columns: 340px 1fr 340px;
+  grid-template-columns: minmax(0, 340px) auto minmax(0, 340px);
   align-items: start;
   gap: 20px;
 }
@@ -118,6 +118,11 @@ defineEmits<{
 .version-card:nth-of-type(1) { grid-column: 1; grid-row: 1; }
 .version-card:nth-of-type(2) { grid-column: 3; grid-row: 1; }
 .compare-arrow { grid-column: 2; grid-row: 1; }
+
+.compare.single {
+  grid-template-columns: 340px;
+  justify-content: center;
+}
 
 .version-card :deep(.n-card-content) {
   display: flex;
@@ -176,7 +181,8 @@ defineEmits<{
     transform: rotate(-90deg);
   }
 
-  &:hover {
+  &:hover,
+  &.swapping {
     color: var(--color-accent);
 
     .direction {

@@ -3,7 +3,7 @@ import VersionsList from './VersionsList.vue'
 import Row from '@/components/Row.vue'
 import Spacer from '@/components/Spacer.vue'
 import VersionDisplay from './VersionDisplay.vue'
-import VersionSummary from './VersionSummary.vue'
+import SelectedVersions from './SelectedVersions.vue'
 import type { ManifestVersion } from 'minecraft-asset-loader'
 import { getDiffSuggestions } from '@/delta_providers/manifest'
 import { manifestUpdated } from '@/delta_providers/loader'
@@ -32,12 +32,6 @@ const ab = computed(() => {
 })
 const errorMessage = ref<string | null>(null)
 const loading = ref(true)
-
-function deselect(id: string) {
-  const version = Array.from(selectedVersions.value).find(v => v.id === id)
-  if (!version) return;
-  selectedVersions.value.delete(version)
-}
 
 async function loadSuggestions() {
   try {
@@ -78,10 +72,13 @@ watch(manifestUpdated, loadSuggestions)
     <div class="versions-list-wrapper">
       <VersionsList v-model="selectedVersions" />
     </div>
-    <Col v-if="selectedVersions.size === 0" align="stretch" class="main-panel">
-    <NCard v-if="edition.description" size="small" class="edition-description"><p><Content :content="edition.description" /></p></NCard>
-    <NCard class="suggestions-card" title="Comparison Suggestions">
-      <div class="suggestions-grid">
+    <Col align="stretch" class="main-panel">
+      <Transition name="rise">
+        <NCard v-if="edition.description && selectedVersions.size === 0" size="small" class="edition-description"><p><Content :content="edition.description" /></p></NCard>
+      </Transition>
+      <NCard class="suggestions-card" :title="selectedVersions.size === 0 ? 'Comparison Suggestions' : 'Selected Versions'">
+        <Transition name="rise">
+        <div v-if="selectedVersions.size === 0" class="suggestions-grid">
         <template v-if="loading">
           <template v-for="i in 3" :key="`placeholder-${i}`">
             <div class="suggestion-placeholder" :style="{ '--row': (i - 1) * 3 + 1 }">
@@ -141,52 +138,24 @@ watch(manifestUpdated, loadSuggestions)
           </RouterLink>
           <div v-if="i < diffSuggestions.length - 1" class="grid-gap" :style="{ '--row': i * 3 + 1 }"></div>
         </template>
-      </div>
+        </div>
+        <SelectedVersions
+          v-else
+          :versions="Array.from(selectedVersions)"
+          @deselect="version => selectedVersions.delete(version)"
+          @swap="selectedVersions = new Set(Array.from(selectedVersions).reverse())"
+        />
+        </Transition>
       <template #footer>
-        <Row>
+        <Transition name="rise">
+        <Row v-if="selectedVersions.size === 0">
           <NIcon :size="24" :component="ArrowLeft24Regular" />
           <div>Or select any two versions from the list to compare</div>
-        </Row>
-      </template>
-    </NCard>
-    </Col>
-    <NCard v-else class="main-panel" title="Selected Versions">
-      <Col v-if="selectedVersions.size === 1" justify="center" gap="40px" style="height: 100%;">
-         <VersionSummary :id="ab.a">
-            <NButton @click="() => deselect(ab.a)">Deselect</NButton>
-         </VersionSummary>
-        <Row>
-          <NIcon :size="24" :component="ArrowLeft24Regular" />
-          <div>Select one more version from the list</div>
-        </Row>
-      </Col>
-      <Row v-else justify="center" align="center" gap="20px" style="height: 100%;">
-        <Col gap="20px" style="flex: 1;">
-          <Row style="align-self: stretch;">
-            <Spacer />
-            <VersionSummary :id="ab.a">
-              <NButton @click="() => deselect(ab.a)">Deselect</NButton>
-            </VersionSummary>
-            <Spacer flex="1" max="100px" />
-            <NIcon :size="24" :component="ArrowRight24Regular" />
-            <Spacer flex="1" max="100px" />
-            <VersionSummary :id="ab.b">
-              <NButton @click="() => deselect(ab.a)">Deselect</NButton>
-            </VersionSummary>
-            <Spacer />
-          </Row>
-        </Col>
-      </Row>
-      <template #footer>
-        <Row v-if="selectedVersions.size === 1">
-          <Spacer />
-          <NButton @click="selectedVersions.clear()">Clear selection</NButton>
-          <NButton disabled>Compare</NButton>
         </Row>
         <Row v-else>
           <Spacer />
           <NButton @click="selectedVersions.clear()">Clear selection</NButton>
-          <RouterLink :to="{
+          <RouterLink v-if="selectedVersions.size === 2" :to="{
             name: 'delta',
             params: {
               provider: edition.id,
@@ -196,9 +165,12 @@ watch(manifestUpdated, loadSuggestions)
           }">
             <NButton class="accent">Compare</NButton>
           </RouterLink>
+          <NButton v-else disabled>Compare</NButton>
         </Row>
+        </Transition>
       </template>
-    </NCard>
+      </NCard>
+    </Col>
   </Row>
 </template>
 
@@ -217,10 +189,49 @@ watch(manifestUpdated, loadSuggestions)
 
 .main-panel {
   flex: 1;
+  min-width: 0;
 }
 
 .suggestions-card {
+  display: flex;
+  flex-direction: column;
   flex: 1;
+}
+
+.suggestions-card > .n-card-content {
+  display: grid;
+  grid-template-rows: 1fr;
+  flex: 1;
+}
+
+.suggestions-card > .n-card-content > * {
+  grid-area: 1 / 1;
+  align-self: center;
+}
+
+.suggestions-card > .n-card__footer {
+  display: grid;
+}
+
+.suggestions-card > .n-card__footer > * {
+  grid-area: 1 / 1;
+  min-height: 34px;
+}
+
+.rise-enter-active,
+.rise-leave-active {
+  transition: opacity 300ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.rise-enter-from {
+  opacity: 0;
+  transform: translateY(24px);
+}
+
+.rise-leave-to {
+  opacity: 0;
+  transform: translateY(-24px);
 }
 
 .edition-description {
