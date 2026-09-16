@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, shallowRef, watch } from 'vue'
 import type { ManifestVersion } from 'minecraft-asset-loader'
-import VersionCompare, { type CompareSide } from '@/components/VersionCompare.vue'
+import VersionCompare, { type CompareFact, type CompareSide } from '@/components/VersionCompare.vue'
 import VersionName from './VersionName.vue'
 import Row from '@/components/Row.vue'
 import Spacer from '@/components/Spacer.vue'
@@ -24,15 +24,27 @@ const edition = useEdition()
 
 const loaded = shallowRef<Map<string, CompareSide>>(new Map())
 
+function base(version: ManifestVersion): CompareFact[] {
+  return [
+    { label: 'Released', time: new Date(version.releaseTime), tip: VERSION_TIPS.released },
+    { label: 'Type', value: typeName(edition, version.type), tip: edition.typeTip ?? VERSION_TIPS.type },
+  ]
+}
+
+function skeleton(version: ManifestVersion): CompareSide {
+  return {
+    key: version.id,
+    facts: base(version).concat(edition.skeleton?.facts ?? []),
+    links: edition.skeleton?.links ?? [],
+  }
+}
+
 async function load(version: ManifestVersion) {
   const details = await version.details()
   const extra = edition.overview ? await edition.overview(version, details) : { facts: [], links: [] }
   loaded.value = new Map(loaded.value).set(version.id, {
-    facts: [
-      { label: 'Released', time: new Date(version.releaseTime), tip: VERSION_TIPS.released },
-      { label: 'Type', value: typeName(edition, version.type), tip: edition.typeTip ?? VERSION_TIPS.type },
-      ...extra.facts,
-    ],
+    key: version.id,
+    facts: base(version).concat(extra.facts),
     links: extra.links,
   })
 }
@@ -44,7 +56,7 @@ watch(() => props.versions, versions => {
 }, { immediate: true })
 
 const sides = computed<CompareSide[]>(() =>
-  props.versions.map(version => loaded.value.get(version.id) ?? { facts: [], links: [] }))
+  props.versions.map(version => loaded.value.get(version.id) ?? skeleton(version)))
 
 const root = ref<HTMLElement>()
 const SPLIT_MS = 400
@@ -197,6 +209,16 @@ watch(() => props.versions, async (now, before) => {
 
 .selected :deep(.links) {
   flex-direction: column;
+  gap: 0;
+}
+
+.selected :deep(.link-slot + .link-slot) {
+  padding-top: 8px;
+
+  &.reveal-enter-from,
+  &.reveal-leave-to {
+    padding-top: 0;
+  }
 }
 
 .selected :deep(.version-card) {

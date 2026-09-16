@@ -45,6 +45,13 @@ export const javaAssetsEdition: Edition = {
   },
   tooltip: MCJEOVersionTooltip,
   summary: MCJEOVersionFacts,
+  skeleton: {
+    facts: [
+      { label: 'Size', tip: TIPS.size },
+      { label: 'Versions', tip: TIPS.versions },
+    ],
+    links: [ { label: 'Asset index', download: true } ],
+  },
   async overview(version) {
     const index = assetIndex(version)
     return {
