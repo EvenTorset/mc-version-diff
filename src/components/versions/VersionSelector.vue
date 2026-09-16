@@ -43,18 +43,20 @@ async function loadSuggestions() {
   try {
     const suggestions = await getDiffSuggestions(props.edition)
     diffSuggestions.value = []
-    diffSuggestions.value.push(['Latest version', suggestions.latestVersion])
-    if (suggestions.sinceRelease !== null) {
-      diffSuggestions.value.push(['Since release', suggestions.sinceRelease])
+    function add(label: string, pair: [ManifestVersion, ManifestVersion] | null) {
+      if (pair === null) return;
+      if (diffSuggestions.value.some(([ , shown ]) => shown[0].id === pair[0].id && shown[1].id === pair[1].id)) return;
+      diffSuggestions.value.push([label, pair])
     }
-    // if (suggestions.latestRelease !== null) {
-    //   diffSuggestions.value.push(['Latest release', suggestions.latestRelease])
-    // }
-    if (suggestions.majorRelease !== null) {
-      diffSuggestions.value.push(['Major release', suggestions.majorRelease])
-    }
-    if (suggestions.releasePatches !== null) {
-      diffSuggestions.value.push(['Release patches', suggestions.releasePatches])
+    if (suggestions.latestIsRelease) {
+      add('Major release', suggestions.majorRelease)
+      add('Release patches', suggestions.releasePatches)
+      add('Latest version', suggestions.latestVersion)
+    } else {
+      add('Latest version', suggestions.latestVersion)
+      add('Since release', suggestions.sinceRelease)
+      add('Major release', suggestions.majorRelease)
+      add('Release patches', suggestions.releasePatches)
     }
   } catch (err: any) {
     errorMessage.value = err?.message ?? err?.toString?.() ?? 'n/a'
