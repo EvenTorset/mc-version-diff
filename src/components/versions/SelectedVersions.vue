@@ -5,10 +5,10 @@ import VersionCompare, { type CompareSide } from '@/components/VersionCompare.vu
 import VersionName from './VersionName.vue'
 import Row from '@/components/Row.vue'
 import Spacer from '@/components/Spacer.vue'
-import { NButton, NIcon } from 'naive-ui'
-import { Dismiss16Regular } from '@vicons/fluent'
+import { Dismiss16Filled } from '@vicons/fluent'
 import { typeName, useEdition } from './edition'
 import { daysApart, VERSION_TIPS } from '@/util/versionFacts'
+import IconButton from '../IconButton.vue'
 
 const props = defineProps<{
   versions: ManifestVersion[]
@@ -186,9 +186,9 @@ watch(() => props.versions, async (now, before) => {
         <Row class="header">
           <h3><VersionName :version="versions[index]" /></h3>
           <Spacer />
-          <NButton quaternary circle size="small" aria-label="Deselect" @click="emit('deselect', versions[index])">
-            <template #icon><NIcon :component="Dismiss16Regular" /></template>
-          </NButton>
+          <IconButton aria-label="Deselect" @click="emit('deselect', versions[index])">
+            <Dismiss16Filled />
+          </IconButton>
         </Row>
       </template>
     </VersionCompare>
