@@ -47,6 +47,9 @@ const sides = computed<CompareSide[]>(() =>
 
 const root = ref<HTMLElement>()
 const SPLIT_MS = 400
+const CROSS_MS = 750
+const CROSS_PX = 30
+const CROSS_EASE = 'cubic-bezier(0.16, 1, 0.3, 1)'
 
 let running: AbortController | null = null
 let clones: HTMLElement[] = []
@@ -60,11 +63,10 @@ function cancel() {
   running = new AbortController()
   for (const clone of clones) clone.remove()
   clones = []
-  root.value?.querySelector('.swap-toggle')?.classList.remove('swapping')
-  root.value?.querySelector('.compare-arrow')?.classList.remove('raised')
   for (const card of cards()) {
     card.style.transition = ''
     card.style.transform = ''
+    card.style.opacity = ''
     card.style.width = ''
     card.style.zIndex = ''
   }
@@ -115,6 +117,45 @@ function ghost(card: HTMLElement, from: DOMRect, to: DOMRect) {
   setTimeout(() => clone.remove(), SPLIT_MS + 100)
 }
 
+function fade(clone: HTMLElement, from: DOMRect, inward: number) {
+  const base = root.value!.getBoundingClientRect()
+  Object.assign(clone.style, {
+    transition: 'none',
+    transform: 'none',
+    position: 'absolute',
+    left: `${from.left - base.left}px`,
+    top: `${from.top - base.top}px`,
+    width: `${from.width}px`,
+    margin: '0',
+    pointerEvents: 'none',
+  })
+  root.value!.append(clone)
+  clones.push(clone)
+
+  clone.getBoundingClientRect()
+
+  clone.style.transition = `transform ${CROSS_MS}ms ${CROSS_EASE}, opacity ${CROSS_MS}ms ${CROSS_EASE}`
+  clone.style.transform = `translateX(${inward}px)`
+  clone.style.opacity = '0'
+  setTimeout(() => clone.remove(), CROSS_MS + 100)
+}
+
+function enter(card: HTMLElement, inward: number) {
+  card.style.transition = 'none'
+  card.style.transform = `translateX(${inward}px)`
+  card.style.opacity = '0'
+
+  root.value!.getBoundingClientRect()
+
+  card.style.transition = `transform ${CROSS_MS}ms ${CROSS_EASE}, opacity ${CROSS_MS}ms ${CROSS_EASE}`
+  card.style.transform = ''
+  card.style.opacity = ''
+  card.addEventListener('transitionend', event => {
+    if (event.propertyName !== 'transform') return;
+    card.style.transition = ''
+  }, { signal: running!.signal })
+}
+
 function hold(arrow: HTMLElement, from: DOMRect, until: HTMLElement) {
   const clone = arrow.cloneNode(true) as HTMLElement
   const base = root.value!.getBoundingClientRect()
@@ -140,22 +181,16 @@ function hold(arrow: HTMLElement, from: DOMRect, until: HTMLElement) {
 watch(() => props.versions, async (now, before) => {
   if (now.length === before.length) {
     if (now.length !== 2 || now[0].id !== before[1].id || now[1].id !== before[0].id) return;
-    const was = cards().map(card => card.getBoundingClientRect())
+    const leaving = cards().map(card => ({ clone: card.cloneNode(true) as HTMLElement, from: card.getBoundingClientRect() }))
     cancel()
     await nextTick()
     const next = cards()
-    if (next.length !== 2 || !was[1]) return;
-    for (const [ i, card ] of next.entries()) slide(card, was[1 - i], card.getBoundingClientRect(), i === 0 ? '1' : '0')
-    const swap = root.value?.querySelector('.swap-toggle')
-    const arrow = root.value?.querySelector('.compare-arrow')
-    const token = running!.signal
-    swap?.classList.add('swapping')
-    arrow?.classList.add('raised')
-    setTimeout(() => {
-      if (token.aborted) return;
-      swap?.classList.remove('swapping')
-      arrow?.classList.remove('raised')
-    }, SPLIT_MS)
+    if (next.length !== 2 || leaving.length !== 2) return;
+    for (const [ i, card ] of next.entries()) {
+      const inward = i === 0 ? CROSS_PX : -CROSS_PX
+      fade(leaving[i].clone, leaving[i].from, inward)
+      enter(card, inward)
+    }
     return;
   }
   const was = cards().map(card => card.getBoundingClientRect())
@@ -207,10 +242,6 @@ watch(() => props.versions, async (now, before) => {
   flex-direction: column;
 }
 
-.selected :deep(.compare-arrow.raised) {
-  position: relative;
-  z-index: 2;
-}
 
 .header {
   min-height: 34px;
