@@ -73,12 +73,23 @@ function matching(list: ManifestVersion[], query: string) {
 
 const selectedIds = computed(() => new Set([ ...selectedVersions.value ].map(v => v.id)))
 
-const versions = computed<ManifestVersion[]>(() => matching(listForMode.value, debouncedFilter.value))
+const versions = computed<ManifestVersion[]>(() => {
+  const listed = matching(listForMode.value, debouncedFilter.value)
+  if (debouncedFilter.value) return listed
+
+  const merged = Array.from(listed)
+  for (const version of allVersions.value) {
+    if (!selectedIds.value.has(version.id) || merged.some(v => v.id === version.id)) continue;
+    const at = merged.findIndex(v => new Date(v.releaseTime) < new Date(version.releaseTime))
+    merged.splice(at === -1 ? merged.length : at, 0, version)
+  }
+  return merged
+})
 
 const selectedList = computed<ManifestVersion[]>(() => {
   const listed = new Set(versions.value.map(v => v.id))
   const missing = allVersions.value.filter(v => selectedIds.value.has(v.id) && !listed.has(v.id))
-  if (props.keepPinnedWhileFiltering || !debouncedFilter.value) return missing
+  if (props.keepPinnedWhileFiltering) return missing
   return matching(missing, debouncedFilter.value)
 })
 
