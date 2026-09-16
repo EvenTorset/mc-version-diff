@@ -4,10 +4,12 @@ import { StructureViewerEmbed, type CompareResult, type CompareView, type Compar
 import { deltaVirtualHandler } from '@/util/virtualHandler'
 import { NSpin } from 'naive-ui'
 import { nextTick, onBeforeUnmount, ref, watch, Transition } from 'vue'
+import { useRoute } from 'vue-router'
+import { getCSSVar } from '@/util/getCSSVar'
 import { useIframeBudget } from '@/util/iframeBudget'
 import { errorMessage } from '@/util/errorMessage'
 
-const structureViewerUrl = 'https://structure-viewer.ewanhowell.com/?minimal&manual&nosky&background=transparent'
+const structureViewerUrl = `https://structure-viewer.ewanhowell.com/?minimal&manual&nosky&background=${encodeURIComponent(getCSSVar('--color-0-alt'))}`
 
 const props = defineProps<{
   dr: DeltaResult
@@ -20,6 +22,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   counts: [counts: CompareResult['counts']]
 }>()
+
+const route = useRoute()
 
 const doneLoading = ref(false)
 const failed = ref('')
@@ -41,6 +45,11 @@ watch(() => [props.show, props.view], () => {
 
 function fileName(path: string) {
   return path.slice(path.lastIndexOf('/') + 1)
+}
+
+function structurePath(id: string) {
+  const match = /^(?:assets|data)\/([^\/]+)\/structures?\/(.+)\.nbt$/.exec(id)
+  return match ? `${match[1]}/${match[2]}` : null
 }
 
 async function load() {
@@ -73,9 +82,13 @@ async function loadInto(current: StructureViewerEmbed) {
       packs: [{ handler: 'custom', name: version }]
     })
 
+    const structure = structurePath(props.track.id)
+
     await current.send('loadStructure', {
       data: await props.dr.getEntry(version, path),
       name: fileName(path),
+      ...structure && { path: structure },
+      ...route.params.provider === 'mcje' && { version },
     })
   } else {
     current.registerHandler('a', deltaVirtualHandler(props.dr, props.dr.a))
