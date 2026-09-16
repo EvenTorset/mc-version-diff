@@ -242,6 +242,9 @@ watch(() => props.versions, async (now, before) => {
   flex-direction: column;
 }
 
+.selected :deep(.version-card) {
+  background-color: color-mix(in srgb, var(--color-0), var(--color-1)) !important;
+}
 
 .header {
   min-height: 34px;
