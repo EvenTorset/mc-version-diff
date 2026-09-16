@@ -5,7 +5,7 @@ import VersionDiffLogo from '@/components/VersionDiffLogo.vue'
 import type { DeltaProvider, DeltaProviderCategory, DeltaResult, DeltaTrack } from '@/delta_providers'
 import { getDeltaProvider, listDeltaProviders } from '@/delta_providers/registry'
 import { getTrackCategory } from '@/delta_providers/category'
-import { NButton, NCard, NCheckbox, NIcon, NInput, NRadio, NRadioGroup, NSelect, NSlider, NSpin, type InputInst } from 'naive-ui'
+import { NButton, NCard, NCheckbox, NDropdown, NIcon, NInput, NRadio, NRadioGroup, NSelect, NSlider, NSpin, type InputInst } from 'naive-ui'
 import { computed, nextTick, onBeforeUnmount, onMounted, provide, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { rememberDelta } from '@/util/documentTitle'
@@ -38,6 +38,7 @@ import CardSectionHeader from '@/components/CardSectionHeader.vue'
 import MoveScriptGenerator from '@/components/MoveScriptGenerator.vue'
 import RadioGroup from '@/components/RadioGroup.vue'
 import RadioButton from '@/components/RadioButton.vue'
+import { downloadableTracks, downloadCategory } from '@/util/categoryZip'
 
 const route = useRoute()
 const router = useRouter()
@@ -482,6 +483,31 @@ const visibleCategories = computed(() =>
   categories.value.filter(([name, tracks]) =>
     tracks.length > 0 || name === 'Overview' || name === selectedCategory.value)
 )
+
+const categoryMenu = ref<{ name: string, tracks: DeltaTrack[], x: number, y: number } | null>(null)
+
+const categoryMenuOptions = computed(() => {
+  const count = categoryMenu.value ? downloadableTracks(categoryMenu.value.tracks).length : 0
+  return [
+    {
+      label: count === 1 ? 'Download 1 changed file' : `Download ${count.toLocaleString()} changed files`,
+      key: 'download',
+      disabled: count === 0,
+    },
+  ]
+})
+
+function openCategoryMenu(event: MouseEvent, name: string, tracks: DeltaTrack[]) {
+  if (name === 'Overview') return;
+  categoryMenu.value = { name, tracks, x: event.clientX, y: event.clientY }
+}
+
+function runCategoryMenu() {
+  const menu = categoryMenu.value
+  categoryMenu.value = null
+  if (!dr.value || !menu) return;
+  downloadCategory(dr.value, route.params.provider as string, menu.name, menu.tracks)
+}
 </script>
 
 <template>
@@ -605,10 +631,23 @@ const visibleCategories = computed(() =>
                           :name
                           :selected="selectedCategory === name"
                           @click="selectedCategory = name"
+                          @contextmenu.prevent="openCategoryMenu($event, name, tracks)"
                         />
                       </template>
                     </TransitionList>
                   </AnimatedHeight>
+                  <NDropdown
+                    trigger="manual"
+                    placement="bottom-start"
+                    :show="categoryMenu !== null"
+                    :x="categoryMenu?.x ?? 0"
+                    :y="categoryMenu?.y ?? 0"
+                    :options="categoryMenuOptions"
+                    @select="runCategoryMenu"
+                    @clickoutside="categoryMenu = null"
+                  >
+                    <span style="display: none;"></span>
+                  </NDropdown>
                 </Col>
                 <CardSectionHeader text="View" />
                 <Row>
