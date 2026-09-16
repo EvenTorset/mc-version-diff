@@ -7,8 +7,9 @@ import Row from '@/components/Row.vue'
 import Spacer from '@/components/Spacer.vue'
 import { Dismiss16Filled } from '@vicons/fluent'
 import { typeName, useEdition } from './edition'
-import { daysApart, VERSION_TIPS } from '@/util/versionFacts'
+import { VERSION_TIPS } from '@/util/versionFacts'
 import IconButton from '../IconButton.vue'
+import { useSwapCrossfade } from '@/util/swapCrossfade'
 
 const props = defineProps<{
   versions: ManifestVersion[]
@@ -45,13 +46,9 @@ watch(() => props.versions, versions => {
 const sides = computed<CompareSide[]>(() =>
   props.versions.map(version => loaded.value.get(version.id) ?? { facts: [], links: [] }))
 
-const between = computed(() => {
-  const [ a, b ] = props.versions
-  return a && b ? [ daysApart(a.releaseTime, b.releaseTime) ] : []
-})
-
 const root = ref<HTMLElement>()
 const SPLIT_MS = 400
+const cross = useSwapCrossfade(() => root.value)
 
 let running: AbortController | null = null
 let clones: HTMLElement[] = []
@@ -63,12 +60,13 @@ function cards() {
 function cancel() {
   running?.abort()
   running = new AbortController()
+  cross.cancel()
   for (const clone of clones) clone.remove()
   clones = []
-  root.value?.querySelector('.swap-toggle')?.classList.remove('swapping')
   for (const card of cards()) {
     card.style.transition = ''
     card.style.transform = ''
+    card.style.opacity = ''
     card.style.width = ''
     card.style.zIndex = ''
   }
@@ -144,16 +142,12 @@ function hold(arrow: HTMLElement, from: DOMRect, until: HTMLElement) {
 watch(() => props.versions, async (now, before) => {
   if (now.length === before.length) {
     if (now.length !== 2 || now[0].id !== before[1].id || now[1].id !== before[0].id) return;
-    const was = cards().map(card => card.getBoundingClientRect())
+    const leaving = cross.capture(cards())
     cancel()
     await nextTick()
     const next = cards()
-    if (next.length !== 2 || !was[1]) return;
-    for (const [ i, card ] of next.entries()) slide(card, was[1 - i], card.getBoundingClientRect(), i === 0 ? '1' : '0')
-    const swap = root.value?.querySelector('.swap-toggle')
-    const token = running!.signal
-    swap?.classList.add('swapping')
-    setTimeout(() => token.aborted || swap?.classList.remove('swapping'), SPLIT_MS)
+    if (next.length !== 2 || leaving.length !== 2) return;
+    cross.play(leaving, next)
     return;
   }
   const was = cards().map(card => card.getBoundingClientRect())
@@ -181,7 +175,7 @@ watch(() => props.versions, async (now, before) => {
 
 <template>
   <div ref="root" class="selected">
-    <VersionCompare :sides="sides" :between="between" :swappable="versions.length === 2" @swap="emit('swap')">
+    <VersionCompare :sides="sides" :swappable="versions.length === 2" @swap="emit('swap')">
       <template #picker="{ index }">
         <Row class="header">
           <h3><VersionName :version="versions[index]" /></h3>
@@ -203,6 +197,10 @@ watch(() => props.versions, async (now, before) => {
 
 .selected :deep(.links) {
   flex-direction: column;
+}
+
+.selected :deep(.version-card) {
+  background-color: color-mix(in srgb, var(--color-0), var(--color-1)) !important;
 }
 
 .header {

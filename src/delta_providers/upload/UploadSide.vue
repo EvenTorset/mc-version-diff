@@ -187,6 +187,7 @@ function onDrop(event: DragEvent) {
   padding: 24px;
   border: 1px dashed var(--color-3);
   border-radius: 3px;
+  background-color: color-mix(in srgb, var(--color-0), var(--color-1));
 
   h3 {
     margin: 0 0 12px;

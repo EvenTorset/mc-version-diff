@@ -15,6 +15,7 @@ import { selectedComparator } from './selectedComparator'
 import { UPLOAD_VERSION_A_KEY, UPLOAD_VERSION_B_KEY, readFilesMeta, writeFilesMeta } from './filesMeta'
 import CardSectionHeader from '@/components/CardSectionHeader.vue'
 import UploadSide from './UploadSide.vue'
+import { useSwapCrossfade } from '@/util/swapCrossfade'
 
 let restoring = true
 
@@ -29,6 +30,22 @@ const providerOptions = computed(() => Array.from(listDeltaProviders()
 ))
 
 const swap = ref(false)
+const sides = ref<InstanceType<typeof Row>>()
+const cross = useSwapCrossfade(() => sides.value?.$el)
+
+function sideElements() {
+  return Array.from((sides.value?.$el as HTMLElement | undefined)?.querySelectorAll<HTMLElement>(':scope > .upload-side:not([inert])') ?? [])
+}
+
+watch(swap, async () => {
+  const leaving = cross.capture(sideElements())
+  cross.cancel()
+  await nextTick()
+  const next = sideElements()
+  if (next.length !== 2 || leaving.length !== 2) return;
+  cross.play(leaving, next)
+})
+
 const comparatorProvider = computed(() => getDeltaProvider(selectedComparator.value)!)
 const versionPicker = computed(() => comparatorProvider.value.upload?.versionPicker?.() ?? null)
 const fileListA = ref<UploadFileInfo[]>([])
@@ -217,7 +234,7 @@ onMounted(async () => {
           :consistent-menu-width="false"
         />
       </Row>
-      <Row gap="16px" align="stretch">
+      <Row ref="sides" class="sides" gap="16px" align="stretch">
         <UploadSide
           :label="swap ? 'Version B' : 'Version A'"
           :accept="comparatorProvider.upload?.accept"
@@ -245,16 +262,22 @@ onMounted(async () => {
       </Row>
       <template v-if="comparatorProvider.upload?.options">
         <CardSectionHeader text="Options" style="margin-left: -12px;" />
-        <Col align="stretch" style="align-self: flex-start;">
+        <div class="options">
           <template v-for="option, i in comparatorProvider.upload?.options">
-            <Tooltip v-if="option.type === 'bool' && optionShown(option)">
-              <template #trigger="{ props }">
-                <NCheckbox v-bind="props" v-model:checked="optionValues[i]">{{ option.label }}</NCheckbox>
-              </template>
-              <Content :content="option.tooltip" />
-            </Tooltip>
+            <Transition name="reveal">
+              <div v-if="option.type === 'bool' && optionShown(option)" class="option">
+                <div class="option-body">
+                  <Tooltip>
+                    <template #trigger="{ props }">
+                      <NCheckbox v-bind="props" v-model:checked="optionValues[i]">{{ option.label }}</NCheckbox>
+                    </template>
+                    <Content :content="option.tooltip" />
+                  </Tooltip>
+                </div>
+              </div>
+            </Transition>
           </template>
-        </Col>
+        </div>
       </template>
     </Col>
     <template #footer>
@@ -273,3 +296,59 @@ onMounted(async () => {
     </template>
   </NCard>
 </template>
+
+<style lang="scss" scoped>
+
+.sides {
+  position: relative;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  align-self: flex-start;
+}
+
+.option {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+
+.option-body {
+  min-height: 0;
+}
+
+.option + .option {
+  padding-top: 4px;
+
+  &.reveal-enter-from,
+  &.reveal-leave-to {
+    padding-top: 0;
+  }
+}
+
+.reveal-enter-active,
+.reveal-leave-active {
+  transition: grid-template-rows 300ms cubic-bezier(0.16, 1, 0.3, 1),
+              padding-top 300ms cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 300ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  .option-body {
+    overflow: hidden;
+  }
+}
+
+.reveal-enter-from {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: translateY(24px);
+}
+
+.reveal-leave-to {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: translateY(-24px);
+}
+
+</style>

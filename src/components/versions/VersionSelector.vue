@@ -229,6 +229,7 @@ watch(selectedVersions, () => {
   display: grid;
   grid-template-rows: 1fr;
   flex: 1;
+  padding-top: 20px !important;
 }
 
 .suggestions-card > .n-card-content > * {
@@ -307,6 +308,7 @@ watch(selectedVersions, () => {
   border: 1px solid var(--color-2);
 
   @include gradients.interactive-surface;
+  background-color: color-mix(in srgb, var(--color-0), var(--color-1));
   transition:
     --intr-gradient-start_internal 100ms,
     --intr-gradient-end_internal 100ms,
