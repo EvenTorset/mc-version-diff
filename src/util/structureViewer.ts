@@ -23,8 +23,8 @@ export interface LoadPacksArgs {
 export type LoadPacksResult = Record<string, never>
 
 export type LoadStructureArgs =
-  | { data: Bytes; name?: string; path?: never }
-  | { path: string; data?: never; name?: never }
+  | { data: Bytes; name?: string; path?: string; version?: string }
+  | { path: string; data?: never; name?: never; version?: never }
 
 export type LoadStructureResult = Record<string, never>
 
