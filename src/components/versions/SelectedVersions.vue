@@ -7,7 +7,7 @@ import Row from '@/components/Row.vue'
 import Spacer from '@/components/Spacer.vue'
 import { Dismiss16Filled } from '@vicons/fluent'
 import { typeName, useEdition } from './edition'
-import { daysApart, VERSION_TIPS } from '@/util/versionFacts'
+import { VERSION_TIPS } from '@/util/versionFacts'
 import IconButton from '../IconButton.vue'
 
 const props = defineProps<{
@@ -44,11 +44,6 @@ watch(() => props.versions, versions => {
 
 const sides = computed<CompareSide[]>(() =>
   props.versions.map(version => loaded.value.get(version.id) ?? { facts: [], links: [] }))
-
-const between = computed(() => {
-  const [ a, b ] = props.versions
-  return a && b ? [ daysApart(a.releaseTime, b.releaseTime) ] : []
-})
 
 const root = ref<HTMLElement>()
 const SPLIT_MS = 400
@@ -181,7 +176,7 @@ watch(() => props.versions, async (now, before) => {
 
 <template>
   <div ref="root" class="selected">
-    <VersionCompare :sides="sides" :between="between" :swappable="versions.length === 2" @swap="emit('swap')">
+    <VersionCompare :sides="sides" :swappable="versions.length === 2" @swap="emit('swap')">
       <template #picker="{ index }">
         <Row class="header">
           <h3><VersionName :version="versions[index]" /></h3>
