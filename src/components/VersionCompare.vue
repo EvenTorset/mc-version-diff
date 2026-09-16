@@ -24,8 +24,8 @@ export type CompareSide = {
 </script>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { NButton, NCard, NIcon, NTime } from 'naive-ui'
+import { h, ref } from 'vue'
+import { NButton, NCard, NDropdown, NIcon, NTime } from 'naive-ui'
 import { ArrowRight24Regular } from '@vicons/fluent'
 import Dim from './Dim.vue'
 import Tooltip from './Tooltip.vue'
@@ -34,6 +34,16 @@ import Spacer from './Spacer.vue'
 import SwapToggle from './SwapToggle.vue'
 
 const flipped = ref(false)
+
+const downloads = (side: CompareSide) => side.links.filter(link => link.download)
+
+function download(url: string) {
+  const link = document.createElement('a')
+  link.href = url
+  link.download = ''
+  link.rel = 'noreferrer'
+  link.click()
+}
 
 withDefaults(defineProps<{
   sides: CompareSide[]
@@ -75,8 +85,20 @@ defineEmits<{
       </div>
 
       <div v-if="side.links.length > 0" class="links">
+        <NDropdown
+          v-if="downloads(side).length > 0"
+          trigger="click"
+          placement="bottom"
+          :options="downloads(side).map(link => ({ label: link.label, key: link.url, icon: () => h(NIcon, { component: link.icon }) }))"
+          @select="download"
+        >
+          <NButton size="small">
+            <template #icon><NIcon :component="downloads(side)[0].icon" /></template>
+            Download jar
+          </NButton>
+        </NDropdown>
         <NButton
-          v-for="link of side.links"
+          v-for="link of side.links.filter(link => !link.download)"
           size="small"
           tag="a"
           :key="link.label"
@@ -152,9 +174,12 @@ defineEmits<{
   flex-wrap: wrap;
   gap: 8px;
 
+  > * {
+    flex: 1;
+  }
+
   a {
     text-decoration: none;
-    flex: 1;
   }
 }
 
