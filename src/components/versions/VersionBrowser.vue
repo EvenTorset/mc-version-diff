@@ -73,20 +73,18 @@ function matching(list: ManifestVersion[], query: string) {
 
 const selectedIds = computed(() => new Set([ ...selectedVersions.value ].map(v => v.id)))
 
-const selectedList = computed<ManifestVersion[]>(() => {
-  const pinned = allVersions.value.filter(v => selectedIds.value.has(v.id))
-  if (props.keepPinnedWhileFiltering || !debouncedFilter.value) return pinned
-  return matching(pinned, debouncedFilter.value)
-})
+const versions = computed<ManifestVersion[]>(() => matching(listForMode.value, debouncedFilter.value))
 
-const versions = computed<ManifestVersion[]>(() =>
-  matching(listForMode.value, debouncedFilter.value).filter(v => !selectedIds.value.has(v.id)))
+const selectedList = computed<ManifestVersion[]>(() => {
+  const listed = new Set(versions.value.map(v => v.id))
+  const missing = allVersions.value.filter(v => selectedIds.value.has(v.id) && !listed.has(v.id))
+  if (props.keepPinnedWhileFiltering || !debouncedFilter.value) return missing
+  return matching(missing, debouncedFilter.value)
+})
 
 const otherMatches = computed(() => {
   if (versionMode.value === 'all' || !debouncedFilter.value) return 0
-  const all = matching(allVersions.value, debouncedFilter.value)
-    .filter(v => !selectedIds.value.has(v.id))
-  return all.length - versions.value.length
+  return matching(allVersions.value, debouncedFilter.value).length - versions.value.length
 })
 
 const parentRef = ref<HTMLElement | null>(null)
@@ -107,6 +105,10 @@ const rowVirtualizer = useVirtualizer({
 
 const virtualRows = computed(() => rowVirtualizer.value.getVirtualItems())
 const totalSize = computed(() => rowVirtualizer.value.getTotalSize())
+
+const stuckRows = computed(() => versions.value
+  .map((version, index) => ({ version, y: index * ROW_HEIGHT }))
+  .filter(row => selectedIds.value.has(row.version.id)))
 
 const full = computed(() => props.max > 1 && selectedVersions.value.size >= props.max)
 
@@ -230,6 +232,7 @@ onBeforeUnmount(() => {
             <NList hoverable clickable>
               <template v-for="virtualRow in virtualRows" :key="versions[virtualRow.index].id">
                 <NListItem
+                  v-if="!selectedIds.has(versions[virtualRow.index].id)"
                   :style="{
                     position: 'absolute',
                     top: 0,
@@ -252,6 +255,32 @@ onBeforeUnmount(() => {
                   />
                 </NListItem>
               </template>
+              <div
+                v-for="(row, i) of stuckRows"
+                :key="row.version.id"
+                class="sticky-track"
+                :style="{ height: `${totalSize}px` }"
+              >
+                <div :style="{ height: `${row.y}px` }"></div>
+                <NListItem
+                  :style="{
+                    height: `${ROW_HEIGHT}px`,
+                    top: `${pinnedHeight + i * ROW_HEIGHT}px`,
+                    bottom: `${(stuckRows.length - 1 - i) * ROW_HEIGHT}px`,
+                  }"
+                  @click="toggle(row.version)"
+                  class="version-list-item selected stuck"
+                >
+                  <VersionDisplay
+                    :version="row.version"
+                    tooltip-side="right"
+                    :style="{
+                      padding: '12px 12px 12px 16px',
+                      margin: '-12px -12px -12px -16px',
+                    }"
+                  />
+                </NListItem>
+              </div>
             </NList>
         </div>
         <button v-if="otherMatches > 0" class="show-hidden" @click="versionMode = 'all'">
@@ -297,8 +326,16 @@ onBeforeUnmount(() => {
 .pinned {
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: 2;
   background: var(--color-1);
+}
+
+.sticky-track {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
 }
 
 .list-container {
@@ -350,6 +387,13 @@ onBeforeUnmount(() => {
     .n-list-item__main {
       color: var(--color-6);
     }
+  }
+
+  &.stuck {
+    position: sticky;
+    z-index: 1;
+    pointer-events: auto;
+    background-color: var(--color-1) !important;
   }
 
   &.selected {
