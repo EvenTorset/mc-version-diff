@@ -1,12 +1,12 @@
 <script setup lang="tsx">
 import Col from '@/components/Col.vue'
 import Row from '@/components/Row.vue'
-import { ArrowLeft24Filled, ArrowRight16Filled, ArrowRight24Filled } from '@vicons/fluent'
-import { NButton, NCard, NCheckbox, NIcon, NSelect, type UploadFileInfo } from 'naive-ui'
+import { NButton, NCard, NCheckbox, NSelect, type UploadFileInfo } from 'naive-ui'
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { getDeltaProvider, listDeltaProviders } from '../registry'
 import Content from '@/components/Content.vue'
 import Tooltip from '@/components/Tooltip.vue'
+import SwapToggle from '@/components/SwapToggle.vue'
 import { RouterLink, type RouteLocationAsPathGeneric, type RouteLocationAsRelativeGeneric } from 'vue-router'
 import { deleteUserFile, readUserFile, writeUserFile } from '@/util/userFiles'
 import Notify from '@/notify'
@@ -202,7 +202,6 @@ onMounted(async () => {
   restoring = false
 })
 
-const arrowHover = ref(false)
 
 </script>
 
@@ -230,28 +229,7 @@ const arrowHover = ref(false)
         />
         <Tooltip>
           <template #trigger="{ props }">
-            <div
-              v-bind="props"
-              class="swap-toggle"
-              :class="{ hover: arrowHover }"
-              @mouseenter="arrowHover = true"
-              @mouseleave="arrowHover = false"
-              @click="swap = !swap"
-            >
-              <NIcon :component="ArrowRight16Filled" :size="32" class="swap-icon arrow" />
-              <div class="swap-icon swap">
-                <div class="swap-row">
-                  <Transition :name="swap ? 'flow-right' : 'flow-left'">
-                    <NIcon :key="String(swap)" :component="swap ? ArrowLeft24Filled : ArrowRight24Filled" :size="24" class="swap-arrow" :class="swap ? 'points-left' : 'points-right'" />
-                  </Transition>
-                </div>
-                <div class="swap-row">
-                  <Transition :name="swap ? 'flow-left' : 'flow-right'">
-                    <NIcon :key="String(swap)" :component="swap ? ArrowRight24Filled : ArrowLeft24Filled" :size="24" class="swap-arrow" :class="swap ? 'points-right' : 'points-left'" />
-                  </Transition>
-                </div>
-              </div>
-            </div>
+            <SwapToggle v-bind="props" :swapped="swap" @click="swap = !swap" />
           </template>
           Swap sides
         </Tooltip>
@@ -295,94 +273,3 @@ const arrowHover = ref(false)
     </template>
   </NCard>
 </template>
-
-<style lang="scss">
-
-.swap-toggle {
-  position: relative;
-  min-width: 32px;
-  width: 32px;
-  height: 32px;
-  align-self: center;
-  cursor: pointer;
-  user-select: none;
-  color: var(--color-4);
-  transition: color 200ms;
-
-  &:hover {
-    color: var(--color-accent);
-  }
-
-  .swap-icon {
-    position: absolute;
-    inset: 0;
-    display: block;
-    transition: opacity 300ms, transform 300ms;
-  }
-
-  .arrow {
-    transform: rotate(0deg);
-  }
-
-  .swap {
-    opacity: 0;
-    transform: rotate(-90deg);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-
-  .swap-row {
-    position: relative;
-    height: 14px;
-  }
-
-  .swap-arrow {
-    position: absolute;
-    top: 50%;
-    margin-top: -12px;
-    transition: opacity 300ms, transform 300ms;
-
-    &.points-right {
-      right: 0;
-    }
-
-    &.points-left {
-      left: 0;
-    }
-  }
-
-  .flow-right-leave-to {
-    opacity: 0;
-    transform: translateX(60%) scale(0.5);
-  }
-
-  .flow-left-leave-to {
-    opacity: 0;
-    transform: translateX(-60%) scale(0.5);
-  }
-
-  .flow-left-enter-from {
-    opacity: 0;
-    transform: translateX(60%) scale(0.5);
-  }
-
-  .flow-right-enter-from {
-    opacity: 0;
-    transform: translateX(-60%) scale(0.5);
-  }
-
-  &.hover {
-    .arrow {
-      opacity: 0;
-      transform: rotate(90deg);
-    }
-
-    .swap {
-      opacity: 1;
-      transform: rotate(0deg);
-    }
-  }
-}
-
-</style>

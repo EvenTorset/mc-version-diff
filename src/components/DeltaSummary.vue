@@ -15,6 +15,7 @@ import { naturalCompare } from '@/util/sort.ts'
 import { copyToClipboard } from '@/util/clipboard.ts'
 import Notify from '@/notify.tsx'
 import { errorMessage } from '@/util/errorMessage.ts'
+import { downloadableTracks, downloadCategory } from '@/util/categoryZip'
 import Tooltip from './Tooltip.vue'
 import Dim from './Dim.vue'
 
@@ -57,7 +58,12 @@ const categories = computed(() => {
 })
 
 const hasMovedFiles = computed(() => props.dr.tracks.some(t => t.state === DeltaTrackState.Moved))
-const hasActions = computed(() => Settings.enableCopyStatusButton || hasMovedFiles.value)
+const changedCount = computed(() => downloadableTracks(props.dr.tracks).length)
+const hasActions = computed(() => Settings.enableCopyStatusButton || hasMovedFiles.value || changedCount.value > 0)
+
+function downloadChanged() {
+  downloadCategory(props.dr, route.params.provider as string, 'changed', props.dr.tracks)
+}
 
 async function copySpreadsheet() {
   try {
@@ -137,6 +143,9 @@ async function copySpreadsheet() {
     <div v-if="hasActions">
       <h3>Actions</h3>
       <Row>
+        <NButton v-if="changedCount > 0" @click="downloadChanged">
+          Download {{ changedCount.toLocaleString() }} changed files
+        </NButton>
         <RouterLink
           v-if="hasMovedFiles"
           :to="{ query: { ...$route.query, category: 'generate-move-script' } }"

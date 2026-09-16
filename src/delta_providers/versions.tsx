@@ -490,6 +490,10 @@ export async function buildDelta(
       if (found) return found
       return Promise.reject(`File not found: ${path}`)
     },
+    getStoredEntry(versionId: string, path: string) {
+      const entries = versionId === a ? jarA.entries : versionId === b ? jarB.entries : null
+      return entries?.get(path) ?? null
+    },
     getCategory(track) {
       return getTrackCategory(provider, this, track)
     },

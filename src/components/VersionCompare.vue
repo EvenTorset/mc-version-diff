@@ -24,12 +24,40 @@ export type CompareSide = {
 </script>
 
 <script setup lang="ts">
+import { computed, h, ref } from 'vue'
 import { NButton, NCard, NIcon, NTime } from 'naive-ui'
-import { ArrowRight24Regular, ArrowSwap24Regular } from '@vicons/fluent'
+import { ArrowRight24Regular } from '@vicons/fluent'
 import Dim from './Dim.vue'
 import Tooltip from './Tooltip.vue'
 import Row from './Row.vue'
 import Spacer from './Spacer.vue'
+import SwapToggle from './SwapToggle.vue'
+import ContextMenu from './ContextMenu.vue'
+
+const flipped = ref(false)
+
+const downloads = (side: CompareSide) => side.links.filter(link => link.download)
+
+const jarMenu = ref<InstanceType<typeof ContextMenu>>()
+const jarSide = ref<CompareSide>()
+const jarOptions = computed(() => downloads(jarSide.value ?? { facts: [], links: [] }).map(link => ({
+  label: link.label,
+  key: link.url,
+  icon: () => h(NIcon, { component: link.icon }),
+})))
+
+function openJars(side: CompareSide, event: MouseEvent) {
+  jarSide.value = side
+  jarMenu.value?.show(event)
+}
+
+function download(url: string | number) {
+  const link = document.createElement('a')
+  link.href = String(url)
+  link.download = ''
+  link.rel = 'noreferrer'
+  link.click()
+}
 
 withDefaults(defineProps<{
   sides: CompareSide[]
@@ -46,7 +74,7 @@ defineEmits<{
 </script>
 
 <template>
-  <div class="compare">
+  <div class="compare" :class="{ single: sides.length < 2 }">
     <NCard v-for="(side, i) of sides" :key="i" class="version-card" size="small">
       <slot name="picker" :index="i"></slot>
 
@@ -71,8 +99,12 @@ defineEmits<{
       </div>
 
       <div v-if="side.links.length > 0" class="links">
+        <NButton v-if="downloads(side).length > 0" size="small" @click="openJars(side, $event)">
+          <template #icon><NIcon :component="downloads(side)[0].icon" /></template>
+          Download jar
+        </NButton>
         <NButton
-          v-for="link of side.links"
+          v-for="link of side.links.filter(link => !link.download)"
           size="small"
           tag="a"
           :key="link.label"
@@ -87,13 +119,10 @@ defineEmits<{
       </div>
     </NCard>
 
-    <div class="compare-arrow">
+    <div v-if="sides.length > 1" class="compare-arrow">
       <Tooltip v-if="swappable">
         <template #trigger="{ props: tip }">
-          <button v-bind="tip" type="button" class="swap" @click="$emit('swap')">
-            <NIcon :size="32" :component="ArrowRight24Regular" class="direction" />
-            <NIcon :size="32" :component="ArrowSwap24Regular" class="reverse" />
-          </button>
+          <SwapToggle v-bind="tip" :swapped="flipped" @click="flipped = !flipped; $emit('swap')" />
         </template>
         Swap sides
       </Tooltip>
@@ -103,6 +132,7 @@ defineEmits<{
         <Content v-else :content="line" />
       </template>
     </div>
+    <ContextMenu ref="jarMenu" :options="jarOptions" @select="download" />
   </div>
 </template>
 
@@ -110,7 +140,7 @@ defineEmits<{
 
 .compare {
   display: grid;
-  grid-template-columns: 340px 1fr 340px;
+  grid-template-columns: minmax(0, 340px) auto minmax(0, 340px);
   align-items: start;
   gap: 20px;
 }
@@ -118,6 +148,11 @@ defineEmits<{
 .version-card:nth-of-type(1) { grid-column: 1; grid-row: 1; }
 .version-card:nth-of-type(2) { grid-column: 3; grid-row: 1; }
 .compare-arrow { grid-column: 2; grid-row: 1; }
+
+.compare.single {
+  grid-template-columns: 340px;
+  justify-content: center;
+}
 
 .version-card :deep(.n-card-content) {
   display: flex;
@@ -146,48 +181,12 @@ defineEmits<{
   flex-wrap: wrap;
   gap: 8px;
 
-  a {
-    text-decoration: none;
+  > * {
     flex: 1;
   }
-}
 
-.swap {
-  display: grid;
-  padding: 4px;
-  border: none;
-  background: none;
-  color: var(--color-5);
-  cursor: pointer;
-  user-select: none;
-  transition: color 200ms;
-
-  > * {
-    grid-area: 1 / 1;
-    transition: opacity 300ms, transform 300ms;
-  }
-
-  .direction {
-    transform: rotate(0deg);
-  }
-
-  .reverse {
-    opacity: 0;
-    transform: rotate(-90deg);
-  }
-
-  &:hover {
-    color: var(--color-accent);
-
-    .direction {
-      opacity: 0;
-      transform: rotate(90deg);
-    }
-
-    .reverse {
-      opacity: 1;
-      transform: rotate(0deg);
-    }
+  a {
+    text-decoration: none;
   }
 }
 

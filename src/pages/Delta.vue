@@ -38,6 +38,8 @@ import CardSectionHeader from '@/components/CardSectionHeader.vue'
 import MoveScriptGenerator from '@/components/MoveScriptGenerator.vue'
 import RadioGroup from '@/components/RadioGroup.vue'
 import RadioButton from '@/components/RadioButton.vue'
+import { downloadableTracks, downloadCategory } from '@/util/categoryZip'
+import ContextMenu from '@/components/ContextMenu.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -482,6 +484,32 @@ const visibleCategories = computed(() =>
   categories.value.filter(([name, tracks]) =>
     tracks.length > 0 || name === 'Overview' || name === selectedCategory.value)
 )
+
+const categoryMenu = ref<{ name: string, tracks: DeltaTrack[] } | null>(null)
+const categoryMenuRef = ref<InstanceType<typeof ContextMenu>>()
+
+const categoryMenuOptions = computed(() => {
+  const count = categoryMenu.value ? downloadableTracks(categoryMenu.value.tracks).length : 0
+  return [
+    {
+      label: count === 1 ? 'Download 1 changed file' : `Download ${count.toLocaleString()} changed files`,
+      key: 'download',
+      disabled: count === 0,
+    },
+  ]
+})
+
+function openCategoryMenu(event: MouseEvent, name: string, tracks: DeltaTrack[]) {
+  if (name === 'Overview') return;
+  categoryMenu.value = { name, tracks }
+  categoryMenuRef.value?.show(event)
+}
+
+function runCategoryMenu() {
+  const menu = categoryMenu.value
+  if (!dr.value || !menu) return;
+  downloadCategory(dr.value, route.params.provider as string, menu.name, menu.tracks)
+}
 </script>
 
 <template>
@@ -605,10 +633,12 @@ const visibleCategories = computed(() =>
                           :name
                           :selected="selectedCategory === name"
                           @click="selectedCategory = name"
+                          @contextmenu.prevent="openCategoryMenu($event, name, tracks)"
                         />
                       </template>
                     </TransitionList>
                   </AnimatedHeight>
+                  <ContextMenu ref="categoryMenuRef" :options="categoryMenuOptions" @select="runCategoryMenu" />
                 </Col>
                 <CardSectionHeader text="View" />
                 <Row>

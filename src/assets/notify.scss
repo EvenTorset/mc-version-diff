@@ -44,6 +44,7 @@
 .n-notification-main {
   margin-left: calc(var(--notify-header-size) - var(--notify-border-width)) !important;
   padding-right: var(--notify-right-padding);
+  padding-bottom: calc(12px - var(--notify-border-width)) !important;
   width: calc(100% - var(--notify-header-size) + var(--notify-border-width)) !important;
 }
 
@@ -65,4 +66,9 @@
 
 .n-notification-main-footer {
   gap: 8px;
+  margin-top: 0 !important;
+}
+
+.n-notification-main-footer > *:not(:empty) {
+  margin-top: 12px;
 }
