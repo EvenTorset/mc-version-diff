@@ -229,6 +229,7 @@ watch(selectedVersions, () => {
   display: grid;
   grid-template-rows: 1fr;
   flex: 1;
+  padding-top: 20px !important;
 }
 
 .suggestions-card > .n-card-content > * {
