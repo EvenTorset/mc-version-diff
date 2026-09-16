@@ -1,5 +1,5 @@
 //@ts-ignore
-import * as renderer from 'https://esm.sh/block-model-renderer@2'
+import * as renderer from 'https://esm.sh/block-model-renderer@2.17.1'
 import * as THREE from 'three'
 import type { DeltaResult } from '@/delta_providers'
 import { deltaVirtualHandler } from '@/util/virtualHandler'
@@ -8,7 +8,7 @@ import { deltaVirtualHandler } from '@/util/virtualHandler'
 // a CDN that hands back the raw file, or block entities render as nothing
 renderer.configure({
   three: THREE,
-  assetsUrl: 'https://cdn.jsdelivr.net/npm/block-model-renderer@2/assets.zip',
+  assetsUrl: 'https://cdn.jsdelivr.net/npm/block-model-renderer@2.17.1/assets.zip',
 })
 
 export const {
