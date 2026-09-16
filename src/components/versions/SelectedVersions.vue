@@ -61,6 +61,7 @@ function cancel() {
   for (const clone of clones) clone.remove()
   clones = []
   root.value?.querySelector('.swap-toggle')?.classList.remove('swapping')
+  root.value?.querySelector('.compare-arrow')?.classList.remove('raised')
   for (const card of cards()) {
     card.style.transition = ''
     card.style.transform = ''
@@ -146,9 +147,15 @@ watch(() => props.versions, async (now, before) => {
     if (next.length !== 2 || !was[1]) return;
     for (const [ i, card ] of next.entries()) slide(card, was[1 - i], card.getBoundingClientRect(), i === 0 ? '1' : '0')
     const swap = root.value?.querySelector('.swap-toggle')
+    const arrow = root.value?.querySelector('.compare-arrow')
     const token = running!.signal
     swap?.classList.add('swapping')
-    setTimeout(() => token.aborted || swap?.classList.remove('swapping'), SPLIT_MS)
+    arrow?.classList.add('raised')
+    setTimeout(() => {
+      if (token.aborted) return;
+      swap?.classList.remove('swapping')
+      arrow?.classList.remove('raised')
+    }, SPLIT_MS)
     return;
   }
   const was = cards().map(card => card.getBoundingClientRect())
@@ -198,6 +205,11 @@ watch(() => props.versions, async (now, before) => {
 
 .selected :deep(.links) {
   flex-direction: column;
+}
+
+.selected :deep(.compare-arrow.raised) {
+  position: relative;
+  z-index: 2;
 }
 
 .header {
