@@ -49,6 +49,14 @@ export const javaEdition: Edition = {
   lineSegments: 2,
   tooltip: MCJEVersionTooltip,
   summary: MCJEVersionFacts,
+  skeleton: {
+    facts: [
+      { label: 'Size', tip: TIPS.size },
+      { label: 'Assets', tip: TIPS.assets },
+      { label: 'Asset index', tip: TIPS.assetIndex },
+    ],
+    links: [ { label: 'Client jar', download: true } ],
+  },
   async overview(version: ManifestVersion, details: VersionDetails) {
     const java = details as MCJEVersionDetails
     const packs = getPackFormats(version.id)

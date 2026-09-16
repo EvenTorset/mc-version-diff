@@ -26,6 +26,7 @@ export interface Edition {
   tooltip?: Component
   summary?: Component
   overview?: (version: ManifestVersion, details: VersionDetails) => Promise<{ facts: CompareFact[], links: CompareLink[] }>
+  skeleton?: { facts: CompareFact[], links: CompareLink[] }
   between?: (a: VersionDetails, b: VersionDetails) => Renderable[]
   expand?: (entries: VersionEntry[]) => Promise<VersionEntry[]>
   fallback?: {
