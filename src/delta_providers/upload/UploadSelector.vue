@@ -15,6 +15,7 @@ import { selectedComparator } from './selectedComparator'
 import { UPLOAD_VERSION_A_KEY, UPLOAD_VERSION_B_KEY, readFilesMeta, writeFilesMeta } from './filesMeta'
 import CardSectionHeader from '@/components/CardSectionHeader.vue'
 import UploadSide from './UploadSide.vue'
+import { useSwapCrossfade } from '@/util/swapCrossfade'
 
 let restoring = true
 
@@ -29,6 +30,22 @@ const providerOptions = computed(() => Array.from(listDeltaProviders()
 ))
 
 const swap = ref(false)
+const sides = ref<InstanceType<typeof Row>>()
+const cross = useSwapCrossfade(() => sides.value?.$el)
+
+function sideElements() {
+  return Array.from((sides.value?.$el as HTMLElement | undefined)?.querySelectorAll<HTMLElement>(':scope > .upload-side:not([inert])') ?? [])
+}
+
+watch(swap, async () => {
+  const leaving = cross.capture(sideElements())
+  cross.cancel()
+  await nextTick()
+  const next = sideElements()
+  if (next.length !== 2 || leaving.length !== 2) return;
+  cross.play(leaving, next)
+})
+
 const comparatorProvider = computed(() => getDeltaProvider(selectedComparator.value)!)
 const versionPicker = computed(() => comparatorProvider.value.upload?.versionPicker?.() ?? null)
 const fileListA = ref<UploadFileInfo[]>([])
@@ -217,7 +234,7 @@ onMounted(async () => {
           :consistent-menu-width="false"
         />
       </Row>
-      <Row gap="16px" align="stretch">
+      <Row ref="sides" class="sides" gap="16px" align="stretch">
         <UploadSide
           :label="swap ? 'Version B' : 'Version A'"
           :accept="comparatorProvider.upload?.accept"
@@ -273,3 +290,11 @@ onMounted(async () => {
     </template>
   </NCard>
 </template>
+
+<style lang="scss" scoped>
+
+.sides {
+  position: relative;
+}
+
+</style>
