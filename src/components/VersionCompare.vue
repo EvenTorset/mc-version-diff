@@ -141,7 +141,7 @@ defineEmits<{
 .compare {
   display: grid;
   grid-template-columns: minmax(0, 340px) auto minmax(0, 340px);
-  align-items: start;
+  align-items: center;
   gap: 20px;
 }
 
