@@ -24,12 +24,16 @@ export type CompareSide = {
 </script>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { NButton, NCard, NIcon, NTime } from 'naive-ui'
-import { ArrowRight24Regular, ArrowSwap24Regular } from '@vicons/fluent'
+import { ArrowRight24Regular } from '@vicons/fluent'
 import Dim from './Dim.vue'
 import Tooltip from './Tooltip.vue'
 import Row from './Row.vue'
 import Spacer from './Spacer.vue'
+import SwapToggle from './SwapToggle.vue'
+
+const flipped = ref(false)
 
 withDefaults(defineProps<{
   sides: CompareSide[]
@@ -90,10 +94,7 @@ defineEmits<{
     <div v-if="sides.length > 1" class="compare-arrow">
       <Tooltip v-if="swappable">
         <template #trigger="{ props: tip }">
-          <button v-bind="tip" type="button" class="swap" @click="$emit('swap')">
-            <NIcon :size="32" :component="ArrowRight24Regular" class="direction" />
-            <NIcon :size="32" :component="ArrowSwap24Regular" class="reverse" />
-          </button>
+          <SwapToggle v-bind="tip" :swapped="flipped" @click="flipped = !flipped; $emit('swap')" />
         </template>
         Swap sides
       </Tooltip>
@@ -154,46 +155,6 @@ defineEmits<{
   a {
     text-decoration: none;
     flex: 1;
-  }
-}
-
-.swap {
-  display: grid;
-  padding: 4px;
-  border: none;
-  background: none;
-  color: var(--color-5);
-  cursor: pointer;
-  user-select: none;
-  transition: color 200ms;
-
-  > * {
-    grid-area: 1 / 1;
-    transition: opacity 300ms, transform 300ms;
-  }
-
-  .direction {
-    transform: rotate(0deg);
-  }
-
-  .reverse {
-    opacity: 0;
-    transform: rotate(-90deg);
-  }
-
-  &:hover,
-  &.swapping {
-    color: var(--color-accent);
-
-    .direction {
-      opacity: 0;
-      transform: rotate(90deg);
-    }
-
-    .reverse {
-      opacity: 1;
-      transform: rotate(0deg);
-    }
   }
 }
 

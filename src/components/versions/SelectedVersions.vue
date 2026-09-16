@@ -32,7 +32,7 @@ async function load(version: ManifestVersion) {
       { label: 'Type', value: typeName(edition, version.type), tip: edition.typeTip ?? VERSION_TIPS.type },
       ...extra.facts,
     ],
-    links: extra.links.filter(link => !link.download),
+    links: extra.links,
   })
 }
 
@@ -65,7 +65,7 @@ function cancel() {
   running = new AbortController()
   for (const clone of clones) clone.remove()
   clones = []
-  root.value?.querySelector('.swap')?.classList.remove('swapping')
+  root.value?.querySelector('.swap-toggle')?.classList.remove('swapping')
   for (const card of cards()) {
     card.style.transition = ''
     card.style.transform = ''
@@ -150,7 +150,7 @@ watch(() => props.versions, async (now, before) => {
     const next = cards()
     if (next.length !== 2 || !was[1]) return;
     for (const [ i, card ] of next.entries()) slide(card, was[1 - i], card.getBoundingClientRect(), i === 0 ? '1' : '0')
-    const swap = root.value?.querySelector('.swap')
+    const swap = root.value?.querySelector('.swap-toggle')
     const token = running!.signal
     swap?.classList.add('swapping')
     setTimeout(() => token.aborted || swap?.classList.remove('swapping'), SPLIT_MS)

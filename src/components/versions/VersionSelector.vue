@@ -153,6 +153,10 @@ watch(manifestUpdated, loadSuggestions)
           <div>Or select any two versions from the list to compare</div>
         </Row>
         <Row v-else>
+          <template v-if="selectedVersions.size === 1">
+            <NIcon :size="24" :component="ArrowLeft24Regular" />
+            <div>Select one more version from the list</div>
+          </template>
           <Spacer />
           <NButton @click="selectedVersions.clear()">Clear selection</NButton>
           <RouterLink v-if="selectedVersions.size === 2" :to="{
