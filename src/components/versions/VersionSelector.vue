@@ -11,7 +11,7 @@ import { EDITION, type Edition } from './edition'
 import { ArrowLeft24Regular, ArrowRight24Regular } from '@vicons/fluent'
 import { NAlert, NButton, NCard, NIcon, NSkeleton } from 'naive-ui'
 import { computed, onMounted, provide, ref, watch } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import Col from '@/components/Col.vue'
 import Content from '@/components/Content.vue'
 
@@ -61,6 +61,29 @@ async function loadSuggestions() {
 
 onMounted(loadSuggestions)
 watch(manifestUpdated, loadSuggestions)
+
+const route = useRoute()
+const router = useRouter()
+
+function queryIds() {
+  return [ route.query.a, route.query.b ].filter((id): id is string => typeof id === 'string')
+}
+
+async function selectFromQuery() {
+  const ids = queryIds()
+  if (ids.join() === Array.from(selectedVersions.value, v => v.id).join()) return;
+  const versions = await props.edition.assets.manifest.versions()
+  selectedVersions.value = new Set(ids.map(id => versions.find(v => v.id === id)).filter(v => v !== undefined))
+}
+
+onMounted(selectFromQuery)
+watch(queryIds, selectFromQuery)
+
+watch(selectedVersions, () => {
+  const [ a, b ] = Array.from(selectedVersions.value, v => v.id)
+  if (queryIds().join() === [ a, b ].filter(id => id).join()) return;
+  router.replace({ query: { ...route.query, a, b } })
+}, { deep: true })
 </script>
 
 <template>
