@@ -6,10 +6,11 @@ import VersionDisplay from './VersionDisplay.vue'
 import VersionSummary from './VersionSummary.vue'
 import type { ManifestVersion } from 'minecraft-asset-loader'
 import { getDiffSuggestions } from '@/delta_providers/manifest'
+import { manifestUpdated } from '@/delta_providers/loader'
 import { EDITION, type Edition } from './edition'
 import { ArrowLeft24Regular, ArrowRight24Regular } from '@vicons/fluent'
 import { NAlert, NButton, NCard, NIcon, NSkeleton } from 'naive-ui'
-import { computed, onMounted, provide, ref } from 'vue'
+import { computed, onMounted, provide, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import Col from '@/components/Col.vue'
 import Content from '@/components/Content.vue'
@@ -38,9 +39,10 @@ function deselect(id: string) {
   selectedVersions.value.delete(version)
 }
 
-onMounted(async () => {
+async function loadSuggestions() {
   try {
     const suggestions = await getDiffSuggestions(props.edition)
+    diffSuggestions.value = []
     diffSuggestions.value.push(['Latest version', suggestions.latestVersion])
     if (suggestions.sinceRelease !== null) {
       diffSuggestions.value.push(['Since release', suggestions.sinceRelease])
@@ -59,7 +61,10 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(loadSuggestions)
+watch(manifestUpdated, loadSuggestions)
 </script>
 
 <template>
