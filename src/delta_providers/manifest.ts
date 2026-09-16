@@ -16,6 +16,7 @@ export async function getDiffSuggestions(edition: Edition): Promise<{
     sinceRelease: [ManifestVersion, ManifestVersion] | null
     majorRelease: [ManifestVersion, ManifestVersion] | null
     releasePatches: [ManifestVersion, ManifestVersion] | null
+    latestIsRelease: boolean
 }> {
   const manifest = edition.assets.manifest
   const all = await manifest.versions()
@@ -41,6 +42,7 @@ export async function getDiffSuggestions(edition: Edition): Promise<{
     releasePatches: currentMajorRelease !== currentRelease && currentMajorRelease && currentRelease
       ? [currentMajorRelease, currentRelease]
       : null,
+    latestIsRelease: newest?.type === 'release',
   }
 }
 
