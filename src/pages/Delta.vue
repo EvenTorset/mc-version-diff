@@ -497,14 +497,19 @@ const categoryMenuOptions = computed(() => {
   ]
 })
 
+const categoryMenuOpen = ref(false)
+const menuLayer = ref<HTMLElement>()
+
 function openCategoryMenu(event: MouseEvent, name: string, tracks: DeltaTrack[]) {
   if (name === 'Overview') return;
   categoryMenu.value = { name, tracks, x: event.clientX, y: event.clientY }
+  categoryMenuOpen.value = true
+  window.addEventListener('scroll', () => categoryMenuOpen.value = false, { once: true, capture: true, passive: true })
 }
 
 function runCategoryMenu() {
+  categoryMenuOpen.value = false
   const menu = categoryMenu.value
-  categoryMenu.value = null
   if (!dr.value || !menu) return;
   downloadCategory(dr.value, route.params.provider as string, menu.name, menu.tracks)
 }
@@ -636,15 +641,19 @@ function runCategoryMenu() {
                       </template>
                     </TransitionList>
                   </AnimatedHeight>
+                  <Teleport to="body">
+                    <div ref="menuLayer" class="menu-layer"></div>
+                  </Teleport>
                   <NDropdown
                     trigger="manual"
                     placement="bottom-start"
-                    :show="categoryMenu !== null"
+                    :to="menuLayer ?? 'body'"
+                    :show="categoryMenuOpen"
                     :x="categoryMenu?.x ?? 0"
                     :y="categoryMenu?.y ?? 0"
                     :options="categoryMenuOptions"
                     @select="runCategoryMenu"
-                    @clickoutside="categoryMenu = null"
+                    @clickoutside="categoryMenuOpen = false"
                   >
                     <span style="display: none;"></span>
                   </NDropdown>
@@ -895,6 +904,13 @@ function runCategoryMenu() {
       margin-top: -4px;
     }
   }
+}
+
+.menu-layer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2000;
 }
 
 .category-list {
