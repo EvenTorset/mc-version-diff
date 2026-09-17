@@ -65,7 +65,22 @@ for (const edition of editions) {
       <Col align="stretch">
         <Tooltip anchor="cursor-x">
           <template #trigger="{ props }">
-            <Row v-bind="props" class="setting" @click="Settings.pixelFont = !Settings.pixelFont">
+            <Row v-bind="props" class="setting">
+              Color scheme
+              <Spacer bridge />
+              <NSelect v-model:value="Settings.colorScheme" :options="[
+                { label: 'Dark', value: 'dark' },
+                { label: 'Light', value: 'light' },
+                { label: 'OLED Dark', value: 'oled-dark' },
+              ]" />
+            </Row>
+          </template>
+          <h3>Color scheme</h3>
+          <p>Controls the colors used on the site.</p>
+        </Tooltip>
+        <Tooltip anchor="cursor-x">
+          <template #trigger="{ props }">
+            <Row v-bind="props" class="setting bool" @click="Settings.pixelFont = !Settings.pixelFont">
               Pixel font
               <Spacer bridge />
               <NSwitch :value="Settings.pixelFont" />
@@ -76,7 +91,7 @@ for (const edition of editions) {
         </Tooltip>
         <Tooltip anchor="cursor-x">
           <template #trigger="{ props }">
-            <Row v-bind="props" class="setting" @click="Settings.formatJSON = !Settings.formatJSON">
+            <Row v-bind="props" class="setting bool" @click="Settings.formatJSON = !Settings.formatJSON">
               Format JSON
               <Spacer bridge />
               <NSwitch :value="Settings.formatJSON" />
@@ -165,13 +180,22 @@ for (const edition of editions) {
 }
 
 .setting {
-  cursor: pointer;
   user-select: none;
   border-radius: 6px;
   padding: 0 4px;
 
-  &:hover {
-    color: var(--color-6);
+  &.bool {
+    cursor: pointer;
+
+    &:hover {
+      color: var(--color-6);
+    }
+  }
+
+  :deep(.n-select) {
+    width: fit-content;
+    min-width: 160px;
+    flex: 0;
   }
 }
 

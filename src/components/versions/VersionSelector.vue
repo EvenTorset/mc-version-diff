@@ -355,6 +355,14 @@ watch(selectedVersions, () => {
   text-shadow: 0 1px 2px #000;
   transition: color 200ms;
 
+  :root.light-color-scheme & {
+    text-shadow: none;
+
+    svg {
+      filter: none;
+    }
+  }
+
   svg {
     filter: drop-shadow(0 1px 2px #000);
   }

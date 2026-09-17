@@ -1,4 +1,4 @@
-import { TextView } from '@/components/lazyText'
+import { TextView } from '@/monaco/lazyText'
 import { registerViewer } from './registry'
 import { DeltaTrackState } from '@/delta_providers/states'
 import LangDiff from '@/components/LangDiff.vue'

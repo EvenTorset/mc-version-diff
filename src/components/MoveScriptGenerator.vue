@@ -2,15 +2,15 @@
 import { generateMoveScript, generateMoveCommand } from '@/util/moveScriptGen'
 import { NButton, NRadio, NRadioGroup } from 'naive-ui'
 import { computed } from 'vue'
-import TextView from './TextView.vue'
-import type { DeltaResult } from '@/delta_providers/index.ts'
-import { DeltaTrackState } from '@/delta_providers/states.ts'
+import type { DeltaResult } from '@/delta_providers/index'
+import { DeltaTrackState } from '@/delta_providers/states'
 import Row from './Row.vue'
-import { copyToClipboard } from '@/util/clipboard.ts'
+import { copyToClipboard } from '@/util/clipboard'
 import { saveAs } from 'file-saver'
-import Notify from '@/notify.tsx'
-import { errorMessage } from '@/util/errorMessage.ts'
-import { Settings } from '@/settings.ts'
+import Notify from '@/notify'
+import { errorMessage } from '@/util/errorMessage'
+import { Settings } from '@/settings'
+import { TextView } from '@/monaco/lazyText'
 
 const props = defineProps<{
   dr: DeltaResult

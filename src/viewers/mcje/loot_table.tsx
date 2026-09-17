@@ -1,4 +1,4 @@
-import { TextDiff, TextView } from '@/components/lazyText'
+import { TextDiff, TextView } from '@/monaco/lazyText'
 import Content from '@/components/Content.vue'
 import LootItems from '@/components/LootItems.vue'
 import LootRules from '@/components/LootRules.vue'

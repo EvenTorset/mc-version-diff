@@ -7,6 +7,7 @@ import { loadSettings, Settings, SETTINGS_STORAGE_KEY } from '@/settings'
 import { assets } from '@/delta_providers/loader'
 import { NotifyProvider } from '@/notify'
 import Splash from '@/components/Splash.vue'
+import { hasMonacoLoaded } from './monaco/monacoLoad'
 
 const route = useRoute()
 
@@ -93,13 +94,25 @@ onMounted(async () => {
 })
 
 watchEffect(async () => {
-  if (Settings.lightMode) {
-    document.documentElement.classList.add('light-mode')
-  } else {
-    document.documentElement.classList.remove('light-mode')
+  switch (Settings.colorScheme) {
+    case 'light':
+      document.documentElement.classList.add('light-color-scheme')
+      document.documentElement.classList.remove('oled-dark-color-scheme')
+      break
+    case 'oled-dark':
+      document.documentElement.classList.remove('light-color-scheme')
+      document.documentElement.classList.add('oled-dark-color-scheme')
+      break
+    default:
+      document.documentElement.classList.remove('light-color-scheme')
+      document.documentElement.classList.remove('oled-dark-color-scheme')
+      break
   }
   await nextTick()
   naiveThemeOverrides.value = genNaiveTheme()
+  if (hasMonacoLoaded.value) {
+    ;(await import('@/monaco/monacoSetup')).updateMonacoTheme()
+  }
 })
 
 watch(Settings, () => {

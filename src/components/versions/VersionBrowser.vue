@@ -389,6 +389,10 @@ onBeforeUnmount(() => {
   text-shadow: 0 1px 2px #000;
   user-select: none;
 
+  :root.light-color-scheme & {
+    text-shadow: none;
+  }
+
   .n-list-item__main {
     color: var(--color-5);
     transition: color 200ms;

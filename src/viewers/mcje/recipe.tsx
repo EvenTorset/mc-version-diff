@@ -1,4 +1,4 @@
-import { TextDiff, TextView } from '@/components/lazyText'
+import { TextDiff, TextView } from '@/monaco/lazyText'
 import Content from '@/components/Content.vue'
 import RecipeView, { type RecipeMarks, type SlotMark } from '@/components/RecipeView.vue'
 import type { DeltaResult } from '@/delta_providers'

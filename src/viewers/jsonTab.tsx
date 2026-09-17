@@ -1,4 +1,4 @@
-import { TextDiff, TextView } from '@/components/lazyText'
+import { TextDiff, TextView } from '@/monaco/lazyText'
 import { DeltaTrackState } from '@/delta_providers/states'
 import { Settings } from '@/settings'
 import stringify from 'fabulous-json'

@@ -1209,6 +1209,10 @@ onUnmounted(() => {
   border-radius: 4px;
   margin: 0 -3px 0 3px;
   padding: 0 3px;
+
+  :root.light-color-scheme & {
+    text-shadow: none;
+  }
 }
 
 .time-display {
@@ -1222,6 +1226,10 @@ onUnmounted(() => {
   border-radius: 4px;
   margin: 0 -3px;
   padding: 0 3px;
+
+  :root.light-color-scheme & {
+    text-shadow: none;
+  }
 }
 
 .loading-overlay {

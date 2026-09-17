@@ -107,15 +107,29 @@
   color: var(--color-5);
   font-size: 14px;
 
-  &.light-mode {
+  &.light-color-scheme {
+    color-scheme: light;
     --color-0: #ffffff;
-    --color-1: #e0ebf7;
+    --color-1: #f5faff;
     --color-2: #b1bfe0;
     --color-3: #7f8eb4;
-    --color-4: #3f465d;
+    --color-4: #626a85;
     --color-5: #292c3a;
-    --color-6: #161820;
-    --color-7: #0d1011;
+    --color-6: #0d1011;
+    --color-7: #000000;
+    --color-0-alt: #ffffff;
+  }
+
+  &.oled-dark-color-scheme {
+    --color-0: #000000;
+    --color-1: #0d1014;
+    --color-2: #161820;
+    --color-3: #292c3a;
+    --color-4: #7f8eb4;
+    --color-5: #b1bfe0;
+    --color-6: #e0ebf7;
+    --color-7: #ffffff;
+    --color-0-alt: #000000;
   }
 }
 
@@ -422,6 +436,10 @@ body {
   text-shadow: 0 1px 1px #000;
   display: inline-flex;
   justify-content: center;
+
+  :root.light-color-scheme & {
+    text-shadow: none;
+  }
 }
 
 .n-progress-graph-line-fill {
@@ -524,6 +542,14 @@ body {
   border-radius: 6px;
   color: var(--color-6);
   text-shadow: 0 1px 2px #000;
+
+  :root.light-color-scheme & {
+    text-shadow: none;
+
+    svg {
+      filter: none;
+    }
+  }
 
   .faded {
     color: var(--color-5);
@@ -805,14 +831,22 @@ body {
     color-mix(in srgb, var(--color-3), var(--color-2))
   );
 
+  :root.light-color-scheme & {
+    filter: drop-shadow(0 2px 8px #0002);
+    --easy-tooltip-background: var(--color-0);
+  }
+
   .easy-tooltip-text {
     text-shadow: 0 1px 1px #000;
     text-align: left;
-
     font-size: 1.142858em;
     font-weight: 500;
     margin: 0;
     color: var(--color-6);
+
+    :root.light-color-scheme & {
+      text-shadow: none;
+    }
 
     h3 {
       font-size: 1em;

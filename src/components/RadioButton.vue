@@ -56,6 +56,7 @@ const handleClick = () => {
     --intr-gradient-y 200ms,
     box-shadow 200ms,
     text-shadow 200ms,
+    font-weight 200ms,
     background-color 200ms,
     color 200ms;
   border-radius: 6px;
@@ -82,6 +83,10 @@ const handleClick = () => {
     color: var(--color-6);
     text-shadow: 0 1px 2px #000;
 
+    :root.light-color-scheme & {
+      text-shadow: none;
+    }
+
     &::after {
       border-color: rgb(from var(--intr-color) calc(1.2 * r) calc(1.2 * g) calc(1.2 * b) / 0.2);
     }
@@ -96,6 +101,10 @@ const handleClick = () => {
     background-color: rgb(from var(--color-0) r g b / 1) !important;
     text-shadow: 0 1px 2px #000;
     box-shadow: 0 0 8px rgb(from var(--intr-color) calc(1.2 * r) calc(1.2 * g) calc(1.2 * b) / 0.333);
+
+    :root.light-color-scheme & {
+      text-shadow: none;
+    }
 
     &:not(.nullable) {
       cursor: default;
