@@ -71,7 +71,7 @@ onBeforeUnmount(() => {
     }"
   >
     <template #trigger="{ props }">
-      <span ref="pathEl" v-bind="props" class="file-path">
+      <span ref="pathEl" v-bind="props" class="file-path"><span class="bidi-iso">&#8294;</span>
         <template v-for="(part, i) of parts" :key="i">
           <mark v-if="part.mark">
             <Dim v-if="part.dim">{{ part.text }}</Dim>
@@ -79,7 +79,7 @@ onBeforeUnmount(() => {
           </mark>
           <Dim v-else-if="part.dim">{{ part.text }}</Dim>
           <span v-else>{{ part.text }}</span>
-        </template><span class="lrm">&lrm;</span>
+        </template><span class="bidi-iso">&#8297;</span>
       </span>
     </template>
     {{ path }}
@@ -99,7 +99,7 @@ onBeforeUnmount(() => {
   font-weight: 500;
   font-size: 15px;
 
-  & .lrm {
+  & .bidi-iso {
     user-select: none;
   }
 
