@@ -383,6 +383,10 @@ function toggle() {
   padding: 1px;
   max-width: 100cqw;
 
+  :root.light-color-scheme & {
+    border-color: var(--color-2);
+  }
+
   &::after {
     content: '';
     position: absolute;

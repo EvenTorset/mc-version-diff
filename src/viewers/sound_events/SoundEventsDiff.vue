@@ -360,6 +360,10 @@ function shown(diff: Line[]) {
 
   & + .event {
     border-top: 1px solid rgb(from var(--color-5) r g b / 0.1);
+
+    :root.light-color-scheme & {
+      border-top-color: var(--color-2);
+    }
   }
 }
 

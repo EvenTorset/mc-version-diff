@@ -177,6 +177,10 @@ for (const edition of editions) {
 .separator {
   height: 1px;
   background-color: rgb(from var(--color-5) r g b / 0.1);
+
+  :root.light-color-scheme & {
+    background-color: var(--color-2);
+  }
 }
 
 .setting {

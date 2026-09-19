@@ -79,10 +79,14 @@ const config = computed(() => ({
   line-height: 12px;
   white-space: nowrap;
   user-select: none;
-  background-color: rgb(from var(--tag-color) r g b / 0.25);
+  background-color: color-mix(in srgb, var(--tag-color) 25%, var(--color-1));
   border: 1px solid rgb(from var(--tag-color) r g b / var(--tag-border-alpha));
   color: oklch(from var(--tag-color) calc(l * 1.3) calc(c * 0.7) h);
   cursor: pointer;
+
+  :root.light-color-scheme & {
+    color: color-mix(in srgb, var(--tag-color) 60%, var(--color-6));
+  }
 
   &.narrow {
     min-width: 28px;
