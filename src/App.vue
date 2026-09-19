@@ -78,7 +78,7 @@ function genNaiveTheme(): GlobalThemeOverrides {
       checkMarkColor: '#fff',
     },
     Switch: {
-      railColor: getCSSVar('--color-2'),
+      railColor: Settings.colorScheme === 'oled-dark' ? getCSSVar('--color-3') : getCSSVar('--color-2'),
     },
   }
 }
