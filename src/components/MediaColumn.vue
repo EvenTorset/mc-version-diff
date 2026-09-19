@@ -21,6 +21,22 @@ defineProps<{
   font-size: 12px;
   font-weight: 700;
   min-height: 1lh;
+
+  :deep(.new) {
+    color: var(--color-success);
+
+    :root.light-color-scheme & {
+      color: color-mix(in srgb, var(--color-success) 75%, var(--color-5));
+    }
+  }
+
+  :deep(.old) {
+    color: var(--color-danger);
+
+    :root.light-color-scheme & {
+      color: color-mix(in srgb, var(--color-danger) 75%, var(--color-5));
+    }
+  }
 }
 
 </style>

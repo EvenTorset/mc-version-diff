@@ -402,6 +402,10 @@ onBeforeUnmount(() => {
     --intr-color: rgb(from var(--color-accent) r g b / calc(alpha * 0.5));
     --color-dim: var(--color-5);
 
+    :root.light-color-scheme & {
+      --intr-color: oklch(from var(--color-accent) l calc(c * 1.3) h / calc(alpha * 0.3));
+    }
+
     .n-list-item__main {
       color: var(--color-6);
     }
@@ -417,6 +421,10 @@ onBeforeUnmount(() => {
   &.selected {
     --intr-color: oklch(from var(--color-accent) l calc(c * 1.3) h);
     --color-dim: var(--color-5);
+
+    :root.light-color-scheme & {
+      --intr-color: oklch(from var(--color-accent) l calc(c * 1.3) h / calc(alpha * 0.5));
+    }
 
     .n-list-item__main {
       color: var(--color-6);

@@ -93,14 +93,26 @@ for (const [ k, v ] of Object.entries(props.modified)) {
 
   &.added {
     --key-color: var(--color-success);
+
+    :root.light-color-scheme & {
+      --key-color: color-mix(in srgb, var(--color-success) 75%, var(--color-5));
+    }
   }
 
   &.edited {
     --key-color: var(--color-accent-suppl);
+
+    :root.light-color-scheme & {
+      --key-color: color-mix(in srgb, var(--color-accent) 75%, var(--color-5));
+    }
   }
 
   &.removed {
     --key-color: var(--color-danger);
+
+    :root.light-color-scheme & {
+      --key-color: color-mix(in srgb, var(--color-danger) 75%, var(--color-5));
+    }
   }
 
   .key {

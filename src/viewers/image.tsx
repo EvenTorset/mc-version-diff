@@ -32,10 +32,10 @@ function versionImage(
   changedSize?: boolean,
   changedClass?: string,
 ) {
-  const caption = () => <><span style={{
-    color: changedDims ? changedClass === 'new' ? 'var(--color-success)' : 'var(--color-danger)' : undefined
-  }}>{img.width}×{img.height}</span> · <span style={{
-    color: changedSize ? changedClass === 'new' ? 'var(--color-success)' : 'var(--color-danger)' : undefined
+  const caption = () => <><span class={{
+    [changedClass ?? '']: changedDims,
+  }}>{img.width}×{img.height}</span> · <span class={{
+    [changedClass ?? '']: changedSize,
   }}>{formatBytes(bytes.byteLength)}</span></>
 
   // only an edited track shows more than one image, so only it has a group to page through

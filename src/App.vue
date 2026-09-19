@@ -74,6 +74,11 @@ function genNaiveTheme(): GlobalThemeOverrides {
     },
     Checkbox: {
       labelFontWeight: 500,
+      border: '1px solid var(--color-4)',
+      checkMarkColor: '#fff',
+    },
+    Switch: {
+      railColor: getCSSVar('--color-2'),
     },
   }
 }

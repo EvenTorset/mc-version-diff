@@ -124,7 +124,7 @@ const maxDuration = computed(() => {
 let palette: Record<string, string> = {}
 let paletteAt = 0
 
-function themeColor(name: string): string {
+function styleValue(name: string): string {
   const now = performance.now()
   if (now - paletteAt > 250) {
     palette = {}
@@ -447,7 +447,7 @@ const layerCache = new WeakMap<ProcessedTrack, { key: string, layer: HTMLCanvasE
 function trackLayer(track: ProcessedTrack, index: number, width: number, maxDur: number): HTMLCanvasElement {
   const tracks = loadedTracks.value
   const other = tracks.length === 2 ? tracks[index === 0 ? 1 : 0] : null
-  const key = `${width}|${maxDur}|${track.filled}|${other?.filled ?? ''}|${themeColor('--color-6')}`
+  const key = `${width}|${maxDur}|${track.filled}|${other?.filled ?? ''}|${styleValue('--color-6')}`
   const cached = layerCache.get(track)
   if (cached?.key === key) return cached.layer
 
@@ -469,11 +469,11 @@ function trackLayer(track: ProcessedTrack, index: number, width: number, maxDur:
       centred(otherBase.topPoints, -0.5),
       centred(otherBase.bottomPoints, 0.5),
       Math.min(base.trackWidth, otherBase.trackWidth),
-      themeColor(index === 0 ? '--color-danger' : '--color-success'),
-      themeColor('--color-6')
+      styleValue(index === 0 ? '--color-danger' : '--color-success'),
+      styleValue(Settings.colorScheme === 'light' ? '--color-3' : '--color-6')
     )
   } else {
-    drawPlainWaveform(lctx, topPoints, bottomPoints, themeColor(track.color ?? '--color-accent'))
+    drawPlainWaveform(lctx, topPoints, bottomPoints, styleValue(track.color ?? '--color-accent'))
   }
 
   layerCache.set(track, { key, layer })
@@ -621,10 +621,10 @@ function renderWaveform() {
   ctx.clearRect(0, 0, width, height)
 
   if (loadedTracks.value.length === 0 || maxDur === 0) {
-    ctx.fillStyle = '#121214'
+    ctx.fillStyle = styleValue('--color-0-alt')
     ctx.fillRect(0, 0, width, height)
-    ctx.fillStyle = '#64748b'
-    ctx.font = '14px system-ui, sans-serif'
+    ctx.fillStyle = styleValue('--color-5')
+    ctx.font = `14px ${styleValue('--font-family')}`
     ctx.textAlign = 'center'
     ctx.fillText('No audio loaded', width / 2, height / 2)
     ctx.restore()
@@ -635,11 +635,11 @@ function renderWaveform() {
     const track = loadedTracks.value[i]
     const laneY = i * props.laneHeight
 
-    ctx.fillStyle = themeColor('--color-0-alt')
+    ctx.fillStyle = styleValue('--color-0-alt')
     ctx.fillRect(0, laneY, width, props.laneHeight)
 
     if (i > 0) {
-      ctx.strokeStyle = themeColor('--color-2')
+      ctx.strokeStyle = styleValue('--color-2')
       ctx.lineWidth = 1
       ctx.beginPath()
       ctx.moveTo(0, laneY)
@@ -682,14 +682,14 @@ function drawOverlay() {
       const laneY = index * props.laneHeight
       const x = (state.currentTime / maxDur) * width
 
-      ctx.strokeStyle = themeColor('--color-5')
+      ctx.strokeStyle = styleValue('--color-5')
       ctx.lineWidth = 2
       ctx.beginPath()
       ctx.moveTo(x, laneY)
       ctx.lineTo(x, laneY + props.laneHeight)
       ctx.stroke()
 
-      ctx.fillStyle = themeColor('--color-5')
+      ctx.fillStyle = styleValue('--color-5')
       ctx.beginPath()
       ctx.moveTo(x - 5, laneY)
       ctx.lineTo(x + 5, laneY)
@@ -703,10 +703,10 @@ function drawOverlay() {
     ctx.beginPath()
     ctx.moveTo(hoverX.value + 0.5, 0)
     ctx.lineTo(hoverX.value + 0.5, height)
-    ctx.strokeStyle = themeColor('--color-0')
+    ctx.strokeStyle = styleValue('--color-0')
     ctx.lineWidth = 3
     ctx.stroke()
-    ctx.strokeStyle = themeColor('--color-6')
+    ctx.strokeStyle = styleValue('--color-6')
     ctx.lineWidth = 1
     ctx.stroke()
   }
@@ -1235,7 +1235,7 @@ onUnmounted(() => {
 .loading-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(9, 9, 11, 0.8);
+  background: rgb(from var(--color-0-alt) r g b / 0.8);
   display: flex;
   align-items: center;
   justify-content: center;

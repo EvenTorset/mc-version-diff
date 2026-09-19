@@ -6,6 +6,7 @@ import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 import { getCSSVar } from '@/util/getCSSVar'
 import '@/monaco/glsl_lang'
 import { hasMonacoLoaded } from './monacoLoad'
+import { Settings } from '@/settings'
 
 Object.defineProperty(globalThis, 'MonacoEnvironment', {
   configurable: true,
@@ -23,7 +24,7 @@ Object.defineProperty(globalThis, 'MonacoEnvironment', {
 
 export function updateMonacoTheme() {
   monaco.editor.defineTheme('custom-theme', {
-    base: 'vs-dark',
+    base: Settings.colorScheme === 'light' ? 'vs' : 'vs-dark',
     inherit: true,
     rules: [],
     colors: {

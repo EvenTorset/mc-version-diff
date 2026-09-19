@@ -252,14 +252,26 @@ function iconVersion(row: ItemRow) {
 
   &.added {
     --section-color: var(--color-success);
+
+    :root.light-color-scheme & {
+      --section-color: color-mix(in srgb, var(--color-success) 75%, var(--color-5));
+    }
   }
 
   &.changed {
     --section-color: var(--color-accent-suppl);
+
+    :root.light-color-scheme & {
+      --section-color: color-mix(in srgb, var(--color-accent) 75%, var(--color-5));
+    }
   }
 
   &.removed {
     --section-color: var(--color-danger);
+
+    :root.light-color-scheme & {
+      --section-color: color-mix(in srgb, var(--color-danger) 75%, var(--color-5));
+    }
   }
 
   &.same {

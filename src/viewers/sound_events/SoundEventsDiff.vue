@@ -344,14 +344,26 @@ function shown(diff: Line[]) {
 
   &.added {
     --key-color: var(--color-success);
+
+    :root.light-color-scheme & {
+      --key-color: color-mix(in srgb, var(--color-success) 75%, var(--color-5));
+    }
   }
 
   &.edited {
     --key-color: var(--color-accent-suppl);
+
+    :root.light-color-scheme & {
+      --key-color: color-mix(in srgb, var(--color-accent) 75%, var(--color-5));
+    }
   }
 
   &.removed {
     --key-color: var(--color-danger);
+
+    :root.light-color-scheme & {
+      --key-color: color-mix(in srgb, var(--color-danger) 75%, var(--color-5));
+    }
   }
 }
 
@@ -396,15 +408,27 @@ function shown(diff: Line[]) {
 
   &.added {
     color: var(--color-success);
+
+    :root.light-color-scheme & {
+      color: color-mix(in srgb, var(--color-success) 75%, var(--color-5));
+    }
   }
 
   &.removed {
     color: var(--color-danger);
     text-decoration: line-through;
+
+    :root.light-color-scheme & {
+      color: color-mix(in srgb, var(--color-danger) 75%, var(--color-5));
+    }
   }
 
   &.edited {
     color: var(--color-accent-suppl);
+
+    :root.light-color-scheme & {
+      color: color-mix(in srgb, var(--color-accent) 75%, var(--color-5));
+    }
   }
 }
 
@@ -436,21 +460,37 @@ function shown(diff: Line[]) {
   &.added {
     background-color: rgb(from var(--color-success) r g b / 0.2);
     color: var(--color-success);
+
+    :root.light-color-scheme & {
+      color: color-mix(in srgb, var(--color-success) 75%, var(--color-5));
+    }
   }
 
   &.removed {
     background-color: rgb(from var(--color-danger) r g b / 0.2);
     color: var(--color-danger);
     text-decoration: line-through;
+
+    :root.light-color-scheme & {
+      color: color-mix(in srgb, var(--color-danger) 75%, var(--color-5));
+    }
   }
 
   .was {
     color: var(--color-danger);
     text-decoration: line-through;
+    
+    :root.light-color-scheme & {
+      color: color-mix(in srgb, var(--color-danger) 75%, var(--color-5));
+    }
   }
 
   .now {
     color: var(--color-success);
+
+    :root.light-color-scheme & {
+      color: color-mix(in srgb, var(--color-success) 75%, var(--color-5));
+    }
   }
 }
 
