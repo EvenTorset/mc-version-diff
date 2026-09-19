@@ -13,6 +13,8 @@
     <meta property="og:title" content="Version Diff - Asset Comparison for Minecraft" />
     <meta property="og:description" content="Easily compare the assets of Minecraft Java Edition, Bedrock Edition, or your own uploaded packs. Show every changed texture, model, sound, structure, and more!" />
     <meta property="og:image" content="https://cccode.pages.dev/version-diff/icon.webp" />
+    <meta property="og:image:width" content="256" />
+    <meta property="og:image:height" content="256" />
     <meta property="og:image:alt" content="Version Diff logo" />
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="Version Diff - Asset Comparison for Minecraft" />
@@ -20,6 +22,44 @@
     <meta property="twitter:image" content="https://cccode.pages.dev/version-diff/icon.webp" />
     <meta name="theme-color" content="#5588FF" />
     <meta name="google-site-verification" content="KQyDjwL2LaF9V6RhiegCiTrWc9rGDge2eyzgwxDjBtA" />
+    <script id="discord:component-embed" type="application/json">
+      {
+        "component": {
+          "type": 17,
+          "accent_color": 5605631,
+          "components": [
+            {
+              "type": 12,
+              "items": [
+                { "media": { "url": "https://cccode.pages.dev/version-diff/banner.webp" } }
+              ]
+            },
+            {
+              "type": 10,
+              "content": "Easily compare the assets of Minecraft Java Edition, Bedrock Edition, or your own uploaded packs. Show every changed texture, model, sound, structure, and more!"
+            },
+            { "type": 14, "spacing": 2 },
+            {
+              "type": 1,
+              "components": [
+                {
+                  "type": 2,
+                  "style": 5,
+                  "url": "https://cccode.pages.dev/version-diff/",
+                  "label": "Open Website"
+                },
+                {
+                  "type": 2,
+                  "style": 5,
+                  "url": "https://cccode.pages.dev/version-diff/mcje/featured",
+                  "label": "Featured Comparison"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    </script>
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -36,9 +76,36 @@
         ]
       }
     </script>
-    <!-- <link rel="stylesheet" href="https://d0t1755n-8123.uks1.devtunnels.ms/src/popupable.css" />
-    <script src="https://d0t1755n-8123.uks1.devtunnels.ms/src/popupable.js"></script>
-    <script type="module" src="https://d0t1755n-8124.uks1.devtunnels.ms/src/easy-tooltips.js"></script> -->
+    <script>
+      ;(function () {
+        let bg = '#101112'
+        let scheme = 'dark'
+        const root = document.documentElement
+
+        try {
+          const raw = localStorage.getItem('mc-version-diff-settings')
+          if (raw) {
+            const settings = JSON.parse(raw)
+            const mode = settings.colorScheme
+
+            if (mode === 'light') {
+              bg = '#f5faff'
+              scheme = 'light'
+              root.classList.add('light-color-scheme')
+            } else if (mode === 'oled-dark') {
+              bg = '#000000'
+              scheme = 'dark'
+              root.classList.add('oled-dark-color-scheme')
+            }
+          }
+        } catch (e) {
+          // falls back to dark
+        }
+
+        root.style.colorScheme = scheme
+        root.style.backgroundColor = bg
+      })()
+    </script>
   </head>
   <body>
     <noscript>
@@ -46,7 +113,7 @@
       <p>Easily compare the assets of Minecraft Java Edition, Bedrock Edition, or your own uploaded packs. Show every changed texture, model, sound, structure, and more! Version Diff needs JavaScript to run.</p>
     </noscript>
     <div id="app">
-      <style>:root{color-scheme:dark;background-color:#101112;}body{margin:0;}</style>
+      <style>body{margin:0;}</style>
       <div style="display:flex;justify-content:center;align-items:center;min-height:100vh;">
         <svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="256" height="256" viewBox="0 0 1024 1024"><defs><radialGradient id="b" gradientTransform="matrix(2 0 0 2 -.5 0)"><stop offset="0%" stop-color="#4280ff"/><stop offset="8.33%" stop-color="rgba(62, 125, 255, 0.93)"/><stop offset="16.67%" stop-color="rgba(59, 123, 255, 0.86)"/><stop offset="25%" stop-color="rgba(55, 120, 255, 0.79)"/><stop offset="33.33%" stop-color="rgba(51, 118, 255, 0.72)"/><stop offset="41.67%" stop-color="rgba(48, 115, 255, 0.65)"/><stop offset="50%" stop-color="rgba(44, 112, 255, 0.57)"/><stop offset="58.33%" stop-color="rgba(40, 109, 255, 0.5)"/><stop offset="66.67%" stop-color="rgba(35, 107, 255, 0.43)"/><stop offset="75%" stop-color="rgba(31, 104, 255, 0.36)"/><stop offset="83.33%" stop-color="rgba(26, 101, 255, 0.29)"/><stop offset="100%" stop-color="rgba(15, 95, 255, 0.15)"/></radialGradient><radialGradient id="c" gradientTransform="matrix(2 0 0 2 -.5 -1)"><stop offset="0%" stop-color="#4280ff"/><stop offset="8.33%" stop-color="rgba(62, 125, 255, 0.93)"/><stop offset="16.67%" stop-color="rgba(59, 123, 255, 0.86)"/><stop offset="25%" stop-color="rgba(55, 120, 255, 0.79)"/><stop offset="33.33%" stop-color="rgba(51, 118, 255, 0.72)"/><stop offset="41.67%" stop-color="rgba(48, 115, 255, 0.65)"/><stop offset="50%" stop-color="rgba(44, 112, 255, 0.57)"/><stop offset="58.33%" stop-color="rgba(40, 109, 255, 0.5)"/><stop offset="66.67%" stop-color="rgba(35, 107, 255, 0.43)"/><stop offset="75%" stop-color="rgba(31, 104, 255, 0.36)"/><stop offset="83.33%" stop-color="rgba(26, 101, 255, 0.29)"/><stop offset="100%" stop-color="rgba(15, 95, 255, 0.15)"/></radialGradient><clipPath id="d"><use href="#a"/></clipPath><path id="a" d="M443.2 44.9.5 896.4 128.1 0zM907 949.2l117-821.7-580.8-82.6zm0 0-10.6 74.7-527.9-74.6z"/></defs><use fill="url(#b)" href="#a"/><use fill="none" stroke="url(#c)" stroke-width="12" clip-path="url(#d)" href="#a"/></svg>
       </div>

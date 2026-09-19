@@ -121,11 +121,15 @@ onBeforeUnmount(() => {
   &>h1 {
     color: var(--color-6);
     font-size: 3em;
-    text-shadow: 0 3px var(--color-1);
+    text-shadow: 0 0.036em var(--color-0);
     margin: 0;
     user-select: none;
     cursor: inherit;
     white-space: nowrap;
+
+    :root.light-color-scheme & {
+      text-shadow: none;
+    }
   }
 
   &>span {

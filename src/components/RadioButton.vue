@@ -82,6 +82,15 @@ const handleClick = () => {
     color: var(--color-6);
     text-shadow: 0 1px 2px #000;
 
+    :root.light-color-scheme & {
+      --intr-gradient-size: 100% 100%;
+      --intr-gradient-start-alpha: 0.2;
+      --intr-gradient-end-alpha: 0;
+      --intr-gradient-end: rgb(from var(--color-accent) r g b / var(--intr-gradient-start-alpha));
+      --intr-gradient-start: rgb(from var(--color-accent) r g b / calc(alpha * var(--intr-gradient-end-alpha)));
+      text-shadow: none;
+    }
+
     &::after {
       border-color: rgb(from var(--intr-color) calc(1.2 * r) calc(1.2 * g) calc(1.2 * b) / 0.2);
     }
@@ -97,6 +106,15 @@ const handleClick = () => {
     text-shadow: 0 1px 2px #000;
     box-shadow: 0 0 8px rgb(from var(--intr-color) calc(1.2 * r) calc(1.2 * g) calc(1.2 * b) / 0.333);
 
+    :root.light-color-scheme & {
+      --intr-gradient-size: 100% 100%;
+      --intr-gradient-start-alpha: 0.3;
+      --intr-gradient-end-alpha: 0.1;
+      --intr-gradient-end: rgb(from var(--color-accent) r g b / var(--intr-gradient-start-alpha));
+      --intr-gradient-start: rgb(from var(--color-accent) r g b / calc(alpha * var(--intr-gradient-end-alpha)));
+      text-shadow: none;
+    }
+
     &:not(.nullable) {
       cursor: default;
     }
@@ -111,6 +129,14 @@ const handleClick = () => {
       --intr-gradient-end-alpha: 0.15;
       --intr-gradient-size: 100% 100%;
       background-color: transparent !important;
+
+      :root.light-color-scheme & {
+        --intr-gradient-start-alpha: 0.2;
+        --intr-gradient-end-alpha: 0;
+        --intr-gradient-end: rgb(from var(--color-accent) r g b / var(--intr-gradient-start-alpha));
+        --intr-gradient-start: rgb(from var(--color-accent) r g b / calc(alpha * var(--intr-gradient-end-alpha)));
+        text-shadow: none;
+      }
 
       &::after {
         border-color: rgb(from var(--intr-color) calc(1.2 * r) calc(1.2 * g) calc(1.2 * b) / 0.2);

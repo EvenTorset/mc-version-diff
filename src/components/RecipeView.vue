@@ -212,14 +212,26 @@ const hasLabels = computed(() =>
 
   .added {
     color: var(--color-success);
+
+    :root.light-color-scheme & {
+      color: color-mix(in srgb, var(--color-success) 75%, var(--color-5));
+    }
   }
 
   .changed {
     color: var(--color-accent);
+
+    :root.light-color-scheme & {
+      color: color-mix(in srgb, var(--color-accent) 75%, var(--color-5));
+    }
   }
 
   .removed {
     color: var(--color-danger);
+
+    :root.light-color-scheme & {
+      color: color-mix(in srgb, var(--color-danger) 75%, var(--color-5));
+    }
   }
 }
 
@@ -325,8 +337,8 @@ const hasLabels = computed(() =>
   bottom: 1px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-6);
-  text-shadow: 0 1px 2px #000;
+  color: #fff;
+  text-shadow: 0 1px 0 #000;
   pointer-events: none;
 }
 

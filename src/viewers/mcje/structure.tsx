@@ -1,4 +1,4 @@
-import { TextDiff, TextView } from '@/components/lazyText'
+import { TextDiff, TextView } from '@/monaco/lazyText'
 import { registerViewer } from '../registry'
 import { trackTab } from '@/util/trackFocus'
 import { DeltaTrackState } from '@/delta_providers/states'

@@ -52,6 +52,10 @@ provide('setOverlayButtons', setOverlayButtons)
   gap: 2px;
   padding: 1px;
   box-shadow: 0 2px 4px #0008;
+
+  :root.light-color-scheme & {
+    box-shadow: 0 2px 4px #0002;
+  }
 }
 
 .overlay-wrapper:hover .overlay-buttons {

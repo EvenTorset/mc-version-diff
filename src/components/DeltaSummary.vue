@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { NButton, NCard } from 'naive-ui'
+import { NButton } from 'naive-ui'
 import type { DeltaResult } from '@/delta_providers'
 import { DeltaTrackState } from '@/delta_providers/states'
 import AnimatedHeight from './AnimatedHeight.vue'
@@ -18,6 +18,8 @@ import { errorMessage } from '@/util/errorMessage.ts'
 import { downloadableTracks, downloadCategory } from '@/util/categoryZip'
 import Tooltip from './Tooltip.vue'
 import Dim from './Dim.vue'
+import RadioGroup from './RadioGroup.vue'
+import RadioButton from './RadioButton.vue'
 
 const props = defineProps<{
   dr: DeltaResult
@@ -37,13 +39,12 @@ const stateSummary = computed(() => {
   ]
 })
 
-const activeState = computed(() => (route.query.state as string) ?? null)
-
-function toggleState(name: string) {
-  router.replace({
-    query: { ...route.query, state: activeState.value === name ? undefined : name },
+const activeState = computed({
+  get: () => (route.query.state as string) ?? null,
+  set: value => router.replace({
+    query: { ...route.query, state: value },
   })
-}
+})
 
 const categories = computed(() => {
   const counts = new Map<string, number>()
@@ -102,23 +103,20 @@ async function copySpreadsheet() {
     <div class="section">
       <h3>Changes</h3>
       <Row class="states" gap="10px" align="stretch" wrap>
-        <NCard
-          v-for="{ state, count } of stateSummary"
-          :key="DeltaTrackState[state]"
-          class="state"
-          :class="{
-            empty: count === 0,
-            selected: activeState === DeltaTrackState[state],
-            dim: activeState !== null && activeState !== DeltaTrackState[state],
-          }"
-          size="small"
-          @click="count > 0 && toggleState(DeltaTrackState[state])"
-        >
-          <Col>
-            <div class="state-count">{{ count }}</div>
-            <TrackTag :state full-width />
-          </Col>
-        </NCard>
+        <RadioGroup nullable v-model="activeState">
+          <RadioButton
+            v-for="{ state, count } of stateSummary"
+            :key="DeltaTrackState[state]"
+            class="state"
+            :value="DeltaTrackState[state]"
+            :disabled="count === 0"
+          >
+            <Col>
+              <div class="state-count">{{ count }}</div>
+              <TrackTag :state full-width />
+            </Col>
+          </RadioButton>
+        </RadioGroup>
       </Row>
     </div>
 
@@ -179,6 +177,7 @@ async function copySpreadsheet() {
 }
 
 .state {
+  padding: 12px 0;
   flex: 1 1 140px;
   user-select: none;
   cursor: pointer;

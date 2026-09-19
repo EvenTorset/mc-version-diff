@@ -5,7 +5,7 @@ import Spacer from '@/components/Spacer.vue'
 import VersionDisplay from './VersionDisplay.vue'
 import SelectedVersions from './SelectedVersions.vue'
 import type { ManifestVersion } from 'minecraft-asset-loader'
-import { getDiffSuggestions } from '@/delta_providers/manifest'
+import { getDiffSuggestions, type DiffSuggestion } from '@/delta_providers/manifest'
 import { manifestUpdated } from '@/delta_providers/loader'
 import { EDITION, type Edition } from './edition'
 import { ArrowLeft24Regular, ArrowRight24Regular } from '@vicons/fluent'
@@ -21,7 +21,7 @@ const props = defineProps<{
 
 provide(EDITION, props.edition)
 
-const diffSuggestions = ref<[string, ManifestVersion[]][]>([])
+const diffSuggestions = ref<DiffSuggestion[]>([])
 const selectedVersions = ref<Set<ManifestVersion>>(new Set())
 const ab = computed(() => {
   const [ a, b ] = Array.from(selectedVersions.value)
@@ -35,23 +35,7 @@ const loading = ref(true)
 
 async function loadSuggestions() {
   try {
-    const suggestions = await getDiffSuggestions(props.edition)
-    diffSuggestions.value = []
-    function add(label: string, pair: [ManifestVersion, ManifestVersion] | null) {
-      if (pair === null) return;
-      if (diffSuggestions.value.some(([ , shown ]) => shown[0].id === pair[0].id && shown[1].id === pair[1].id)) return;
-      diffSuggestions.value.push([label, pair])
-    }
-    if (suggestions.latestIsRelease) {
-      add('Major release', suggestions.majorRelease)
-      add('Release patches', suggestions.releasePatches)
-      add('Latest version', suggestions.latestVersion)
-    } else {
-      add('Latest version', suggestions.latestVersion)
-      add('Since release', suggestions.sinceRelease)
-      add('Major release', suggestions.majorRelease)
-      add('Release patches', suggestions.releasePatches)
-    }
+    diffSuggestions.value = await getDiffSuggestions(props.edition)
   } catch (err: any) {
     errorMessage.value = err?.message ?? err?.toString?.() ?? 'n/a'
   } finally {
@@ -354,6 +338,14 @@ watch(selectedVersions, () => {
   color: var(--color-5);
   text-shadow: 0 1px 2px #000;
   transition: color 200ms;
+
+  :root.light-color-scheme & {
+    text-shadow: none;
+
+    svg {
+      filter: none;
+    }
+  }
 
   svg {
     filter: drop-shadow(0 1px 2px #000);

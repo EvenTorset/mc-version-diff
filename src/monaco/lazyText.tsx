@@ -1,8 +1,8 @@
 import { NSkeleton } from 'naive-ui'
 import { defineComponent, h, Suspense, defineAsyncComponent, type Component } from 'vue'
 
-const loadTextView = () => import('./TextView.vue')
-const loadTextDiff = () => import('./TextDiff.vue')
+const loadTextView = () => import('@/monaco/TextView.vue')
+const loadTextDiff = () => import('@/monaco/TextDiff.vue')
 
 const AsyncTextView = defineAsyncComponent(loadTextView)
 const AsyncTextDiff = defineAsyncComponent(loadTextDiff)

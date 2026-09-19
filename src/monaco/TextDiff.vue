@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { getLanguage } from '@/util/getLanguage'
+import { getLanguage } from '@/monaco/getLanguage'
 import * as monaco from 'monaco-editor'
-import '@/monacoSetup.ts'
+import '@/monaco/monacoSetup'
 import { NSkeleton } from 'naive-ui'
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 

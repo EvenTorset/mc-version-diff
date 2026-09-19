@@ -528,6 +528,7 @@ type EditionProviderOptions = {
 export function editionProvider(edition: Edition, { categories, upload }: EditionProviderOptions): DeltaProvider<VersionContent> {
   const provider: DeltaProvider<VersionContent> = {
     name: edition.name,
+    edition,
     categories,
     upload: upload && {
       accept: upload.accept,

@@ -129,14 +129,26 @@ const empty = computed(() => numbered.value.total === 0)
 
   &.added .entry {
     color: var(--color-success);
+
+    :root.light-color-scheme & {
+      color: color-mix(in srgb, var(--color-success) 75%, var(--color-5));
+    }
   }
 
   &.edited .entry {
     color: var(--color-accent-suppl);
+
+    :root.light-color-scheme & {
+      color: color-mix(in srgb, var(--color-accent) 75%, var(--color-5));
+    }
   }
 
   &.removed .entry {
     color: var(--color-danger);
+
+    :root.light-color-scheme & {
+      color: color-mix(in srgb, var(--color-danger) 75%, var(--color-5));
+    }
   }
 }
 

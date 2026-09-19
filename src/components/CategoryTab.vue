@@ -80,8 +80,19 @@ const favorite = computed({
   padding: 4px;
   margin: -4px;
 
+  :root.light-color-scheme & {
+    color: var(--color-accent-suppl);
+    stroke: #fff;
+    stroke-width: 2px;
+    paint-order: stroke;
+  }
+
   &:hover {
     color: var(--color-7);
+
+    :root.light-color-scheme & {
+      color: var(--color-accent);
+    }
   }
 }
 
@@ -145,12 +156,22 @@ const favorite = computed({
     color: var(--color-6);
     text-shadow: 0 1px 2px #000;
 
+    :root.light-color-scheme & {
+      --intr-gradient-start: rgb(from var(--intr-color) r g b / 0.4);
+      --intr-gradient-end-alpha: 0.05;
+      text-shadow: none;
+    }
+
     &::after {
       border-color: rgb(from var(--intr-color) calc(1.2 * r) calc(1.2 * g) calc(1.2 * b) / 0.2);
     }
 
     .category-tab-count {
       color: oklch(from var(--color-accent) calc(l * 1.2) c h);
+
+      :root.light-color-scheme & {
+        color: var(--color-accent);
+      }
     }
 
     .favorite-button {
@@ -168,12 +189,22 @@ const favorite = computed({
     text-shadow: 0 1px 2px #000;
     box-shadow: 0 0 8px rgb(from var(--intr-color) calc(1.2 * r) calc(1.2 * g) calc(1.2 * b) / 0.333);
 
+    :root.light-color-scheme & {
+      --intr-gradient-start: rgb(from var(--intr-color) r g b / 0.7);
+      --intr-gradient-end-alpha: 0.05;
+      text-shadow: none;
+    }
+
     &::after {
       border-color: rgb(from var(--intr-color) calc(1.2 * r) calc(1.2 * g) calc(1.2 * b) / 0.3);
     }
 
     .category-tab-count {
       color: oklch(from var(--color-accent) calc(l * 1.2) c h);
+
+      :root.light-color-scheme & {
+        color: var(--color-accent-suppl);
+      }
     }
 
     &:hover {
@@ -187,6 +218,10 @@ const favorite = computed({
 
       .category-tab-count {
         color: oklch(from var(--color-accent) calc(l * 1.4) calc(c * 2) h);
+
+        :root.light-color-scheme & {
+          color: var(--color-accent-suppl);
+        }
       }
     }
   }

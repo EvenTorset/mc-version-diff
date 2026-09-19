@@ -5,7 +5,7 @@ export const SETTINGS_STORAGE_KEY = 'mc-version-diff-settings'
 
 const DEFAULT_SETTINGS = {
   eulaAccepted: import.meta.env.DEV,
-  lightMode: false,
+  colorScheme: 'dark' as 'dark' | 'light' | 'oled-dark',
   pixelFont: false,
   formatJSON: false,
   cacheSizeMaxJava: 157286400,
