@@ -133,7 +133,7 @@ function markPathChanges(fromPath: string, toPath: string): Renderable {
     currentOffset += len
   }
 
-  const nodes: ComponentOrStaticRenderableContent[] = []
+  const nodes: ComponentOrStaticRenderableContent[] = [<span class="lrm">&#8294;</span>]
   let buffer = ''
   let bufferStart = -1
   let bufferEnd = -1
@@ -192,6 +192,8 @@ function markPathChanges(fromPath: string, toPath: string): Renderable {
     }
   }
   flushBuffer()
+
+  nodes.push(<span class="lrm">&#8297;</span>)
 
   return nodes
 }
