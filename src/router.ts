@@ -1,9 +1,19 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
-import { getDiffSuggestions } from './delta_providers/manifest'
+import { getSuggestionPair, type SuggestionKey } from './delta_providers/manifest'
+import { getDeltaProvider } from './delta_providers/registry'
 import { javaEdition } from './delta_providers/mcje/edition'
 import { URL_BASE } from '@/../urlBase'
 import DeltaRoute from '@/pages/DeltaRoute.vue'
 import { DEFAULT_TITLE, deltaTitle } from '@/util/documentTitle'
+
+const SUGGESTIONS: Record<string, SuggestionKey> = {
+  'featured': 'featured',
+  'latest': 'latest',
+  'since-release': 'since-release',
+  'major': 'major',
+  'major-release': 'major',
+  'patches': 'patches',
+}
 
 const routes: RouteRecordRaw[] = [
   { name: 'delta', path: '/:provider/:a/:b?', component: DeltaRoute },
@@ -24,35 +34,51 @@ router.afterEach(to => {
 })
 
 router.beforeEach(async to => {
+  if (to.name === 'delta' && !to.params.b) {
+    const provider = to.params.provider as string
+    const edition = getDeltaProvider(provider)?.edition
+    const key = SUGGESTIONS[to.params.a as string]
+    if (!edition || !key) {
+      return;
+    }
+
+    const suggestion = await getSuggestionPair(edition, key)
+    if (!suggestion) {
+      return { name: 'home', params: { provider }, replace: true }
+    }
+
+    return {
+      name: 'delta',
+      params: {
+        provider,
+        a: suggestion[0].id,
+        b: suggestion[1].id,
+      },
+      query: to.query,
+      hash: to.hash,
+      replace: true,
+    }
+  }
+
   if (to.path !== '/') {
     return;
   }
 
   const search = window.location.search.slice(1)
+  const key = SUGGESTIONS[search]
 
-  switch (search) {
-    case 'latest':
-    case 'since-release':
-    // case 'latest-release':
-    case 'major-release':
-    case 'patches':
-      const suggestion = (await getDiffSuggestions(javaEdition))[({
-        'latest': 'latestVersion',
-        'since-release': 'sinceRelease',
-        // 'latest-release': 'latestRelease',
-        'major-release': 'majorRelease',
-        'patches': 'releasePatches',
-      } as const)[search]]
-      if (!suggestion) return;
-      return {
-        name: 'delta',
-        params: {
-          provider: 'mcje',
-          a: suggestion[0].id,
-          b: suggestion[1].id,
-        },
-        replace: true,
-      }
+  if (key) {
+    const suggestion = await getSuggestionPair(javaEdition, key)
+    if (!suggestion) return;
+    return {
+      name: 'delta',
+      params: {
+        provider: 'mcje',
+        a: suggestion[0].id,
+        b: suggestion[1].id,
+      },
+      replace: true,
+    }
   }
 
   if (!/^[^,]+,[^,]+$/.test(search)) {
