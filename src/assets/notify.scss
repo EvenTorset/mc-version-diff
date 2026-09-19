@@ -1,3 +1,5 @@
+@use '@/util/gradients.scss' as gradients;
+
 .n-notification-wrapper {
   display: flex;
   justify-content: flex-end;
@@ -8,18 +10,48 @@
   --notify-border-width: 2px;
   --notify-right-padding: calc(var(--notify-header-size) - var(--notify-border-width));
   padding: 0 var(--notify-border-width) var(--notify-border-width);
-  background-image: radial-gradient(farthest-corner at bottom center, var(--n-icon-color), color-mix(in srgb, var(--n-icon-color) 60%, #000));
+  background-image: radial-gradient(
+    farthest-corner at bottom center,
+    gradients.scrim(
+      oklch(from var(--n-icon-color) l calc(c * 1.5) h),
+      oklch(from var(--n-icon-color) calc(l * 0.8) calc(c * 1.5) h)
+    )
+  );
   line-height: 1.2;
   max-width: min(100vw - 32px, 800px) !important;
   --n-border-radius: 6px !important;
+
+  :root.light-color-scheme & {
+    background-image: radial-gradient(
+      farthest-corner at bottom center,
+      color-mix(in srgb, var(--n-icon-color) 60%, #fff),
+      var(--n-icon-color)
+    );
+  }
 
   &::before {
     content: '';
     position: absolute;
     inset: var(--notify-header-size) var(--notify-border-width) var(--notify-border-width);
-    background-image: radial-gradient(farthest-corner at bottom center, color-mix(in srgb, var(--n-icon-color) 30%, #000), color-mix(in srgb, var(--n-icon-color) 5%, #000));
+    background-image: radial-gradient(
+      farthest-corner at bottom center,
+      gradients.scrim(
+        color-mix(in srgb, var(--n-icon-color) 30%, #000),
+        color-mix(in srgb, var(--n-icon-color) 5%, #000)
+      )
+    );
     border-radius: 0 0 5px 5px;
     pointer-events: none;
+
+    :root.light-color-scheme & {
+      background-image: radial-gradient(
+        farthest-corner at bottom center,
+        gradients.scrim(
+          #fff,
+          color-mix(in oklch, var(--n-icon-color) 10%, #fff)
+        )
+      )
+    }
   }
 
   & * {
@@ -28,7 +60,7 @@
 }
 
 .n-notification__avatar{
-  left: calc(-1 * var(--notify-border-width)) !important;
+  left: calc(-1 * var(--notify-border-width) + 1px) !important;
   color: var(--color-6);
 }
 
@@ -49,7 +81,7 @@
 }
 
 .n-notification-main__header {
-  margin-left: -26px !important;
+  margin-left: -24px !important;
   margin-right: calc(-1 * var(--notify-right-padding) + 12px) !important;
   padding: 0 calc(var(--notify-header-size) - var(--notify-border-width)) !important;
   height: var(--notify-header-size);
@@ -62,6 +94,11 @@
 
 .n-notification-main__content {
   line-height: inherit !important;
+  text-shadow: 0 1px 1px #000;
+
+  :root.light-color-scheme & {
+    text-shadow: none;
+  }
 }
 
 .n-notification-main-footer {
