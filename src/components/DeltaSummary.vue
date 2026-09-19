@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { NButton, NCard } from 'naive-ui'
+import { NButton } from 'naive-ui'
 import type { DeltaResult } from '@/delta_providers'
 import { DeltaTrackState } from '@/delta_providers/states'
 import AnimatedHeight from './AnimatedHeight.vue'
@@ -45,12 +45,6 @@ const activeState = computed({
     query: { ...route.query, state: value },
   })
 })
-
-function toggleState(name: string) {
-  router.replace({
-    query: { ...route.query, state: activeState.value === name ? undefined : name },
-  })
-}
 
 const categories = computed(() => {
   const counts = new Map<string, number>()
