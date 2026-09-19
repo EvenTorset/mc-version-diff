@@ -350,11 +350,6 @@ watch(selectedVersions, () => {
   svg {
     filter: drop-shadow(0 1px 2px #000);
   }
-
-  .faded {
-    color: var(--color-4);
-    transition: color 200ms;
-  }
 }
 
 .suggestion-label {
@@ -369,17 +364,19 @@ watch(selectedVersions, () => {
   font-size: 16px;
 }
 
-.suggestion-link:hover {
-  .suggestion-cell {
-    color: var(--color-6);
+.suggestion-link {
+  transition: --color-dim 100ms;
 
-    .faded {
-      color: var(--color-5);
+  &:hover {
+    --color-dim: var(--color-5);
+
+    .suggestion-cell {
+      color: var(--color-6);
     }
-  }
 
-  .suggestion-button {
-    --intr-color: rgb(from var(--color-accent) r g b / calc(alpha * 0.5));
+    .suggestion-button {
+      --intr-color: rgb(from var(--color-accent) r g b / calc(alpha * 0.5));
+    }
   }
 }
 
