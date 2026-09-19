@@ -57,6 +57,7 @@ export type DeltaProviderCategory = {
 export interface DeltaProvider<T> {
   /** The display name of the provider */
   name: string
+  edition?: Edition
   /**
    * Options for controlling how the Upload provider will use this provider as
    * a comparator. If absent, the provider will not be available as a

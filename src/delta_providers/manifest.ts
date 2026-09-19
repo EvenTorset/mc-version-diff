@@ -11,13 +11,17 @@ export async function findVersion(assets: MinecraftAssets, id: string): Promise<
   return assets.manifest.version(id)
 }
 
-export async function getDiffSuggestions(edition: Edition): Promise<{
-    latestVersion: [ManifestVersion, ManifestVersion]
-    sinceRelease: [ManifestVersion, ManifestVersion] | null
-    majorRelease: [ManifestVersion, ManifestVersion] | null
-    releasePatches: [ManifestVersion, ManifestVersion] | null
-    latestIsRelease: boolean
-}> {
+export type SuggestionKey = 'featured' | 'latest' | 'since-release' | 'major' | 'patches'
+
+export type SuggestionPair = [ManifestVersion, ManifestVersion]
+
+export type DiffSuggestion = [label: string, pair: SuggestionPair]
+
+function pair(a: ManifestVersion | null | undefined, b: ManifestVersion | null | undefined): SuggestionPair | null {
+  return a && b && a !== b ? [ a, b ] : null
+}
+
+async function suggestionPairs(edition: Edition) {
   const manifest = edition.assets.manifest
   const all = await manifest.versions()
   const releases = await manifest.versions(VersionType.RELEASE)
@@ -32,18 +36,47 @@ export async function getDiffSuggestions(edition: Edition): Promise<{
     : null
 
   return {
-    latestVersion: [all[1], all[0]],
-    sinceRelease: currentReleaseExceptLatest && newest && newest.type !== 'release' && currentReleaseExceptLatest !== prevMajorRelease
-      ? [currentReleaseExceptLatest, newest]
-      : null,
-    majorRelease: prevMajorRelease && currentRelease
-      ? [prevMajorRelease, currentRelease]
-      : null,
-    releasePatches: currentMajorRelease !== currentRelease && currentMajorRelease && currentRelease
-      ? [currentMajorRelease, currentRelease]
-      : null,
+    'latest': pair(all[1], all[0]),
+    'since-release': pair(currentReleaseExceptLatest, newest),
+    'major': pair(prevMajorRelease, currentRelease),
+    'patches': pair(currentMajorRelease, currentRelease),
     latestIsRelease: newest?.type === 'release',
+    sinceIsMajor: currentReleaseExceptLatest === prevMajorRelease,
   }
+}
+
+export async function getSuggestionPair(edition: Edition, key: SuggestionKey): Promise<SuggestionPair | null> {
+  if (key === 'featured') {
+    return (await getDiffSuggestions(edition))[0]?.[1] ?? null
+  }
+
+  return (await suggestionPairs(edition))[key]
+}
+
+export async function getDiffSuggestions(edition: Edition): Promise<DiffSuggestion[]> {
+  const pairs = await suggestionPairs(edition)
+
+  const ordered: [string, SuggestionPair | null][] = pairs.latestIsRelease
+    ? [
+      [ 'Major release', pairs.major ],
+      [ 'Release patches', pairs.patches ],
+      [ 'Latest version', pairs.latest ],
+    ]
+    : [
+      [ 'Latest version', pairs.latest ],
+      [ 'Since release', pairs.sinceIsMajor ? null : pairs['since-release'] ],
+      [ 'Major release', pairs.major ],
+      [ 'Release patches', pairs.patches ],
+    ]
+
+  const shown: DiffSuggestion[] = []
+  for (const [ label, suggestion ] of ordered) {
+    if (!suggestion) continue
+    if (shown.some(([ , seen ]) => seen[0].id === suggestion[0].id && seen[1].id === suggestion[1].id)) continue
+    shown.push([ label, suggestion ])
+  }
+
+  return shown
 }
 
 export interface RelatedDeltaGroup {
