@@ -87,6 +87,8 @@ const naiveThemeOverrides = ref<GlobalThemeOverrides>(genNaiveTheme())
 
 let loadedSettings = false
 onMounted(async () => {
+  document.documentElement.style.removeProperty('color-scheme')
+  document.documentElement.style.removeProperty('background-color')
   loadSettings()
   loadedSettings = true
   assets()
