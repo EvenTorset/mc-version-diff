@@ -56,6 +56,17 @@ async function readTable(dr: DeltaResult, version: string, id: string) {
 
 const strip = (s: any) => typeof s === 'string' ? s.replace(/^minecraft:/, '') : s
 
+const TOOLS: Record<string, string> = {
+  'tool/can_silk_touch': 'silk touch',
+  'tool/can_shear': 'shears',
+  'match_tool': 'the right tool',
+}
+
+const asList = (v: any) => v == null ? [] : Array.isArray(v) ? v : [ v ]
+const conditionsOf = (node: any) => asList(node?.condition ?? node?.conditions)
+const functionsOf = (node: any) => asList(node?.modifier ?? node?.functions)
+const typeOf = (node: any) => strip(typeof node === 'string' ? node : node?.condition ?? node?.type ?? node?.function ?? '')
+
 export const stackKey = (s: LootStack | LootOdds) =>
   s.id + '|' + JSON.stringify(s.components ?? null)
 
@@ -122,18 +133,34 @@ class Roller {
     return n.value ?? 1
   }
 
-  // only the flat chances are meaningful without world context; others pass
-  #passes(conditions: any[] | undefined) {
-    return (conditions ?? []).every(c => {
-      const chance = conditionChance(c)
-      return chance === null || this.#random() < this.#rollNum(chance)
-    })
+  #passes(node: any) {
+    return conditionsOf(node).every(c => this.#test(c) !== false)
   }
 
-  #applyFunctions(fns: any[] | undefined, stack: LootStack) {
-    for (const f of fns ?? []) {
-      const t = strip(f.function || '')
-      if (!this.#passes(f.conditions)) continue
+  #test(c: any): boolean | null {
+    const type = typeOf(c)
+    if (type === 'all_of') {
+      const terms = asList(c.terms).map((t: any) => this.#test(t))
+      return terms.includes(false) ? false : terms.includes(null) ? null : true
+    }
+    if (type === 'any_of') {
+      const terms = asList(c.terms).map((t: any) => this.#test(t))
+      return terms.includes(true) ? true : terms.includes(null) ? null : false
+    }
+    if (type === 'inverted') {
+      const inner = this.#test(c.term ?? c.terms)
+      return inner === null ? null : !inner
+    }
+    if (type in TOOLS) return false
+    const chance = conditionChance(c)
+    if (chance !== null) return this.#random() < this.#rollNum(chance)
+    return null
+  }
+
+  #applyFunctions(fns: any[], stack: LootStack) {
+    for (const f of fns) {
+      const t = typeOf(f)
+      if (!this.#passes(f)) continue
       if (t === 'set_count') stack.count = Math.max(1, Math.round(this.#rollNum(f.count, true)))
       else if (t === 'set_data') stack.id = legacyVariant(stack.id, Math.round(this.#rollNum(f.data, true)))
       else if (t === 'enchant_randomly' || t === 'enchant_with_levels') stack.enchanted = true
@@ -146,8 +173,8 @@ class Roller {
     const type = strip(entry.type || 'item')
     if (type === 'item') {
       const stack: LootStack = { id: legacyVariant(strip(entry.name)), count: 1, via }
-      this.#applyFunctions(entry.functions, stack)
-      this.#applyFunctions(pool?.functions, stack)
+      this.#applyFunctions(functionsOf(entry), stack)
+      this.#applyFunctions(functionsOf(pool), stack)
       out.push(stack)
     } else if (type === 'loot_table') {
       const ref = entry.value ?? entry.name
@@ -156,14 +183,14 @@ class Roller {
     } else if (type === 'alternatives' || type === 'group' || type === 'sequence') {
       for (const c of entry.children ?? []) {
         if (type === 'alternatives') {
-          if (this.#passes(c.conditions)) { this.#applyEntry(c, pool, out, via); break }
+          if (this.#passes(c)) { this.#applyEntry(c, pool, out, via); break }
         } else this.#applyEntry(c, pool, out, via)
       }
     }
   }
 
   #pickEntry(entries: any[]) {
-    const usable = entries.filter(e => this.#passes(e.conditions))
+    const usable = entries.filter(e => this.#passes(e))
     const total = usable.reduce((a, e) => a + (e.weight ?? 1), 0)
     let r = this.#random() * total
     for (const e of usable) {
@@ -175,7 +202,7 @@ class Roller {
 
   rollInto(table: any, out: LootStack[], via?: string) {
     for (const pool of table.pools ?? []) {
-      if (!this.#passes(pool.conditions)) continue
+      if (!this.#passes(pool)) continue
       const n = Math.round(this.#rollNum(pool.rolls ?? 1, true))
       for (let i = 0; i < n; i++) {
         const entry = this.#pickEntry(pool.entries ?? [])
@@ -240,10 +267,50 @@ export async function sampleTable(
 
 // read at zero enchantment levels, the only assumption available outside a world
 function conditionChance(c: any) {
-  const type = strip(c.condition || '')
+  const type = typeOf(c)
   if (type === 'random_chance' || type === 'random_chance_with_looting') return c.chance ?? 1
   if (type === 'random_chance_with_enchanted_bonus') return c.unenchanted_chance ?? 1
+  if (type === 'table_bonus') return c.chances?.[0] ?? 1
   return null
+}
+
+function toolName(c: any) {
+  const type = typeOf(c)
+  if (type !== 'match_tool') return TOOLS[type]
+  const predicate = JSON.stringify(c?.predicate ?? '')
+  if (predicate.includes('silk_touch')) return TOOLS['tool/can_silk_touch']
+  if (predicate.includes('shears')) return TOOLS['tool/can_shear']
+  return TOOLS[type]
+}
+
+export function toolGate(table: any): string | null {
+  let found: string | null = null
+  const walk = (node: any) => {
+    if (found) return;
+    for (const c of asList(node)) {
+      if (typeOf(c) in TOOLS) {
+        found = toolName(c)
+        return;
+      }
+      walk(c?.terms ?? c?.term)
+    }
+  }
+  const visit = (node: any) => {
+    walk(conditionsOf(node))
+    for (const child of asList(node?.pools).concat(asList(node?.entries), asList(node?.children))) visit(child)
+  }
+  visit(table)
+  return found
+}
+
+function chanceTerms(c: any, out: any[] = []): any[] {
+  if (typeOf(c) === 'all_of') {
+    for (const term of asList(c.terms)) chanceTerms(term, out)
+    return out
+  }
+  const chance = conditionChance(c)
+  if (chance !== null) out.push(chance)
+  return out
 }
 
 function entryKind(e: any): Pick<LootRuleEntry, 'kind' | 'id'> {
@@ -294,17 +361,17 @@ export function describeTable(table: any): LootRulePool[] {
   return (table.pools ?? []).map((pool: any) => {
     const entries = pool.entries ?? []
     const total = entries.reduce((a: number, e: any) => a + (e.weight ?? 1), 0) || 1
-    const chance = (pool.conditions ?? []).map(conditionChance).find((c: any) => c !== null)
+    const chance = conditionsOf(pool).flatMap((c: any) => chanceTerms(c))[0]
     return {
       rolls: fmtNum(pool.rolls ?? 1),
       bonus: pool.bonus_rolls ? fmtNum(pool.bonus_rolls) : null,
       chance: chance != null ? Math.round(Number(fmtNum(chance)) * 100) + '% chance' : null,
       entries: entries.map((e: any) => {
-        const fns = e.functions ?? []
-        const sc = fns.find((f: any) => strip(f.function) === 'set_count')
+        const fns = functionsOf(e)
+        const sc = fns.find((f: any) => typeOf(f) === 'set_count')
         const notes: string[] = []
         for (const f of fns) {
-          const fn = strip(f.function || '')
+          const fn = typeOf(f)
           if (fn === 'enchant_randomly') notes.push('enchanted')
           else if (fn === 'enchant_with_levels') notes.push(`enchanted, ${fmtNum(f.levels)} levels`)
           else if (fn === 'set_potion') notes.push(strip(f.id))
