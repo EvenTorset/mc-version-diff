@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { DeltaResult } from '@/delta_providers'
-import { deltaTableReader, sameOdds, sampleTableCached, stackKey, type LootOdds } from '@/util/loot'
+import { deltaTableReader, sameOdds, sampleTableCached, stackKey, toolGate, type LootOdds } from '@/util/loot'
 import { itemName as translate } from '@/util/itemNames'
 import { ItemIcon } from './lazyRenderers'
 import Meter from './Meter.vue'
@@ -128,6 +128,11 @@ watch(rows, list => {
   })
 }, { immediate: true })
 
+const emptyReason = computed(() => {
+  const gate = [ props.after, props.before ].map(side => side && toolGate(side.table)).find(g => g)
+  return gate ? `This table only drops with ${gate}.` : 'This table never drops anything.'
+})
+
 const showAvg = computed(() => rows.value.some(row =>
   [ row.before, row.after ].some(odds => odds && odds.min !== odds.max)))
 
@@ -168,7 +173,7 @@ function iconVersion(row: ItemRow) {
     <NSpin size="small" />
     <div>Measuring drop rates over 10,000 opens…</div>
   </div>
-  <div v-else-if="!rows.length" class="loot-empty">This table never drops anything.</div>
+  <div v-else-if="!rows.length" class="loot-empty">{{ emptyReason }}</div>
   <div v-else-if="isDiff && !showUnchanged && !sections.some(s => s.state !== 'same')" class="loot-empty">
     The items this table drops did not change.
   </div>
