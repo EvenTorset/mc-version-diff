@@ -24,6 +24,7 @@ import { holdFocus, isInitialFocus } from '@/util/trackFocus.ts'
 import { computed } from 'vue'
 import Notify from '@/notify.tsx'
 import SizeDiff from './SizeDiff.vue'
+import { maxWidthQuery, useBreakpoint } from '@/util/useBreakpoint.ts'
 
 const props = defineProps<{
   track: DeltaTrack
@@ -213,6 +214,8 @@ function toggle() {
   }
   expanded.value = !expanded.value
 }
+
+const isNarrow = useBreakpoint(maxWidthQuery('1100px'))
 </script>
 
 <template>
@@ -244,7 +247,12 @@ function toggle() {
         style="cursor: pointer;"
       >
         <TrackTag :state="DeltaTrackState.Moved" />
-        <ArrowTurnRight20Filled style="transform: scaleY(-1); width: 20px; height: 20px;" />
+        <ArrowTurnRight20Filled :style="{
+          transform: 'scaleY(-1)',
+          width: '20px',
+          height: '20px',
+          marginTop: isNarrow ? '-4px' : undefined
+        }" />
       </Col>
       <TrackTag
         v-else
@@ -252,12 +260,15 @@ function toggle() {
         @click="toggle"
       />
 
-      <Col v-if="track.state === DeltaTrackState.Moved" align="stretch" style="overflow: hidden;">
+      <div
+        v-if="track.state === DeltaTrackState.Moved"
+        style="overflow: hidden; padding: 0 2px; margin: 0 -2px;"
+      >
         <MarkFilePathChanges
           :original="track.a"
           :modified="track.b"
         />
-      </Col>
+      </div>
       <FilePath v-else :path="track.id"/>
       <div v-if="track.state === DeltaTrackState.Moved" style="min-width: 16px;"></div>
       <SizeDiff

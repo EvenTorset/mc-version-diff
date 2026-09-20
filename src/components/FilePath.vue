@@ -71,7 +71,7 @@ onBeforeUnmount(() => {
     }"
   >
     <template #trigger="{ props }">
-      <span ref="pathEl" v-bind="props" class="file-path"><span class="bidi-iso">&#8294;</span>
+      <span ref="pathEl" v-bind="props" class="file-path"><span class="bidi">&#8294;</span>
         <template v-for="(part, i) of parts" :key="i">
           <mark v-if="part.mark">
             <Dim v-if="part.dim">{{ part.text }}</Dim>
@@ -79,14 +79,15 @@ onBeforeUnmount(() => {
           </mark>
           <Dim v-else-if="part.dim">{{ part.text }}</Dim>
           <span v-else>{{ part.text }}</span>
-        </template><span class="bidi-iso">&#8297;</span>
+          <span class="bidi">&lrm;</span>
+        </template><span class="bidi">&#8297;</span>
       </span>
     </template>
     {{ path }}
   </Tooltip>
 </template>
 
-<style lang="css" scoped>
+<style lang="scss" scoped>
 
 .file-path {
   overflow: hidden;
@@ -99,7 +100,15 @@ onBeforeUnmount(() => {
   font-weight: 500;
   font-size: 15px;
 
-  & .bidi-iso {
+  // Fix for marks causing overflow
+  margin: 0 -2px;
+  &::before,&::after {
+    content: '';
+    display: inline-block;
+    width: 2px;
+  }
+
+  & .bidi {
     user-select: none;
   }
 
