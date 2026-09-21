@@ -4,6 +4,7 @@ import { listBedrockModels, loadBedrockModel, registerBedrockLoader } from '@/vi
 
 registerViewer('mcbe_model', {
   edition: 'mcbe',
+  predictedHeight: 285,
   test(_dr, track) {
     return /^resource_pack\/models\/.+\.json$/.test(track.id)
   },
