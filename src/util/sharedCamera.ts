@@ -9,6 +9,7 @@ interface Entry {
   homePhi: number
   homeRadius: number
   owner: symbol | null
+  idle: boolean
   idleTimer: ReturnType<typeof setTimeout> | null
   lastTickTime: number
   refCount: number
@@ -38,19 +39,22 @@ export class SharedCamera {
       this.entry.idleTimer = null
     }
     this.entry.owner = ownerId
+    this.entry.idle = false
     return true
   }
 
   release(ownerId: symbol) {
     if (this.entry.owner !== ownerId) return;
+    this.entry.owner = null
     if (this.entry.idleTimer !== null) clearTimeout(this.entry.idleTimer)
     this.entry.idleTimer = setTimeout(() => {
-      this.entry.owner = null
+      this.entry.idle = true
+      this.entry.idleTimer = null
     }, IDLE_RETURN_DELAY)
   }
 
   sync(now: number) {
-    if (this.entry.owner !== null) {
+    if (this.entry.owner !== null || !this.entry.idle) {
       this.entry.lastTickTime = now
       return;
     }
@@ -79,6 +83,7 @@ export function acquireSharedCamera(
       homePhi,
       homeRadius,
       owner: null,
+      idle: true,
       idleTimer: null,
       lastTickTime: performance.now(),
       refCount: 0,
