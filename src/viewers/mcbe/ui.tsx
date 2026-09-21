@@ -1,6 +1,6 @@
 import { registerViewer } from '../registry'
 import { renderJsonTab } from '../jsonTab'
-import { effectiveToggles, listBedrockUiControls, renderBedrockUi, UI_SCALE, type UiRender, type UiUse } from '@/util/bedrockUi'
+import { effectiveToggles, listBedrockUiControls, renderBedrockUi, UI_SCALE, type UiRender, type UiUse } from '@/viewers/mcbe/util/ui'
 import { useElementVisible } from '@/util/useElementVisible'
 import { yieldToMain } from '@/util/yieldToMain'
 import { popupable } from '@/util/popupable'

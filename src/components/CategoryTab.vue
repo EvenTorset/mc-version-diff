@@ -25,7 +25,11 @@ const favorite = computed({
 </script>
 
 <template>
-  <div class="category-tab" :class="{ selected }">
+  <RouterLink :to="{ query: {
+    ...route.query,
+    category: name.toLowerCase(),
+    file: undefined
+  } }" class="category-tab" :class="{ selected }">
     <NIcon
       v-if="name === 'Overview'"
       class="category-tab-count"
@@ -40,14 +44,14 @@ const favorite = computed({
         <NIcon
           v-bind="props"
           class="favorite-button"
-          @click.stop="favorite = name"
+          @click.stop.prevent="favorite = name"
           :component="favorite === name ? Star12Filled : Star12Regular"
         />
       </template>
       <h3>Favorite Category</h3>
       <p>Your favorite category will be opened automatically when opening a new comparison.</p>
     </Tooltip>
-  </div>
+  </RouterLink>
 </template>
 
 <style lang="scss" scoped>

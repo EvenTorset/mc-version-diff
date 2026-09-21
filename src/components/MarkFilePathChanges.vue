@@ -55,7 +55,7 @@ function renderPathSlice(
     }
   }
 
-  sliceNodes.push(<span class="lrm">&lrm;</span>)
+  sliceNodes.push(<span class="bidi">&lrm;</span>)
   return sliceNodes
 }
 
@@ -133,7 +133,7 @@ function markPathChanges(fromPath: string, toPath: string): Renderable {
     currentOffset += len
   }
 
-  const nodes: ComponentOrStaticRenderableContent[] = [<span class="lrm">&#8294;</span>]
+  const nodes: ComponentOrStaticRenderableContent[] = [<span class="bidi">&#8294;</span>]
   let buffer = ''
   let bufferStart = -1
   let bufferEnd = -1
@@ -193,7 +193,7 @@ function markPathChanges(fromPath: string, toPath: string): Renderable {
   }
   flushBuffer()
 
-  nodes.push(<span class="lrm">&#8297;</span>)
+  nodes.push(<span class="bidi">&#8297;</span>)
 
   return nodes
 }
@@ -267,7 +267,7 @@ function nextTickCheck() {
   </div>
 </template>
 
-<style lang="css" scoped>
+<style lang="scss" scoped>
 
 .line {
   display: flex;
@@ -281,7 +281,6 @@ function nextTickCheck() {
 .file-path {
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100%;
   min-width: 0;
   white-space: nowrap;
   direction: rtl;
@@ -290,7 +289,14 @@ function nextTickCheck() {
   font-size: 15px;
   display: block;
 
-  & :deep(.lrm) {
+  // Fix for marks causing overflow
+  margin: 0 -2px;
+  &::before,&::after {
+    content: '';
+    padding-left: 2px;
+  }
+
+  & :deep(.bidi) {
     user-select: none;
   }
 
@@ -304,34 +310,34 @@ function nextTickCheck() {
   }
 
   & :deep(:is(mark, .search-hit):has(+ :is(mark, .search-hit))),
-  & :deep(:is(mark, .search-hit):has(+ .lrm + :is(mark, .search-hit))),
+  & :deep(:is(mark, .search-hit):has(+ .bidi + :is(mark, .search-hit))),
   & :deep(mark > .search-hit:last-child),
-  & :deep(mark > .search-hit:has(+ .lrm:last-child)) {
+  & :deep(mark > .search-hit:has(+ .bidi:last-child)) {
     padding-right: 0;
     margin-right: 0;
   }
 
   & :deep(:is(mark, .search-hit) + :is(mark, .search-hit)),
-  & :deep(:is(mark, .search-hit) + .lrm + :is(mark, .search-hit)),
+  & :deep(:is(mark, .search-hit) + .bidi + :is(mark, .search-hit)),
   & :deep(mark > .search-hit:first-child) {
     padding-left: 0;
     margin-left: 0;
   }
 
   & :deep(.search-hit:has(+ :is(mark, .search-hit))),
-  & :deep(.search-hit:has(+ .lrm + :is(mark, .search-hit))),
+  & :deep(.search-hit:has(+ .bidi + :is(mark, .search-hit))),
   & :deep(mark > .search-hit:last-child),
-  & :deep(mark > .search-hit:has(+ .lrm:last-child)),
+  & :deep(mark > .search-hit:has(+ .bidi:last-child)),
   & :deep(mark:has(+ mark)),
-  & :deep(mark:has(+ .lrm + mark)) {
+  & :deep(mark:has(+ .bidi + mark)) {
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
   }
 
   & :deep(:is(mark, .search-hit) + .search-hit),
-  & :deep(:is(mark, .search-hit) + .lrm + .search-hit),
+  & :deep(:is(mark, .search-hit) + .bidi + .search-hit),
   & :deep(mark + mark),
-  & :deep(mark + .lrm + mark),
+  & :deep(mark + .bidi + mark),
   & :deep(mark > .search-hit:first-child) {
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;

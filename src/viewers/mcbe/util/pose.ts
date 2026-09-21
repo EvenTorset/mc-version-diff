@@ -1,6 +1,6 @@
 import Molang from 'molangjs'
 import type { DeltaResult } from '@/delta_providers'
-import { listFiles, parseJson } from '@/util/bedrockFiles'
+import { listFiles, parseJson } from '@/viewers/mcbe/util/files'
 
 type Vec3 = [ number, number, number ]
 

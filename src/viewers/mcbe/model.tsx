@@ -1,9 +1,10 @@
 import { registerViewer } from '../registry'
 import { renderModelTrack } from '../modelTrack'
-import { listBedrockModels, loadBedrockModel, registerBedrockLoader } from '@/util/bedrockModel'
+import { listBedrockModels, loadBedrockModel, registerBedrockLoader } from '@/viewers/mcbe/util/model'
 
 registerViewer('mcbe_model', {
   edition: 'mcbe',
+  predictedHeight: 285,
   test(_dr, track) {
     return /^resource_pack\/models\/.+\.json$/.test(track.id)
   },

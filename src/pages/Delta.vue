@@ -203,6 +203,7 @@ let pendingScrollReset = false
 
 watch(selectedCategory, () => {
   pendingScrollReset = true
+  focusedTrack.value = ''
 })
 
 function onCategoryTransitionEnd() {

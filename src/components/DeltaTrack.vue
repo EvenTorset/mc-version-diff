@@ -24,6 +24,8 @@ import { holdFocus, isInitialFocus } from '@/util/trackFocus.ts'
 import { computed } from 'vue'
 import Notify from '@/notify.tsx'
 import SizeDiff from './SizeDiff.vue'
+import { maxWidthQuery, useBreakpoint } from '@/util/useBreakpoint.ts'
+import { resolveStaticOrAsync } from '@/util/resolveToStatic.ts'
 
 const props = defineProps<{
   track: DeltaTrack
@@ -56,6 +58,7 @@ watch(expanded, v => treeList?.setTrackExpanded(props.track, v), { immediate: tr
 const isInitialAutoExpanded = ref(initExpanded)
 const isInitialRender = ref(initExpanded)
 const shouldRenderContent = ref(initExpanded)
+const minHeight = ref<string | undefined>()
 
 const viewer = computed(() => getViewer(props.dr, props.track))
 const view = shallowRef<Renderable>()
@@ -129,6 +132,10 @@ function markContentInteraction() {
 
 onMounted(async () => {
   if (expanded.value) {
+    if (isInitialAutoExpanded.value) {
+      minHeight.value = `${await resolveStaticOrAsync(viewer.value?.predictedHeight, props.dr, props.track) ?? 0}px`
+    }
+
     view.value = await renderView()
   }
   isInitialRender.value = false
@@ -213,6 +220,8 @@ function toggle() {
   }
   expanded.value = !expanded.value
 }
+
+const isNarrow = useBreakpoint(maxWidthQuery('1100px'))
 </script>
 
 <template>
@@ -244,7 +253,12 @@ function toggle() {
         style="cursor: pointer;"
       >
         <TrackTag :state="DeltaTrackState.Moved" />
-        <ArrowTurnRight20Filled style="transform: scaleY(-1); width: 20px; height: 20px;" />
+        <ArrowTurnRight20Filled :style="{
+          transform: 'scaleY(-1)',
+          width: '20px',
+          height: '20px',
+          marginTop: isNarrow ? '-4px' : undefined
+        }" />
       </Col>
       <TrackTag
         v-else
@@ -252,12 +266,15 @@ function toggle() {
         @click="toggle"
       />
 
-      <Col v-if="track.state === DeltaTrackState.Moved" align="stretch" style="overflow: hidden;">
+      <div
+        v-if="track.state === DeltaTrackState.Moved"
+        style="overflow: hidden; padding: 0 2px; margin: 0 -2px;"
+      >
         <MarkFilePathChanges
           :original="track.a"
           :modified="track.b"
         />
-      </Col>
+      </div>
       <FilePath v-else :path="track.id"/>
       <div v-if="track.state === DeltaTrackState.Moved" style="min-width: 16px;"></div>
       <SizeDiff
@@ -328,9 +345,7 @@ function toggle() {
     <div
       v-if="shouldRenderContent"
       class="delta-track-detail"
-      :style="{
-        minHeight: (expanded && isInitialAutoExpanded) ? `${viewer?.predictedHeight?.(track) ?? 0}px` : undefined
-      }"
+      :style="{ minHeight }"
       @pointerdown.capture="markContentInteraction"
       @keydown.capture="markContentInteraction"
     >

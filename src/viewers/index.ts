@@ -1,9 +1,9 @@
 import type { DeltaResult, DeltaTrack } from '@/delta_providers'
-import type { Renderable } from '@/types'
+import type { Renderable, StaticOrAsync } from '@/types'
 
 export type Viewer = {
   edition?: string
-  predictedHeight?: (track: DeltaTrack) => number
+  predictedHeight?: StaticOrAsync<number, [DeltaResult, DeltaTrack]>
   test(dr: DeltaResult, track: DeltaTrack): boolean
   render(dr: DeltaResult, track: DeltaTrack): Promise<Renderable> | Renderable
 }

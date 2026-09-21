@@ -3,8 +3,8 @@ import { getThree, ModelLoader, prepareAssets } from '@/util/blockModelRenderer'
 import { deltaVirtualHandler } from '@/util/virtualHandler'
 import { imageFromBytes } from '@/util/imageFromBytes'
 import { tgaToImageData } from '@/util/tga'
-import { listFiles, parseJson } from '@/util/bedrockFiles'
-import { activatingProperties, animationLength, computePose, entityProperties, hiddenBones, molangEvaluator, readAnimations, runScripts, sampleAnimation, visibleParts, type AnimationSets, type Pose, type Properties, type Rest } from '@/util/bedrockPose'
+import { listFiles, parseJson } from '@/viewers/mcbe/util/files'
+import { activatingProperties, animationLength, computePose, entityProperties, hiddenBones, molangEvaluator, readAnimations, runScripts, sampleAnimation, visibleParts, type AnimationSets, type Pose, type Properties, type Rest } from '@/viewers/mcbe/util/pose'
 
 type Vec3 = [ number, number, number ]
 
