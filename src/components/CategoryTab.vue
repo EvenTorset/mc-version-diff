@@ -44,7 +44,7 @@ const favorite = computed({
         <NIcon
           v-bind="props"
           class="favorite-button"
-          @click.stop="favorite = name"
+          @click.stop.prevent="favorite = name"
           :component="favorite === name ? Star12Filled : Star12Regular"
         />
       </template>
