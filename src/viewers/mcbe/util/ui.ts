@@ -1,7 +1,7 @@
 import type { DeltaResult } from '@/delta_providers'
-import { listFiles, parseJson } from '@/util/bedrockFiles'
+import { listFiles, parseJson } from '@/viewers/mcbe/util/files'
 import { imageFromBytes } from '@/util/imageFromBytes'
-import { loadBedrockFont, LINE, type BitmapFont } from '@/util/bedrockFont'
+import { loadBedrockFont, LINE, type BitmapFont } from '@/viewers/mcbe/util/font'
 import { createBudget } from '@/util/yieldToMain'
 
 export const SCREEN_WIDTH = 376

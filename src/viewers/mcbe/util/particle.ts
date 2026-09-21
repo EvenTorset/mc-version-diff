@@ -1,6 +1,6 @@
 import type { DeltaResult } from '@/delta_providers'
 import { getThree, ModelLoader, versionAssets } from '@/util/blockModelRenderer'
-import { parseJson } from '@/util/bedrockFiles'
+import { parseJson } from '@/viewers/mcbe/util/files'
 import { tgaToImageData } from '@/util/tga'
 
 const TICK_RATE = 30

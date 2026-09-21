@@ -1,6 +1,6 @@
 import { registerViewer } from '../registry'
 import { renderModelTrack } from '../modelTrack'
-import { listBedrockModels, loadBedrockModel, registerBedrockLoader } from '@/util/bedrockModel'
+import { listBedrockModels, loadBedrockModel, registerBedrockLoader } from '@/viewers/mcbe/util/model'
 
 registerViewer('mcbe_model', {
   edition: 'mcbe',

@@ -1,6 +1,6 @@
 import { registerViewer } from '../registry'
 import { renderModelTrack } from '../modelTrack'
-import { listBedrockParticles, loadBedrockParticle, registerParticleLoader } from '@/util/bedrockParticle'
+import { listBedrockParticles, loadBedrockParticle, registerParticleLoader } from '@/viewers/mcbe/util/particle'
 
 registerViewer('mcbe_particle', {
   edition: 'mcbe',
