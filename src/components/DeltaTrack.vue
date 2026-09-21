@@ -25,6 +25,7 @@ import { computed } from 'vue'
 import Notify from '@/notify.tsx'
 import SizeDiff from './SizeDiff.vue'
 import { maxWidthQuery, useBreakpoint } from '@/util/useBreakpoint.ts'
+import { resolveStaticOrAsync } from '@/util/resolveToStatic.ts'
 
 const props = defineProps<{
   track: DeltaTrack
@@ -57,6 +58,7 @@ watch(expanded, v => treeList?.setTrackExpanded(props.track, v), { immediate: tr
 const isInitialAutoExpanded = ref(initExpanded)
 const isInitialRender = ref(initExpanded)
 const shouldRenderContent = ref(initExpanded)
+const minHeight = ref<string | undefined>()
 
 const viewer = computed(() => getViewer(props.dr, props.track))
 const view = shallowRef<Renderable>()
@@ -130,6 +132,10 @@ function markContentInteraction() {
 
 onMounted(async () => {
   if (expanded.value) {
+    if (isInitialAutoExpanded.value) {
+      minHeight.value = `${await resolveStaticOrAsync(viewer.value?.predictedHeight, props.dr, props.track) ?? 0}px`
+    }
+
     view.value = await renderView()
   }
   isInitialRender.value = false
@@ -339,9 +345,7 @@ const isNarrow = useBreakpoint(maxWidthQuery('1100px'))
     <div
       v-if="shouldRenderContent"
       class="delta-track-detail"
-      :style="{
-        minHeight: (expanded && isInitialAutoExpanded) ? `${viewer?.predictedHeight?.(track) ?? 0}px` : undefined
-      }"
+      :style="{ minHeight }"
       @pointerdown.capture="markContentInteraction"
       @keydown.capture="markContentInteraction"
     >

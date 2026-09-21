@@ -17,6 +17,7 @@ import { diffImage } from '@/util/imageDiff'
 import NativeTemplate from '@/components/NativeTemplate.vue'
 import { imageFromBytes } from '@/util/imageFromBytes'
 import RawImage from '@/components/RawImage.vue'
+import type { RawBytes } from 'minecraft-asset-loader'
 
 export const imageViewMode = ref<ImageViewMode>('rgba')
 export const animateTextures = ref(false)
@@ -134,8 +135,71 @@ const legend = [
   },
 ]
 
+async function getRawEntryBytes(dr: DeltaResult, version: string, path: string): Promise<RawBytes | undefined> {
+  if (dr.getStoredEntry) {
+    return await dr.getStoredEntry(version, path)?.raw()
+  } else {
+    const bytes = await dr.getEntry(version, path)
+    if (bytes) return { compression: null, bytes }
+    return undefined
+  }
+}
+
+async function getCompressedPNGDims(
+  compressed: Uint8Array<ArrayBuffer>,
+  compression: CompressionFormat,
+): Promise<[ number, number ]> {
+  const inputStream = new Blob([compressed.subarray(0, 128)]).stream()
+  const decompressedStream = inputStream.pipeThrough(new DecompressionStream(compression))
+  const reader = decompressedStream.getReader()
+
+  const header = new Uint8Array(24)
+  let offset = 0
+
+  try {
+    while (offset < 24) {
+      const { done, value } = await reader.read()
+      if (done) throw new Error('Unexpected end of compressed data')
+
+      const copyLength = Math.min(value.length, 24 - offset)
+      header.set(value.subarray(0, copyLength), offset)
+      offset += copyLength
+    }
+
+    const view = new DataView(header.buffer)
+    const width = view.getUint32(16, false)
+    const height = view.getUint32(20, false)
+    return [ width, height ]
+
+  } finally {
+    reader.cancel()
+  }
+}
+
+async function getEntryDims(
+  dr: DeltaResult,
+  version: string,
+  path: string,
+): Promise<[ number, number ]> {
+  const entry = await getRawEntryBytes(dr, version, path)
+  if (entry === undefined) return [0, 0]
+  if (entry.compression) {
+    return getCompressedPNGDims(entry.bytes as Uint8Array<ArrayBuffer>, entry.compression)
+  }
+
+  const dv = new DataView(entry.bytes.buffer.slice(entry.bytes.byteOffset + 16, entry.bytes.byteOffset + 24))
+  return [ dv.getUint32(0, false), dv.getUint32(4, false) ]
+}
+
 registerViewer('image', {
-  predictedHeight(_track) { return 166.4 },
+  async predictedHeight(dr, track) {
+    const a = await getEntryDims(dr, dr.a, track.a)
+    const b = await getEntryDims(dr, dr.b, track.b)
+    return Math.max(
+      a[1] * Math.min(a[0] / 512, a[1] / 128),
+      b[1] * Math.min(b[0] / 512, b[1] / 128),
+    ) + 38.4
+  },
   test(_dr, track) {
     return /\.(?:png|tga|jpg|jpeg|hdr)$/.test(track.id)
   },

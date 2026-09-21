@@ -49,7 +49,7 @@ function areBytesEqual(a: Uint8Array, b: Uint8Array): boolean {
 }
 
 registerViewer('sound', {
-  predictedHeight(track) {
+  predictedHeight(_dr, track) {
     return track.state === DeltaTrackState.Edited ? 200 : 100
   },
   test(_dr, track) {

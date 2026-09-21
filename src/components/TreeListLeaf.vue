@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted, inject } from 'vue'
+import { ref, computed, watch, onUnmounted, inject, watchEffect } from 'vue'
 import DeltaTrack from './DeltaTrack.vue'
 import type { DeltaResult, DeltaTrack as DeltaTrackType } from '@/delta_providers'
 import { categoryExpands } from '@/delta_providers/category'
 import { getViewer } from '@/viewers/registry.ts'
 import { DeltaTrackState } from '@/delta_providers/states'
+import { resolveStaticOrAsync } from '@/util/resolveToStatic.ts'
 
 const props = defineProps<{
   dr: DeltaResult
@@ -36,7 +37,8 @@ function triggerRetire(event: Event) {
   retireTrack(props.track)
 }
 
-const trackHeight = computed(() => {
+const trackHeight = ref<string | undefined>()
+watchEffect(async () => {
   const t = props.track
   let h = 32
 
@@ -47,13 +49,13 @@ const trackHeight = computed(() => {
     )
     && categoryExpands(props.dr, props.dr.getCategory(t))
   ) {
-    const ph = getViewer(props.dr, t)?.predictedHeight?.(t)
+    const ph = await resolveStaticOrAsync(getViewer(props.dr, t)?.predictedHeight, props.dr, t)
     if (ph !== undefined) {
       h = ph + 34
     }
   }
 
-  return retiredHeight.value ?? `${h}px`
+  trackHeight.value = retiredHeight.value ?? `${h}px`
 })
 
 watch([leafRef, isMounted], ([newEl, mountedState], [oldEl]) => {
