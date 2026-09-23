@@ -7,6 +7,10 @@ export interface FilesMeta {
   aFolder?: boolean
   bFolder?: boolean
   aVersion?: string
+  aUrl?: string
+  bUrl?: string
+  aCachedUrl?: string
+  bCachedUrl?: string
 }
 
 export const UPLOAD_VERSION_A_KEY = '__upload_version_a'
