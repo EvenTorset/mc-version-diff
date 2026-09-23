@@ -196,8 +196,8 @@ registerViewer('image', {
     const a = await getEntryDims(dr, dr.a, track.a)
     const b = await getEntryDims(dr, dr.b, track.b)
     return Math.max(
-      a[1] * Math.min(a[0] / 512, a[1] / 128),
-      b[1] * Math.min(b[0] / 512, b[1] / 128),
+      a[1] * Math.min(512 / a[0], 128 / a[1]),
+      b[1] * Math.min(512 / b[0], 128 / b[1]),
     ) + 38.4
   },
   test(_dr, track) {

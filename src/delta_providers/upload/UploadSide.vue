@@ -6,20 +6,23 @@ import Notify from '@/notify'
 import { errorMessage } from '@/util/errorMessage'
 import { droppedFolder, folderFromEntry, folderFromInput, packFolder, type PickedFolder } from '@/util/folderUpload'
 import { ArrowUpload24Regular, Attach24Regular, Dismiss24Filled, Folder24Regular, FolderZip24Regular } from '@vicons/fluent'
-import { NButton, NIcon, NProgress, NSpin, NUpload, NUploadDragger, type UploadFileInfo } from 'naive-ui'
+import { NButton, NIcon, NInput, NProgress, NSpin, NUpload, NUploadDragger, type UploadFileInfo } from 'naive-ui'
 import { ref, type Component } from 'vue'
 import { getCSSVar } from '@/util/getCSSVar'
+
+type SideMode = 'file' | 'version' | 'url'
 
 defineProps<{
   label: string
   accept?: string
   picker?: Component | null
-  modes?: { value: string, label: string }[]
+  modes: { value: string, label: string }[]
 }>()
 
 const fileList = defineModel<UploadFileInfo[]>('fileList', { required: true })
 const version = defineModel<string | null>('version', { required: true })
-const mode = defineModel<string | null>('mode', { default: null })
+const mode = defineModel<SideMode>('mode', { default: 'file' })
+const url = defineModel<string>('url', { default: '' })
 
 const folderInput = ref<HTMLInputElement>()
 const stage = ref<'reading' | 'packing' | null>(null)
@@ -72,10 +75,16 @@ function onDrop(event: DragEvent) {
 
 <template>
   <div class="upload-side" @drop.capture="onDrop">
-    <div v-if="picker && version !== null" class="version-source">
+    <div v-if="mode === 'version' && picker" class="version-source">
       <Col>
         <h3>{{ label }}</h3>
         <component :is="picker" :model-value="version" @update:model-value="(id: string) => version = id" />
+      </Col>
+    </div>
+    <div v-else-if="mode === 'url'" class="url-source">
+      <Col>
+        <h3>{{ label }}</h3>
+        <NInput v-model:value="url" placeholder="https://…" />
       </Col>
     </div>
     <NUpload
@@ -116,14 +125,12 @@ function onDrop(event: DragEvent) {
     </NUpload>
     <input ref="folderInput" type="file" webkitdirectory hidden @change="onFolderInput" @cancel="stage = null">
     <VersionModeTabs
-      v-if="modes && mode !== null"
       class="corner left"
-      :model-value="mode"
+      v-model="mode"
       :options="modes"
-      @update:model-value="(value: string) => mode = value"
     />
     <NButton
-      v-if="version === null && fileList.length"
+      v-if="mode === 'file' && fileList.length"
       circle
       class="icon danger corner right"
       size="small"
@@ -133,7 +140,18 @@ function onDrop(event: DragEvent) {
         <NIcon :component="Dismiss24Filled" />
       </template>
     </NButton>
-    <Tooltip v-else-if="version === null && !stage">
+    <NButton
+      v-else-if="mode === 'url' && url"
+      circle
+      class="icon danger corner right"
+      size="small"
+      @click="url = ''"
+    >
+      <template #icon>
+        <NIcon :component="Dismiss24Filled" />
+      </template>
+    </NButton>
+    <Tooltip v-else-if="mode === 'file' && !stage">
       <template #trigger="{ props }">
         <NButton
           v-bind="props"
@@ -159,6 +177,7 @@ function onDrop(event: DragEvent) {
   min-width: 0;
   display: flex;
   position: relative;
+  height: 220px;
 
   > :deep(.n-upload) {
     flex: 1;
@@ -178,7 +197,8 @@ function onDrop(event: DragEvent) {
   }
 }
 
-.version-source {
+.version-source,
+.url-source {
   flex: 1;
   display: flex;
   align-items: center;

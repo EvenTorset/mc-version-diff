@@ -2,7 +2,7 @@
 import Col from '@/components/Col.vue'
 import Row from '@/components/Row.vue'
 import { NButton, NCard, NCheckbox, NSelect, type UploadFileInfo } from 'naive-ui'
-import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch, type Ref } from 'vue'
 import { getDeltaProvider, listDeltaProviders } from '../registry'
 import Content from '@/components/Content.vue'
 import Tooltip from '@/components/Tooltip.vue'
@@ -12,7 +12,7 @@ import { deleteUserFile, readUserFile, writeUserFile } from '@/util/userFiles'
 import Notify from '@/notify'
 import { errorMessage } from '@/util/errorMessage'
 import { selectedComparator } from './selectedComparator'
-import { UPLOAD_VERSION_A_KEY, UPLOAD_VERSION_B_KEY, readFilesMeta, writeFilesMeta } from './filesMeta'
+import { UPLOAD_VERSION_A_KEY, UPLOAD_VERSION_B_KEY, readFilesMeta, writeFilesMeta, type FilesMeta } from './filesMeta'
 import CardSectionHeader from '@/components/CardSectionHeader.vue'
 import UploadSide from './UploadSide.vue'
 import { useSwapCrossfade } from '@/util/swapCrossfade'
@@ -50,13 +50,18 @@ const comparatorProvider = computed(() => getDeltaProvider(selectedComparator.va
 const versionPicker = computed(() => comparatorProvider.value.upload?.versionPicker?.() ?? null)
 const fileListA = ref<UploadFileInfo[]>([])
 const fileListB = ref<UploadFileInfo[]>([])
-type CompareMode = 'file' | 'version'
+type CompareMode = 'file' | 'version' | 'url'
 const COMPARE_MODES: { value: CompareMode, label: string }[] = [
   { value: 'file', label: 'Upload' },
+  { value: 'url', label: 'URL' },
   { value: 'version', label: 'Vanilla' },
 ]
-const compareMode = ref<CompareMode>('file')
+const BASIC_COMPARE_MODES = COMPARE_MODES.filter(m => m.value !== 'version')
+const compareModeA = ref<CompareMode>('file')
+const compareModeB = ref<CompareMode>('file')
 const version = ref('')
+const urlA = ref('')
+const urlB = ref('')
 
 function swapped<T>(a: { value: T }, b: { value: T }) {
   return computed({
@@ -75,21 +80,31 @@ const displayListA = swapped(fileListA, fileListB)
 const displayListB = swapped(fileListB, fileListA)
 
 const slotAVersion = computed({
-  get: () => compareMode.value === 'version' && versionPicker.value ? version.value : null,
+  get: () => compareModeA.value === 'version' && versionPicker.value ? version.value : null,
   set: id => { if (id !== null) version.value = id },
 })
 const nothing = computed<string | null>({ get: () => null, set: () => {} })
 const displayVersionA = swapped(slotAVersion, nothing)
 const displayVersionB = swapped(nothing, slotAVersion)
 
-const slotAMode = computed<string | null>({
-  get: () => versionPicker.value ? compareMode.value : null,
-  set: value => { if (value === 'file' || value === 'version') compareMode.value = value },
-})
-const displayModeA = swapped(slotAMode, nothing)
-const displayModeB = swapped(nothing, slotAMode)
+const modeOptionsA = computed(() => versionPicker.value ? COMPARE_MODES : BASIC_COMPARE_MODES)
+const modeOptionsB = computed(() => BASIC_COMPARE_MODES)
+const displayModeA = swapped(compareModeA, compareModeB)
+const displayModeB = swapped(compareModeB, compareModeA)
+const displayModeOptionsA = swapped(modeOptionsA, modeOptionsB)
+const displayModeOptionsB = swapped(modeOptionsB, modeOptionsA)
+const displayUrlA = swapped(urlA, urlB)
+const displayUrlB = swapped(urlB, urlA)
 
-const sideAReady = computed(() => slotAVersion.value === null ? fileListA.value.length > 0 : slotAVersion.value !== '')
+const slotAReady = computed(() => {
+  if (compareModeA.value === 'version') return version.value !== ''
+  if (compareModeA.value === 'url') return urlA.value.trim() !== ''
+  return fileListA.value.length > 0
+})
+const slotBReady = computed(() => {
+  if (compareModeB.value === 'url') return urlB.value.trim() !== ''
+  return fileListB.value.length > 0
+})
 
 function optionShown(option: { uploadsOnly?: boolean }) {
   return !option.uploadsOnly || slotAVersion.value === null
@@ -97,7 +112,7 @@ function optionShown(option: { uploadsOnly?: boolean }) {
 
 const optionValues = reactive<any[]>([])
 const compareLink = computed<string | RouteLocationAsRelativeGeneric | RouteLocationAsPathGeneric | null>(() => {
-  if (!sideAReady.value || !fileListB.value.length) {
+  if (!slotAReady.value || !slotBReady.value) {
     return null
   }
   return {
@@ -107,15 +122,19 @@ const compareLink = computed<string | RouteLocationAsRelativeGeneric | RouteLoca
       a: selectedComparator.value,
       b: swap.value ? 'swap' : undefined,
     },
-    query: Object.fromEntries(comparatorProvider.value.upload?.options?.map((o, i) => {
-      if (!optionShown(o)) return null
-      switch (o.type) {
-        case 'bool': return optionValues[i] ? [
-          o.queryParam,
-          String(optionValues[i])
-        ] : null
-      }
-    }).filter(e => e !== null) ?? [])
+    query: {
+      ...compareModeA.value === 'url' && urlA.value.trim() && { aUrl: urlA.value.trim() },
+      ...compareModeB.value === 'url' && urlB.value.trim() && { bUrl: urlB.value.trim() },
+      ...Object.fromEntries(comparatorProvider.value.upload?.options?.map((o, i) => {
+        if (!optionShown(o)) return null
+        switch (o.type) {
+          case 'bool': return optionValues[i] ? [
+            o.queryParam,
+            String(optionValues[i])
+          ] : null
+        }
+      }).filter(e => e !== null) ?? [])
+    }
   }
 })
 
@@ -179,26 +198,67 @@ function saveVersion(id: string | null) {
   writeFilesMeta(meta)
 }
 
+function saveUrl(slot: 'a' | 'b', url: string) {
+  if (restoring) return;
+  const meta = currentMeta()
+  const urlKey = slot === 'a' ? 'aUrl' : 'bUrl'
+  if (url.trim()) {
+    meta[urlKey] = url.trim()
+  } else {
+    delete meta[urlKey]
+  }
+  writeFilesMeta(meta)
+}
+
 watch(fileListA, list => saveFile(list, UPLOAD_VERSION_A_KEY, 'a'))
 watch(fileListB, list => saveFile(list, UPLOAD_VERSION_B_KEY, 'b'))
 watch(slotAVersion, id => saveVersion(id))
+watch(urlA, url => saveUrl('a', url))
+watch(urlB, url => saveUrl('b', url))
 
-watch(compareMode, async mode => {
+watch(compareModeA, async mode => {
   if (mode !== 'version' || version.value) return;
   const id = await comparatorProvider.value.upload?.defaultVersion?.()
-  if (id && compareMode.value === 'version' && !version.value) version.value = id
+  if (id && compareModeA.value === 'version' && !version.value) version.value = id
 })
 
 function clear() {
   fileListA.value = []
   fileListB.value = []
   version.value = ''
+  urlA.value = ''
+  urlB.value = ''
+
+  const meta = currentMeta()
+  delete meta.aCachedUrl
+  delete meta.bCachedUrl
+  writeFilesMeta(meta)
 }
 
 watch(selectedComparator, () => {
   if (restoring) return;
   clear()
 })
+
+function restoreSide(
+  slot: 'a' | 'b',
+  meta: FilesMeta | null,
+  file: File | null,
+  mode: Ref<CompareMode>,
+  url: Ref<string>,
+  fileList: Ref<UploadFileInfo[]>,
+) {
+  const metaUrl = slot === 'a' ? meta?.aUrl : meta?.bUrl
+  const cachedUrl = slot === 'a' ? meta?.aCachedUrl : meta?.bCachedUrl
+  const name = slot === 'a' ? meta?.aName : meta?.bName
+  const folder = slot === 'a' ? meta?.aFolder : meta?.bFolder
+  if (metaUrl) url.value = metaUrl
+  if (file && (!metaUrl || cachedUrl === metaUrl)) {
+    fileList.value = [toUploadFileInfo(file, name ?? file.name, folder)]
+  } else if (metaUrl) {
+    mode.value = 'url'
+  }
+}
 
 onMounted(async () => {
   const meta = readFilesMeta()
@@ -209,10 +269,10 @@ onMounted(async () => {
     readUserFile(UPLOAD_VERSION_A_KEY),
     readUserFile(UPLOAD_VERSION_B_KEY),
   ])
-  if (fileA) fileListA.value = [toUploadFileInfo(fileA, meta?.aName ?? fileA.name, meta?.aFolder)]
-  if (fileB) fileListB.value = [toUploadFileInfo(fileB, meta?.bName ?? fileB.name, meta?.bFolder)]
+  restoreSide('a', meta, fileA, compareModeA, urlA, fileListA)
+  restoreSide('b', meta, fileB, compareModeB, urlB, fileListB)
   if (meta?.aVersion) {
-    compareMode.value = 'version'
+    compareModeA.value = 'version'
     version.value = meta.aVersion
   }
   await nextTick()
@@ -239,10 +299,11 @@ onMounted(async () => {
           :label="swap ? 'Version B' : 'Version A'"
           :accept="comparatorProvider.upload?.accept"
           :picker="versionPicker"
-          :modes="COMPARE_MODES"
+          :modes="displayModeOptionsA"
           v-model:file-list="displayListA"
           v-model:version="displayVersionA"
           v-model:mode="displayModeA"
+          v-model:url="displayUrlA"
         />
         <Tooltip>
           <template #trigger="{ props }">
@@ -254,10 +315,11 @@ onMounted(async () => {
           :label="swap ? 'Version A' : 'Version B'"
           :accept="comparatorProvider.upload?.accept"
           :picker="versionPicker"
-          :modes="COMPARE_MODES"
+          :modes="displayModeOptionsB"
           v-model:file-list="displayListB"
           v-model:version="displayVersionB"
           v-model:mode="displayModeB"
+          v-model:url="displayUrlB"
         />
       </Row>
       <template v-if="comparatorProvider.upload?.options">
@@ -283,7 +345,7 @@ onMounted(async () => {
     <template #footer>
       <Row justify="flex-end" gap="8px">
         <NButton
-          :disabled="!fileListA.length && !fileListB.length && !version"
+          :disabled="!fileListA.length && !fileListB.length && !version && !urlA && !urlB"
           @click="clear"
         >
           Clear
