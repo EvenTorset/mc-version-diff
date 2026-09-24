@@ -39,8 +39,8 @@ checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
 
 [[package]]
 name = "minecraft-block-reader"
-version = "2.0.0"
-source = "git+https://github.com/ewanhowell5195/minecraft-block-reader.git#a03b6cc0e83c770a05fc5813b6eae07fe06d541d"
+version = "2.1.0"
+source = "git+https://github.com/ewanhowell5195/minecraft-block-reader.git#21bc67f5d24f53d36a16fc368904e2accb3e391f"
 dependencies = [
  "zune-inflate",
 ]
