@@ -52,7 +52,7 @@ async function textureDataUrl(dr: DeltaResult, version: string, texture: unknown
 
 function expressionStops(gradient: unknown): unknown[][] {
   const stops = Array.isArray(gradient) ? gradient : gradient && typeof gradient === 'object' ? Object.values(gradient) : []
-  return stops.filter((stop): stop is unknown[] => Array.isArray(stop) && stop.some(value => typeof value === 'string'))
+  return stops.filter((stop): stop is unknown[] => Array.isArray(stop) && stop.some(value => typeof value === 'string' || typeof (value as any)?.expression === 'string'))
 }
 
 function normalize(json: any) {
@@ -140,7 +140,7 @@ export async function loadBedrockParticle(dr: DeltaResult, version: string, path
     const ticks = Math.min(Math.round((time - state.last) * TICK_RATE), MAX_CATCHUP_TICKS)
     if (ticks > 0) state.last = time
     const manual = emitter.config.emitter_rate_mode === 'manual'
-    const once = emitter.config.emitter_lifetime_mode === 'once'
+    const once = [ 'once', 'expression' ].includes(emitter.config.emitter_lifetime_mode)
     const collides = !!emitter.config.particle_collision_toggle
     const cap = fit ? FIT_MAX_PARTICLES : Math.min(emitter.calculate(emitter.config.emitter_rate_maximum, emitter.params()) || LIVE_MAX_PARTICLES, LIVE_MAX_PARTICLES)
     for (let i = 0; i < ticks; i++) {
@@ -190,6 +190,7 @@ export function registerParticleLoader() {
       scene.global_options.tick_rate = TICK_RATE
       const emitter = new Wintersky.Emitter(scene, new Wintersky.Config(scene, entry.json), { loop_mode: 'auto', parent_mode: 'world' })
       Object.assign((emitter as any).Molang.global_variables, entry.variables)
+      if (emitter.config.emitter_lifetime_mode === 'expression') emitter.config.emitter_lifetime_activation = 0
       if (entry.json.particle_effect.components?.['minecraft:particle_motion_collision']) {
         if (emitter.config.space_local_position) emitter.ground_collision = false
         else {
