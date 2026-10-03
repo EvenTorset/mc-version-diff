@@ -1,5 +1,5 @@
 import { defineComponent, ref, unref, type VNode } from 'vue'
-import { NIcon, useNotification } from 'naive-ui'
+import { NButton, NIcon, useNotification } from 'naive-ui'
 import { type Renderable } from '@/types'
 import Content from '@/components/Content.vue'
 import { CheckmarkCircle24Regular, ErrorCircle24Regular, Info24Regular, QuestionCircle24Regular, Warning24Regular } from '@vicons/fluent'
@@ -9,7 +9,7 @@ type NotifyType = 'error' | 'info' | 'warning' | 'success' | 'default'
 export type NotifyAction =
   | Renderable
   | {
-      icon?: string
+      icon?: Renderable
       label: string
       run: () => void
     }
@@ -94,11 +94,15 @@ function createNotification(type: NotifyType, input: NotifyInput): NotifyControl
       <div style="display: flex; gap: 6px">
         {actionsRef.value.map(a => {
           if (typeof a === 'object' && a !== null && 'label' in a && 'run' in a) {
-            return <v-btn
-              prepend-icon={a.icon}
+            const icon = a.icon
+            return <NButton
               class='accent'
               onClick={a.run}
-            >{a.label}</v-btn>
+              v-slots={{
+                default: () => a.label,
+                ...icon && { icon: () => <Content content={icon} /> },
+              }}
+            />
           }
           return <Content content={a} />
         })}

@@ -2,7 +2,6 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { getSuggestionPair, type SuggestionKey } from './delta_providers/manifest'
 import { getDeltaProvider } from './delta_providers/registry'
 import { javaEdition } from './delta_providers/mcje/edition'
-import { URL_BASE } from '@/../urlBase'
 import DeltaRoute from '@/pages/DeltaRoute.vue'
 import { DEFAULT_TITLE, deltaTitle } from '@/util/documentTitle'
 
@@ -21,7 +20,7 @@ const routes: RouteRecordRaw[] = [
 ]
 
 export const router = createRouter({
-  history: createWebHistory(URL_BASE),
+  history: createWebHistory(),
   routes,
 })
 
