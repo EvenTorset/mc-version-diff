@@ -1,4 +1,5 @@
-import { CORS } from '../loader'
+import { CORS } from '@/util/cors'
+
 const ARTICLE_URL = 'https://www.minecraft.net/en-us/article/'
 const STORAGE_KEY = 'mc-version-diff-changelogs'
 

@@ -2,8 +2,7 @@ import MinecraftAssets from 'minecraft-asset-loader'
 import { Settings } from '@/settings'
 import { clearDirectory } from '@/util/opfs'
 import { reactive, ref } from 'vue'
-
-export const CORS = 'https://cors.dokucraft.co.uk/'
+import { CORS, CORS_WORKER } from '@/util/cors'
 
 const PROXIED = ['https://github.com/', 'https://resources.download.minecraft.net/']
 
@@ -51,7 +50,7 @@ export function assets(type: Edition = 'java'): MinecraftAssets {
         type,
         cacheSize: cacheSize || null,
         cacheKey: type === 'java' ? undefined : type,
-        proxy: url => PROXIED.some(host => url.startsWith(host)) ? CORS + url : false,
+        proxy: url => PROXIED.some(host => url.startsWith(host)) ? (url.includes('Mojang/bedrock-samples') ? CORS_WORKER : CORS) + url : false,
         manifestExpiry: MANIFEST_TTL,
         onManifestProgress: ratio => progress[type] = ratio < 1 ? ratio : null,
         onManifestUpdate: () => manifestUpdated.value++,
