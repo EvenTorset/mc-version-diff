@@ -14,8 +14,7 @@ import {
 import { createProgressBar } from '@/delta_providers/versions'
 import type { UploadSource } from '../index.ts'
 import type { ProgressList } from '@/components/progressList.tsx'
-
-const CORS_PROXY = 'https://cors.even-torset.workers.dev/'
+import { CORS_WORKER } from '@/util/cors.ts'
 
 type Slot = 'a' | 'b'
 
@@ -87,7 +86,7 @@ async function fetchUrlContent(url: string, label: string, progressDisplay: Prog
   try {
     progressBar.progHandler.setMessage('Downloading...')
     progressBar.progHandler.setUnit('byte')
-    const response = await fetch(CORS_PROXY + url)
+    const response = await fetch(CORS_WORKER + url)
     if (!response.ok) throw new Error(`Request failed with status ${response.status}`)
     const totalHeader = response.headers.get('content-length')
     const total = totalHeader ? Number(totalHeader) : 0
