@@ -26,10 +26,13 @@ async function getAudioSamples(
       await wasm.default()
       return wasm.convertFsb5
     })())
-    return convertFsb5(rawContent).map((sample: { name: string, bytes: Uint8Array<ArrayBuffer> }) => ({
-      ...sample,
-      path: `${path}/${sample.name}`,
-    }))
+    return convertFsb5(rawContent).map((sample: { name: string, bytes: Uint8Array<ArrayBuffer> }) => {
+      return {
+        name: sample.name,
+        bytes: sample.bytes,
+        path: `${path}/${sample.name}`,
+      }
+    })
   }
   return [
     {
