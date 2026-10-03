@@ -29,7 +29,7 @@ router.afterEach(to => {
     ? deltaTitle(to.path, to.params.provider as string, to.params.a as string, to.params.b as string)
     : DEFAULT_TITLE
   document.querySelector('link[rel="canonical"]')
-    ?.setAttribute('href', `https://cccode.pages.dev/version-diff${to.path}`)
+    ?.setAttribute('href', `https://version-diff.evto.cc${to.path}`)
 })
 
 router.beforeEach(async to => {

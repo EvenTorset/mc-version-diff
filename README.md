@@ -6,7 +6,7 @@ Compare any two versions of Minecraft side by side. Instantly preview changes ac
 
 Works on Java Edition, Bedrock Edition, and resource or data packs you upload yourself.
 
-You can use [Version Diff online](https://cccode.pages.dev/version-diff/). Unlike official changelogs that only give a high-level overview, it shows you the exact files that were added, modified, moved, or removed between updates.
+You can use [Version Diff online](https://version-diff.evto.cc/). Unlike official changelogs that only give a high-level overview, it shows you the exact files that were added, modified, moved, or removed between updates.
 
 > [!NOTE]
 > All comparisons are processed entirely in your browser. Uploaded files are never sent to a server.
