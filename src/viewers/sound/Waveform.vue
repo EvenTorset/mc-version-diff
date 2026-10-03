@@ -267,10 +267,11 @@ function writePeaks(peaks: Float32Array, buffer: AudioBuffer, chunk: OggChunk, d
   const to = Math.min(buckets, Math.max(from + 1, Math.round((chunk.end / duration) * buckets)))
 
   for (let bucket = from; bucket < to; bucket++) {
-    const start = Math.max(0, Math.round(((bucket / buckets) * duration - startTime) * rate))
-    const end = Math.min(buffer.length, Math.round((((bucket + 1) / buckets) * duration - startTime) * rate))
-    let min = 0
-    let max = 0
+    const start = Math.max(0, Math.floor(((bucket / buckets) * duration - startTime) * rate))
+    const end = Math.min(buffer.length, Math.max(start + 1, Math.ceil((((bucket + 1) / buckets) * duration - startTime) * rate)))
+
+    let min = Infinity
+    let max = -Infinity
     for (const channel of channels) {
       for (let i = start; i < end; i++) {
         const sample = channel[i]
@@ -278,8 +279,8 @@ function writePeaks(peaks: Float32Array, buffer: AudioBuffer, chunk: OggChunk, d
         if (sample > max) max = sample
       }
     }
-    peaks[bucket * 2] = min
-    peaks[bucket * 2 + 1] = max
+    peaks[bucket * 2] = Number.isFinite(min) ? min : 0
+    peaks[bucket * 2 + 1] = Number.isFinite(max) ? max : 0
   }
 
   return to
