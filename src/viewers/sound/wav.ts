@@ -47,17 +47,20 @@ export function wavPeaks(bytes: Uint8Array<ArrayBuffer>, info: WavInfo, buckets:
   const scale = 1 / 32768
 
   for (let bucket = 0; bucket < buckets; bucket++) {
-    const from = Math.floor(bucket * framesPerBucket) * info.channels
-    const to = Math.min(samples.length, Math.ceil((bucket + 1) * framesPerBucket) * info.channels)
-    let min = 0
-    let max = 0
+    const fromFrame = Math.floor(bucket * framesPerBucket)
+    const toFrame = Math.min(info.frames, Math.max(fromFrame + 1, Math.ceil((bucket + 1) * framesPerBucket)))
+    const from = fromFrame * info.channels
+    const to = toFrame * info.channels
+
+    let min = Infinity
+    let max = -Infinity
     for (let at = from; at < to; at++) {
       const value = samples[at]
       if (value < min) min = value
-      else if (value > max) max = value
+      if (value > max) max = value
     }
-    peaks[bucket * 2] = min * scale
-    peaks[bucket * 2 + 1] = max * scale
+    peaks[bucket * 2] = (Number.isFinite(min) ? min : 0) * scale
+    peaks[bucket * 2 + 1] = (Number.isFinite(max) ? max : 0) * scale
   }
 
   return peaks
