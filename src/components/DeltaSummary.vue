@@ -76,7 +76,7 @@ async function copySpreadsheet() {
         ) && t.b.endsWith('.png'))
         .sort((a, b) => naturalCompare(a.id, b.id))
         .map(async t => [
-          (await props.dr.getEntry(props.dr.b, t.b)).toBase64({ alphabet: 'base64url' }),
+          (await props.dr.getEntry(props.dr.b, t.b)).toBase64({ alphabet: 'base64' }),
           t.b.replace(/^assets\/minecraft\/textures\//, '')
         ].join('\t'))
     )).join('\n')
