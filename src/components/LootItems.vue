@@ -5,7 +5,6 @@ import { itemName as translate } from '@/util/itemNames'
 import { ItemIcon } from './lazyRenderers'
 import Meter from './Meter.vue'
 import Tooltip from './Tooltip.vue'
-import { NSpin } from 'naive-ui'
 import { computed, ref, watch } from 'vue'
 import NamespacedPath from './NamespacedPath.vue'
 import Dim from './Dim.vue'
@@ -169,10 +168,7 @@ function iconVersion(row: ItemRow) {
 </script>
 
 <template>
-  <div v-if="busy" class="loot-busy">
-    <NSpin size="small" />
-    <div>Calculating drop rates…</div>
-  </div>
+  <template v-if="busy"></template>
   <div v-else-if="!rows.length" class="loot-empty">{{ emptyReason }}</div>
   <div v-else-if="isDiff && !showUnchanged && !sections.some(s => s.state !== 'same')" class="loot-empty">
     The items this table drops did not change.
