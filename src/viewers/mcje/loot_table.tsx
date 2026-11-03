@@ -5,7 +5,7 @@ import LootRules from '@/components/LootRules.vue'
 import type { DeltaResult } from '@/delta_providers'
 import { DeltaTrackState } from '@/delta_providers/states'
 import { Settings } from '@/settings'
-import { deltaTableReader, describeTable, oddsChanged, sampleTableCached } from '@/util/loot'
+import { deltaTableReader, describeTable, oddsChanged, tableOddsCached } from '@/util/loot'
 import stringify from 'fabulous-json'
 import { NCheckbox, NTabPane, NTabs } from 'naive-ui'
 import { ref } from 'vue'
@@ -42,8 +42,8 @@ async function initialTab(dr: DeltaResult, sides: Sides) {
   if (!before || !after) return 'items'
 
   const [ a, b ] = await Promise.all([
-    sampleTableCached(before.table, deltaTableReader(dr, dr.a)),
-    sampleTableCached(after.table, deltaTableReader(dr, dr.b)),
+    tableOddsCached(before.table, deltaTableReader(dr, dr.a)),
+    tableOddsCached(after.table, deltaTableReader(dr, dr.b)),
   ])
   if (oddsChanged(a, b)) return 'items'
 

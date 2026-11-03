@@ -67,7 +67,7 @@ const conditionsOf = (node: any) => asList(node?.condition ?? node?.conditions)
 const functionsOf = (node: any) => asList(node?.modifier ?? node?.functions)
 const typeOf = (node: any) => strip(typeof node === 'string' ? node : node?.condition ?? node?.type ?? node?.function ?? '')
 
-export const stackKey = (s: LootStack | LootOdds) =>
+export const stackKey = (s: { id: string, components?: Record<string, any> }) =>
   s.id + '|' + JSON.stringify(s.components ?? null)
 
 // seeded rather than Math.random: both sides of a diff must sample identically
@@ -212,6 +212,272 @@ class Roller {
   }
 }
 
+class Unsupported extends Error {}
+
+type Dist = Map<number, number>
+
+interface ItemOutcome {
+  id: string
+  components?: Record<string, any>
+  zero: number
+  stacks: number
+  total: number
+  min: number
+  max: number
+  via: Set<string>
+}
+
+type Outcome = Map<string, ItemOutcome>
+
+interface Variant {
+  id: string
+  components?: Record<string, any>
+  p: number
+  counts: Dist
+}
+
+function addTo(dist: Dist, value: number, p: number) {
+  dist.set(value, (dist.get(value) ?? 0) + p)
+}
+
+function single(dist: Dist) {
+  if (dist.size !== 1) throw new Unsupported()
+  return dist.keys().next().value!
+}
+
+function distOf(n: any, int = false): Dist {
+  if (n == null) return new Map([ [ 1, 1 ] ])
+  if (typeof n === 'number') return new Map([ [ n, 1 ] ])
+  const t = strip(n.type || '')
+  if (t === 'constant') return new Map([ [ n.value ?? 1, 1 ] ])
+  if (t === 'binomial') {
+    const N = single(distOf(n.n, true)), p = single(distOf(n.p))
+    if (!Number.isInteger(N)) throw new Unsupported()
+    const dist: Dist = new Map()
+    let choose = 1
+    for (let k = 0; k <= N; k++) {
+      dist.set(k, choose * p ** k * (1 - p) ** (N - k))
+      choose = choose * (N - k) / (k + 1)
+    }
+    return dist
+  }
+  if (n.min != null || n.max != null) {
+    const a = single(distOf(n.min ?? 0, int))
+    const b = single(distOf(n.max ?? a, int))
+    if (!int || !Number.isInteger(a) || !Number.isInteger(b) || b < a) throw new Unsupported()
+    const dist: Dist = new Map()
+    for (let v = a; v <= b; v++) dist.set(v, 1 / (b - a + 1))
+    return dist
+  }
+  return new Map([ [ n.value ?? 1, 1 ] ])
+}
+
+function mapDist(dist: Dist, fn: (v: number) => number) {
+  const out: Dist = new Map()
+  for (const [ v, p ] of dist) addTo(out, fn(v), p)
+  return out
+}
+
+function testOdds(c: any): { t: number, f: number } {
+  const type = typeOf(c)
+  if (type === 'all_of') {
+    const terms = asList(c.terms).map(testOdds)
+    return { t: terms.reduce((a, x) => a * x.t, 1), f: 1 - terms.reduce((a, x) => a * (1 - x.f), 1) }
+  }
+  if (type === 'any_of') {
+    const terms = asList(c.terms).map(testOdds)
+    return { t: 1 - terms.reduce((a, x) => a * (1 - x.t), 1), f: terms.reduce((a, x) => a * x.f, 1) }
+  }
+  if (type === 'inverted') {
+    const inner = testOdds(c.term ?? c.terms)
+    return { t: inner.f, f: inner.t }
+  }
+  if (type in TOOLS) return { t: 0, f: 1 }
+  const chance = conditionChance(c)
+  if (chance !== null) {
+    const p = Math.min(1, Math.max(0, single(distOf(chance))))
+    return { t: p, f: 1 - p }
+  }
+  return { t: 0, f: 0 }
+}
+
+function passChance(node: any) {
+  return conditionsOf(node).reduce((a, c) => a * (1 - testOdds(c).f), 1)
+}
+
+function applyFunction(f: any, v: Variant): Variant[] {
+  const t = typeOf(f)
+  if (t === 'set_count') return [ { ...v, counts: mapDist(distOf(f.count, true), c => Math.max(1, Math.round(c))) } ]
+  if (t === 'set_data') return Array.from(distOf(f.data, true), ([ d, p ]) => ({ ...v, id: legacyVariant(v.id, Math.round(d)), p: v.p * p }))
+  if (t === 'set_potion') return [ { ...v, components: { 'minecraft:potion_contents': { potion: f.id } } } ]
+  if (t === 'set_components') return [ { ...v, components: { ...v.components, ...f.components } } ]
+  return [ v ]
+}
+
+function itemOutcome(entry: any, pool: any, via?: string): Outcome {
+  let variants: Variant[] = [ { id: legacyVariant(strip(entry.name)), p: 1, counts: new Map([ [ 1, 1 ] ]) } ]
+  for (const f of functionsOf(entry).concat(functionsOf(pool))) {
+    const c = passChance(f)
+    if (c === 0) continue
+    const applied = variants.flatMap(v => applyFunction(f, v))
+    variants = c === 1 ? applied : applied.map(v => ({ ...v, p: v.p * c })).concat(variants.map(v => ({ ...v, p: v.p * (1 - c) })))
+  }
+  const out: Outcome = new Map()
+  for (const v of variants) {
+    if (!v.id || v.p === 0) continue
+    const k = stackKey(v)
+    if (!out.has(k)) out.set(k, { id: v.id, components: v.components, zero: 1, stacks: 0, total: 0, min: Infinity, max: 0, via: new Set(via ? [ via ] : []) })
+    const o = out.get(k)!
+    o.zero -= v.p
+    o.stacks += v.p
+    for (const [ count, p ] of v.counts) {
+      if (p === 0) continue
+      o.total += v.p * p * count
+      o.min = Math.min(o.min, count)
+      o.max = Math.max(o.max, count)
+    }
+  }
+  return out
+}
+
+function blank(o: ItemOutcome): ItemOutcome {
+  return { id: o.id, components: o.components, zero: 1, stacks: 0, total: 0, min: Infinity, max: 0, via: new Set() }
+}
+
+function merge(target: ItemOutcome, o: ItemOutcome) {
+  target.min = Math.min(target.min, o.min)
+  target.max = Math.max(target.max, o.max)
+  for (const v of o.via) target.via.add(v)
+}
+
+function mix(parts: [ number, Outcome ][]): Outcome {
+  const out: Outcome = new Map()
+  for (const [ p, outcome ] of parts) {
+    if (p === 0) continue
+    for (const [ k, o ] of outcome) {
+      if (!out.has(k)) out.set(k, blank(o))
+      const m = out.get(k)!
+      m.zero -= p * (1 - o.zero)
+      m.stacks += p * o.stacks
+      m.total += p * o.total
+      merge(m, o)
+    }
+  }
+  return out
+}
+
+function combine(parts: Outcome[]): Outcome {
+  const out: Outcome = new Map()
+  for (const outcome of parts) {
+    for (const [ k, o ] of outcome) {
+      if (!out.has(k)) out.set(k, blank(o))
+      const m = out.get(k)!
+      m.zero *= o.zero
+      m.stacks += o.stacks
+      m.total += o.total
+      merge(m, o)
+    }
+  }
+  return out
+}
+
+function repeat(outcome: Outcome, times: Dist): Outcome {
+  const mean = Array.from(times).reduce((a, [ n, p ]) => a + n * p, 0)
+  const out: Outcome = new Map()
+  for (const [ k, o ] of outcome) {
+    const zero = Array.from(times).reduce((a, [ n, p ]) => a + p * o.zero ** n, 0)
+    out.set(k, { ...o, zero, stacks: o.stacks * mean, total: o.total * mean })
+  }
+  return out
+}
+
+class Calculator {
+  #tables: Map<string, any>
+  #open = new Set<string>()
+
+  constructor(tables: Map<string, any>) {
+    this.#tables = tables
+  }
+
+  #entry(entry: any, pool: any, via?: string): Outcome {
+    const type = strip(entry.type || 'item')
+    if (type === 'item') return itemOutcome(entry, pool, via)
+    if (type === 'loot_table') {
+      const ref = entry.value ?? entry.name
+      if (typeof ref === 'object') return this.table(ref, via)
+      const t = this.#tables.get(ref)
+      if (!t) return new Map()
+      if (this.#open.has(ref)) throw new Unsupported()
+      this.#open.add(ref)
+      try {
+        return this.table(t, strip(ref))
+      } finally {
+        this.#open.delete(ref)
+      }
+    }
+    if (type === 'group' || type === 'sequence') return combine((entry.children ?? []).map((c: any) => this.#entry(c, pool, via)))
+    if (type === 'alternatives') {
+      let reach = 1
+      return mix((entry.children ?? []).map((c: any) => {
+        const pass = passChance(c)
+        const p = reach * pass
+        reach *= 1 - pass
+        return [ p, this.#entry(c, pool, via) ]
+      }))
+    }
+    return new Map()
+  }
+
+  #roll(pool: any, via?: string): Outcome {
+    const entries: any[] = pool.entries ?? []
+    const pass = entries.map(passChance)
+    const random = entries.map((_, i) => i).filter(i => pass[i] > 0 && pass[i] < 1)
+    if (random.length > 10) throw new Unsupported()
+    const picked = entries.map(() => 0)
+    for (let mask = 0; mask < 1 << random.length; mask++) {
+      let p = 1
+      const usable = new Set(entries.map((_, i) => i).filter(i => pass[i] === 1))
+      random.forEach((i, bit) => {
+        if (mask >> bit & 1) {
+          p *= pass[i]
+          usable.add(i)
+        } else p *= 1 - pass[i]
+      })
+      const total = Array.from(usable).reduce((a, i) => a + (entries[i].weight ?? 1), 0)
+      if (total <= 0) continue
+      for (const i of usable) picked[i] += p * (entries[i].weight ?? 1) / total
+    }
+    return mix(entries.map((e, i) => [ picked[i], picked[i] ? this.#entry(e, pool, via) : new Map() ]))
+  }
+
+  table(table: any, via?: string): Outcome {
+    return combine((table.pools ?? []).map((pool: any) => {
+      const q = passChance(pool)
+      const rolls = mapDist(distOf(pool.rolls ?? 1, true), Math.round)
+      const times: Dist = new Map([ [ 0, 1 - q ] ])
+      for (const [ n, p ] of rolls) addTo(times, n, q * p)
+      return repeat(this.#roll(pool, via), times)
+    }))
+  }
+}
+
+function sortOdds(odds: LootOdds[]) {
+  return odds.sort((a, b) => b.chance - a.chance || strip(a.id).localeCompare(strip(b.id)))
+}
+
+export async function exactTable(table: any, read: TableReader): Promise<LootOdds[]> {
+  const outcome = new Calculator(await collectTables(table, read)).table(table)
+  return sortOdds(Array.from(outcome.values()).filter(o => o.stacks > 0 && o.zero < 1).map(o => ({
+    id: o.id,
+    components: o.components,
+    chance: 1 - o.zero,
+    avg: o.total / o.stacks,
+    min: o.min,
+    max: o.max,
+    via: Array.from(o.via).sort(),
+  })))
+}
+
 export async function sampleTable(
   table: any,
   read: TableReader,
@@ -222,47 +488,56 @@ export async function sampleTable(
     id: string
     components?: Record<string, any>
     hits: number
+    stacks: number
     total: number
     min: number
     max: number
     via: Set<string>
   }>()
-  const perOpen = new Map<string, number>()
+  const seen = new Set<string>()
   let lastYield = performance.now()
   for (let i = 0; i < opens; i++) {
     if ((i & 511) === 0 && performance.now() - lastYield > 12) {
       await new Promise(resolve => setTimeout(resolve))
       lastYield = performance.now()
     }
-    perOpen.clear()
+    seen.clear()
     const out: LootStack[] = []
     roller.rollInto(table, out)
     for (const s of out) {
       if (!s.id) continue
       const k = stackKey(s)
-      perOpen.set(k, (perOpen.get(k) ?? 0) + s.count)
       if (!tally.has(k)) {
-        tally.set(k, { id: s.id, components: s.components, hits: 0, total: 0, min: Infinity, max: 0, via: new Set() })
+        tally.set(k, { id: s.id, components: s.components, hits: 0, stacks: 0, total: 0, min: Infinity, max: 0, via: new Set() })
       }
-      if (s.via) tally.get(k)!.via.add(s.via)
-    }
-    for (const [ k, count ] of perOpen) {
       const t = tally.get(k)!
-      t.hits++
-      t.total += count
-      t.min = Math.min(t.min, count)
-      t.max = Math.max(t.max, count)
+      if (s.via) t.via.add(s.via)
+      if (!seen.has(k)) t.hits++
+      seen.add(k)
+      t.stacks++
+      t.total += s.count
+      t.min = Math.min(t.min, s.count)
+      t.max = Math.max(t.max, s.count)
     }
   }
-  return Array.from(tally.values()).map(t => ({
+  return sortOdds(Array.from(tally.values()).map(t => ({
     id: t.id,
     components: t.components,
     chance: t.hits / opens,
-    avg: t.total / t.hits,
+    avg: t.total / t.stacks,
     min: t.min,
     max: t.max,
     via: Array.from(t.via).sort(),
-  })).sort((a, b) => b.chance - a.chance || strip(a.id).localeCompare(strip(b.id)))
+  })))
+}
+
+export async function tableOdds(table: any, read: TableReader): Promise<LootOdds[]> {
+  try {
+    return await exactTable(table, read)
+  } catch (e) {
+    if (!(e instanceof Unsupported)) throw e
+    return sampleTable(table, read)
+  }
 }
 
 // read at zero enchantment levels, the only assumption available outside a world
@@ -327,14 +602,16 @@ function entryKind(e: any): Pick<LootRuleEntry, 'kind' | 'id'> {
 
 const oddsCache = new WeakMap<object, Promise<LootOdds[]>>()
 
-export function sampleTableCached(table: any, read: TableReader): Promise<LootOdds[]> {
-  if (table === null || typeof table !== 'object') return sampleTable(table, read)
-  if (!oddsCache.has(table)) oddsCache.set(table, sampleTable(table, read))
+export function tableOddsCached(table: any, read: TableReader): Promise<LootOdds[]> {
+  if (table === null || typeof table !== 'object') return tableOdds(table, read)
+  if (!oddsCache.has(table)) oddsCache.set(table, tableOdds(table, read))
   return oddsCache.get(table)!
 }
 
+const near = (a: number, b: number) => Math.abs(a - b) < 1e-9
+
 export function sameOdds(a: LootOdds, b: LootOdds) {
-  return a.chance === b.chance && a.min === b.min && a.max === b.max && a.avg === b.avg
+  return near(a.chance, b.chance) && a.min === b.min && a.max === b.max && near(a.avg, b.avg)
     && a.via.join(', ') === b.via.join(', ')
 }
 
