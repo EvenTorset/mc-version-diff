@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import type { DeltaResult } from '@/delta_providers'
-import { deltaTableReader, sameOdds, sampleTableCached, stackKey, toolGate, type LootOdds } from '@/util/loot'
+import { deltaTableReader, sameOdds, tableOddsCached, stackKey, toolGate, type LootOdds } from '@/util/loot'
 import { itemName as translate } from '@/util/itemNames'
 import { ItemIcon } from './lazyRenderers'
 import Meter from './Meter.vue'
 import Tooltip from './Tooltip.vue'
-import { NSpin } from 'naive-ui'
 import { computed, ref, watch } from 'vue'
 import NamespacedPath from './NamespacedPath.vue'
 import Dim from './Dim.vue'
@@ -45,7 +44,7 @@ const isDiff = computed(() => !!props.before && !!props.after)
 
 function oddsFor(side: LootSide | undefined) {
   if (!side) return null
-  return sampleTableCached(side.table, deltaTableReader(props.dr, side.version))
+  return tableOddsCached(side.table, deltaTableReader(props.dr, side.version))
 }
 
 let sampledTables: [ any, any ] | null = null
@@ -169,10 +168,7 @@ function iconVersion(row: ItemRow) {
 </script>
 
 <template>
-  <div v-if="busy" class="loot-busy">
-    <NSpin size="small" />
-    <div>Measuring drop rates over 10,000 opens…</div>
-  </div>
+  <template v-if="busy"></template>
   <div v-else-if="!rows.length" class="loot-empty">{{ emptyReason }}</div>
   <div v-else-if="isDiff && !showUnchanged && !sections.some(s => s.state !== 'same')" class="loot-empty">
     The items this table drops did not change.

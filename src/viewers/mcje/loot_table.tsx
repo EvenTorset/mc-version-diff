@@ -5,7 +5,7 @@ import LootRules from '@/components/LootRules.vue'
 import type { DeltaResult } from '@/delta_providers'
 import { DeltaTrackState } from '@/delta_providers/states'
 import { Settings } from '@/settings'
-import { deltaTableReader, describeTable, oddsChanged, sampleTableCached } from '@/util/loot'
+import { deltaTableReader, describeTable, oddsChanged, tableOddsCached } from '@/util/loot'
 import stringify from 'fabulous-json'
 import { NCheckbox, NTabPane, NTabs } from 'naive-ui'
 import { ref } from 'vue'
@@ -39,15 +39,13 @@ function readSides(dr: DeltaResult, track: { a: string, b: string }, single: 'a'
 
 async function initialTab(dr: DeltaResult, sides: Sides) {
   const { before, after } = sides
-  if (!before || !after) return 'items'
-
   const [ a, b ] = await Promise.all([
-    sampleTableCached(before.table, deltaTableReader(dr, dr.a)),
-    sampleTableCached(after.table, deltaTableReader(dr, dr.b)),
+    before && tableOddsCached(before.table, deltaTableReader(dr, dr.a)),
+    after && tableOddsCached(after.table, deltaTableReader(dr, dr.b)),
   ])
-  if (oddsChanged(a, b)) return 'items'
+  if (!a || !b || oddsChanged(a, b)) return 'items'
 
-  const rulesChanged = JSON.stringify(describeTable(before.table)) !== JSON.stringify(describeTable(after.table))
+  const rulesChanged = JSON.stringify(describeTable(before!.table)) !== JSON.stringify(describeTable(after!.table))
   return rulesChanged ? 'rules' : 'json'
 }
 
