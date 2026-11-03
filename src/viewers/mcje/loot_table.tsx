@@ -39,15 +39,13 @@ function readSides(dr: DeltaResult, track: { a: string, b: string }, single: 'a'
 
 async function initialTab(dr: DeltaResult, sides: Sides) {
   const { before, after } = sides
-  if (!before || !after) return 'items'
-
   const [ a, b ] = await Promise.all([
-    tableOddsCached(before.table, deltaTableReader(dr, dr.a)),
-    tableOddsCached(after.table, deltaTableReader(dr, dr.b)),
+    before && tableOddsCached(before.table, deltaTableReader(dr, dr.a)),
+    after && tableOddsCached(after.table, deltaTableReader(dr, dr.b)),
   ])
-  if (oddsChanged(a, b)) return 'items'
+  if (!a || !b || oddsChanged(a, b)) return 'items'
 
-  const rulesChanged = JSON.stringify(describeTable(before.table)) !== JSON.stringify(describeTable(after.table))
+  const rulesChanged = JSON.stringify(describeTable(before!.table)) !== JSON.stringify(describeTable(after!.table))
   return rulesChanged ? 'rules' : 'json'
 }
 
