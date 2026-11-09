@@ -8,7 +8,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import Dim from './Dim.vue'
 import { ItemIcon } from './lazyRenderers'
 import NamespacedPath from './NamespacedPath.vue'
-import Tooltip from './Tooltip.vue'
+import EasyTooltip from 'easy-tooltips-vue'
 
 export type SlotMark = 'added' | 'changed' | 'removed'
 
@@ -83,16 +83,16 @@ const hasLabels = computed(() =>
       </div>
       <template v-if="recipe.result">
         <NIcon :size="24" :component="ArrowRight24Regular" class="recipe-arrow" :class="marks?.result" />
-        <Tooltip>
-          <template #trigger="{ props: tt }">
-            <div v-bind="tt" class="slot result" :class="marks?.result">
-              <ItemIcon :dr="dr" :version="version" :id="recipe.result.id" :components="recipe.result.components" :size="32" />
-              <span v-if="recipe.result.count > 1" class="slot-count">{{ recipe.result.count }}</span>
-            </div>
+        <EasyTooltip>
+          <div class="slot result" :class="marks?.result">
+            <ItemIcon :dr="dr" :version="version" :id="recipe.result.id" :components="recipe.result.components" :size="32" />
+            <span v-if="recipe.result.count > 1" class="slot-count">{{ recipe.result.count }}</span>
+          </div>
+          <template #tooltip>
+            <div>{{ itemName(dr, version, recipe.result.id, recipe.result.components) }}</div>
+            <Dim tag="div"><NamespacedPath :value="recipe.result.id" /></Dim>
           </template>
-          <div>{{ itemName(dr, version, recipe.result.id, recipe.result.components) }}</div>
-          <Dim tag="div"><NamespacedPath :value="recipe.result.id" /></Dim>
-        </Tooltip>
+        </EasyTooltip>
       </template>
     </div>
     <div v-else class="recipe-io" :class="{ 'has-labels': hasLabels }">
@@ -102,86 +102,86 @@ const hasLabels = computed(() =>
         :style="{ gridTemplateColumns: `repeat(${recipe.layout.width}, auto)` }"
       >
         <template v-for="(_, i) of slots" :key="i">
-          <Tooltip v-if="ingredientOf(i)">
-            <template #trigger="{ props: tt }">
-              <div v-bind="tt" class="slot" :class="marks?.slots[i]">
-                <ItemIcon
-                  v-if="currentOption(ingredientOf(i)!)"
-                  :dr="dr" :version="version"
-                  :id="currentOption(ingredientOf(i)!)!"
-                  :components="ingredientOf(i)!.components"
-                  :size="32"
-                />
-                <span v-else class="slot-tag">#</span>
-              </div>
+          <EasyTooltip v-if="ingredientOf(i)">
+            <div class="slot" :class="marks?.slots[i]">
+              <ItemIcon
+                v-if="currentOption(ingredientOf(i)!)"
+                :dr="dr" :version="version"
+                :id="currentOption(ingredientOf(i)!)!"
+                :components="ingredientOf(i)!.components"
+                :size="32"
+              />
+              <span v-else class="slot-tag">#</span>
+            </div>
+            <template #tooltip>
+              <div>{{ optionName(ingredientOf(i)!) }}</div>
+              <Dim v-if="currentOption(ingredientOf(i)!)" tag="div">
+                <NamespacedPath :value="currentOption(ingredientOf(i)!)!" />
+              </Dim>
+              <Dim v-if="ingredientOf(i)!.components && Object.keys(ingredientOf(i)!.components!).length > 0" tag="div">
+                {{ Object.keys(ingredientOf(i)!.components!).length }} component(s)
+              </Dim>
+              <template v-if="ingredientOf(i)!.tag">
+                <div
+                  class="tip-tag"
+                  style="font-family: var(--monospace-font-family); color: var(--color-5);"
+                ><Dim>#</Dim><NamespacedPath :value="ingredientOf(i)!.tag!" /></div>
+                <Dim tag="div">Tag group · {{ ingredientOf(i)!.options.length }} options</Dim>
+              </template>
             </template>
-            <div>{{ optionName(ingredientOf(i)!) }}</div>
-            <Dim v-if="currentOption(ingredientOf(i)!)" tag="div">
-              <NamespacedPath :value="currentOption(ingredientOf(i)!)!" />
-            </Dim>
-            <Dim v-if="ingredientOf(i)!.components && Object.keys(ingredientOf(i)!.components!).length > 0" tag="div">
-              {{ Object.keys(ingredientOf(i)!.components!).length }} component(s)
-            </Dim>
-            <template v-if="ingredientOf(i)!.tag">
-              <div
-                class="tip-tag"
-                style="font-family: var(--monospace-font-family); color: var(--color-5);"
-              ><Dim>#</Dim><NamespacedPath :value="ingredientOf(i)!.tag!" /></div>
-              <Dim tag="div">Tag group · {{ ingredientOf(i)!.options.length }} options</Dim>
-            </template>
-          </Tooltip>
+          </EasyTooltip>
           <div v-else class="slot empty" :class="marks?.slots[i]"></div>
         </template>
       </div>
       <div v-else class="labeled-slots">
         <div v-for="(_, i) of slots" :key="i" class="labeled-slot">
-          <Tooltip v-if="ingredientOf(i)">
-            <template #trigger="{ props: tt }">
-              <div v-bind="tt" class="slot" :class="marks?.slots[i]">
-                <ItemIcon
-                  v-if="currentOption(ingredientOf(i)!)"
-                  :dr="dr" :version="version"
-                  :id="currentOption(ingredientOf(i)!)!"
-                  :components="ingredientOf(i)!.components"
-                  :size="32"
-                />
-                <span v-else class="slot-tag">#</span>
-              </div>
+          <EasyTooltip v-if="ingredientOf(i)">
+            <div class="slot" :class="marks?.slots[i]">
+              <ItemIcon
+                v-if="currentOption(ingredientOf(i)!)"
+                :dr="dr" :version="version"
+                :id="currentOption(ingredientOf(i)!)!"
+                :components="ingredientOf(i)!.components"
+                :size="32"
+              />
+              <span v-else class="slot-tag">#</span>
+            </div>
+            <template #tooltip>
+              <div>{{ optionName(ingredientOf(i)!) }}</div>
+              <Dim v-if="currentOption(ingredientOf(i)!)" tag="div">
+                <NamespacedPath :value="currentOption(ingredientOf(i)!)!" />
+              </Dim>
+              <Dim v-if="ingredientOf(i)!.components && Object.keys(ingredientOf(i)!.components!).length > 0" tag="div">
+                {{ Object.keys(ingredientOf(i)!.components!).length }} component(s)
+              </Dim>
+              <template v-if="ingredientOf(i)!.tag">
+                <div
+                  class="tip-tag"
+                  style="font-family: var(--monospace-font-family); color: var(--color-5);"
+                ><Dim>#</Dim><NamespacedPath :value="ingredientOf(i)!.tag!" /></div>
+                <Dim tag="div">Tag group · {{ ingredientOf(i)!.options.length }} options</Dim>
+              </template>
             </template>
-            <div>{{ optionName(ingredientOf(i)!) }}</div>
-            <Dim v-if="currentOption(ingredientOf(i)!)" tag="div">
-              <NamespacedPath :value="currentOption(ingredientOf(i)!)!" />
-            </Dim>
-            <Dim v-if="ingredientOf(i)!.components && Object.keys(ingredientOf(i)!.components!).length > 0" tag="div">
-              {{ Object.keys(ingredientOf(i)!.components!).length }} component(s)
-            </Dim>
-            <template v-if="ingredientOf(i)!.tag">
-              <div
-                class="tip-tag"
-                style="font-family: var(--monospace-font-family); color: var(--color-5);"
-              ><Dim>#</Dim><NamespacedPath :value="ingredientOf(i)!.tag!" /></div>
-              <Dim tag="div">Tag group · {{ ingredientOf(i)!.options.length }} options</Dim>
-            </template>
-          </Tooltip>
+          </EasyTooltip>
           <div v-else class="slot empty" :class="marks?.slots[i]"></div>
           <div v-if="labelOf(i)" class="slot-label">{{ labelOf(i) }}</div>
         </div>
       </div>
       <template v-if="recipe.result">
         <NIcon :size="24" :component="ArrowRight24Regular" class="recipe-arrow" :class="marks?.result" />
-        <Tooltip>
-          <template #trigger="{ props: tt }">
-            <div v-bind="tt" class="slot result" :class="marks?.result">
-              <ItemIcon :dr="dr" :version="version" :id="recipe.result.id" :components="recipe.result.components" :size="32" />
-              <span v-if="recipe.result.count > 1" class="slot-count">{{ recipe.result.count }}</span>
-            </div>
+        <EasyTooltip>
+          <div class="slot result" :class="marks?.result">
+            <ItemIcon :dr="dr" :version="version" :id="recipe.result.id" :components="recipe.result.components" :size="32" />
+            <span v-if="recipe.result.count > 1" class="slot-count">{{ recipe.result.count }}</span>
+          </div>
+          <template #tooltip>
+            <div>{{ itemName(dr, version, recipe.result.id, recipe.result.components) }}</div>
+            <Dim tag="div"><NamespacedPath :value="recipe.result.id" /></Dim>
+            <Dim v-if="recipe.result.components && Object.keys(recipe.result.components).length > 0" tag="div">
+              {{ Object.keys(recipe.result.components).length }} component(s)
+            </Dim>
           </template>
-          <div>{{ itemName(dr, version, recipe.result.id, recipe.result.components) }}</div>
-          <Dim tag="div"><NamespacedPath :value="recipe.result.id" /></Dim>
-          <Dim v-if="recipe.result.components && Object.keys(recipe.result.components).length > 0" tag="div">
-            {{ Object.keys(recipe.result.components).length }} component(s)
-          </Dim>
-        </Tooltip>
+        </EasyTooltip>
       </template>
     </div>
   </div>

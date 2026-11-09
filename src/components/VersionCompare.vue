@@ -29,7 +29,7 @@ import { computed, h, ref } from 'vue'
 import { NButton, NCard, NIcon, NSkeleton, NTime } from 'naive-ui'
 import { ArrowRight24Regular } from '@vicons/fluent'
 import Dim from './Dim.vue'
-import Tooltip from './Tooltip.vue'
+import EasyTooltip from 'easy-tooltips-vue'
 import Row from './Row.vue'
 import Spacer from './Spacer.vue'
 import SwapToggle from './SwapToggle.vue'
@@ -83,20 +83,22 @@ defineEmits<{
       <TransitionGroup v-if="side.facts.length > 0" name="reveal" tag="div" class="facts">
         <div v-for="fact of side.facts" :key="fact.label" class="fact-slot reveal-slot">
           <Row class="fact">
-            <Tooltip :disabled="!fact.tip">
-              <template #trigger="{ props: tip }"><Dim v-bind="tip" class="label">{{ fact.label }}</Dim></template>
-              <h3>{{ fact.label }}</h3>
-              <p>{{ fact.tip }}</p>
-            </Tooltip>
-            <Spacer bridge />
-            <Tooltip v-if="fact.time">
-              <template #trigger="{ props: tip }">
-                <span v-bind="tip">
-                  <NTime :time="fact.time" :to="Date.now()" type="relative" />
-                </span>
+            <EasyTooltip :disabled="!fact.tip">
+              <Dim class="label">{{ fact.label }}</Dim>
+              <template #tooltip>
+                <h3>{{ fact.label }}</h3>
+                <p>{{ fact.tip }}</p>
               </template>
-              <NTime :time="fact.time" />
-            </Tooltip>
+            </EasyTooltip>
+            <Spacer bridge />
+            <EasyTooltip v-if="fact.time">
+              <span>
+                <NTime :time="fact.time" :to="Date.now()" type="relative" />
+              </span>
+              <template #tooltip>
+                <NTime :time="fact.time" />
+              </template>
+            </EasyTooltip>
             <span v-else-if="fact.value !== undefined">{{ fact.value }}</span>
             <NSkeleton v-else text width="72px" height="14px" :sharp="false" />
           </Row>
@@ -129,12 +131,9 @@ defineEmits<{
     </NCard>
 
     <div v-if="sides.length > 1" class="compare-arrow">
-      <Tooltip v-if="swappable">
-        <template #trigger="{ props: tip }">
-          <SwapToggle v-bind="tip" :swapped="flipped" @click="flipped = !flipped; $emit('swap')" />
-        </template>
-        Swap sides
-      </Tooltip>
+      <EasyTooltip v-if="swappable" text="Swap sides">
+        <SwapToggle :swapped="flipped" @click="flipped = !flipped; $emit('swap')" />
+      </EasyTooltip>
       <NIcon v-else :size="32" :component="ArrowRight24Regular" style="padding: 4px;" />
       <template v-for="line of between">
         <Dim v-if="typeof line === 'string'" :key="line" class="apart">{{ line }}</Dim>

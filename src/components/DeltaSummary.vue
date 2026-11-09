@@ -16,7 +16,7 @@ import { copyToClipboard } from '@/util/clipboard.ts'
 import Notify from '@/notify.tsx'
 import { errorMessage } from '@/util/errorMessage.ts'
 import { downloadableTracks, downloadCategory } from '@/util/categoryZip'
-import Tooltip from './Tooltip.vue'
+import EasyTooltip from 'easy-tooltips-vue'
 import Dim from './Dim.vue'
 import RadioGroup from './RadioGroup.vue'
 import RadioButton from './RadioButton.vue'
@@ -150,14 +150,14 @@ async function copySpreadsheet() {
         >
           <NButton>Generate move script</NButton>
         </RouterLink>
-        <Tooltip v-if="Settings.enableCopyStatusButton">
-          <template #trigger="{ props }">
-            <NButton v-bind="props" @click="copySpreadsheet">Copy spreadsheet</NButton>
+        <EasyTooltip v-if="Settings.enableCopyStatusButton">
+          <NButton @click="copySpreadsheet">Copy spreadsheet</NButton>
+          <template #tooltip>
+            <h3>Copy spreadsheet</h3>
+            <p>Copies the added and edited textures as tab-separated values.</p>
+            <Dim tag='p'>[ Dokucraft ]</Dim>
           </template>
-          <h3>Copy spreadsheet</h3>
-          <p>Copies the added and edited textures as tab-separated values.</p>
-          <Dim tag='p'>[ Dokucraft ]</Dim>
-        </Tooltip>
+        </EasyTooltip>
       </Row>
     </div>
   </template>

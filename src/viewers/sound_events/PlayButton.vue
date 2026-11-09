@@ -5,7 +5,7 @@ import { computed } from 'vue'
 import { audioSources, AudioState, audioStates } from './sharedState'
 import { getAudioBuffer, getAudioContext } from '@/util/audioBuffers'
 import { Settings } from '@/settings'
-import Tooltip from '@/components/Tooltip.vue'
+import { vTooltip } from 'easy-tooltips-vue'
 import { NIcon } from 'naive-ui'
 import Notify from '@/notify'
 import { errorMessage } from '@/util/errorMessage'
@@ -88,37 +88,27 @@ async function playSound() {
 </script>
 
 <template>
-  <Tooltip>
-    <template #trigger="{ props }">
-      <div
-        v-bind="props"
-        @click="playSound()"
-        class="button"
-          :class="{
-          new: $props['new'],
-          old,
-          error: audioStates[key] === AudioState.Unplayable,
-        }"
-      >
-        <NIcon
-          :component="
-            audioStates[key] === AudioState.Playing
-              ? Stop16Filled
-              : audioStates[key] === AudioState.Unplayable
-                ? Prohibited16Filled
-                : Play16Filled
-          "
-          :size="16"
-        />
-      </div>
-    </template>
-    {{ audioStates[key] === AudioState.Playing
-      ? 'Stop'
-      : audioStates[key] === AudioState.Unplayable
-        ? 'Unable to play'
-        : 'Play'
-    }}
-  </Tooltip>
+  <div
+    v-tooltip="audioStates[key] === AudioState.Playing ? 'Stop' : audioStates[key] === AudioState.Unplayable ? 'Unable to play' : 'Play'"
+    @click="playSound()"
+    class="button"
+      :class="{
+      new: $props['new'],
+      old,
+      error: audioStates[key] === AudioState.Unplayable,
+    }"
+  >
+    <NIcon
+      :component="
+        audioStates[key] === AudioState.Playing
+          ? Stop16Filled
+          : audioStates[key] === AudioState.Unplayable
+            ? Prohibited16Filled
+            : Play16Filled
+      "
+      :size="16"
+    />
+  </div>
 </template>
 
 <style lang="scss" scoped>

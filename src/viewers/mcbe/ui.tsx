@@ -3,7 +3,7 @@ import { renderJsonTab } from '../jsonTab'
 import { effectiveToggles, listBedrockUiControls, renderBedrockUi, UI_SCALE, type UiRender, type UiUse } from '@/viewers/mcbe/util/ui'
 import { useElementVisible } from '@/util/useElementVisible'
 import { yieldToMain } from '@/util/yieldToMain'
-import { popupable } from '@/util/popupable'
+import { popupableAttrs } from 'popupable-vue'
 import { asyncRenderable } from '@/util/asyncRenderable'
 import { trackTab } from '@/util/trackFocus'
 import { DeltaTrackState } from '@/delta_providers/states'
@@ -83,11 +83,11 @@ const UiPreview = defineComponent({
         ? <RawImage
           bytes={rendered.bytes}
           style={{ width: `${rendered.width * scale}px`, height: `${rendered.height * scale}px` }}
-          {...popupable({
+          {...popupableAttrs({
             title: `${props.id} (${props.dr[props.version]})`,
             group: `${props.track.id} ${props.id}`,
             thumbnails: true,
-            zoom: true,
+            zoomable: true,
           })}
         />
         : <div class='ui-preview-empty'>{loading.value ? <NSpin size='small' /> : error.value}</div>

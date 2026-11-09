@@ -10,7 +10,7 @@ import type { DeltaResult, DeltaTrack } from '@/delta_providers'
 import { renderJsonTab } from './jsonTab'
 import OverlayWrapper from '@/components/OverlayWrapper.vue'
 import type { Renderable } from '@/types'
-import Tooltip from '@/components/Tooltip.vue'
+import EasyTooltip from 'easy-tooltips-vue'
 import { FullScreenMaximize24Filled, FullScreenMinimize24Filled } from '@vicons/fluent'
 import type { PrepareModel } from '@/components/ModelViewer.vue'
 
@@ -30,22 +30,17 @@ const ExpandButton = defineComponent({
       if (!setOverlayButtons) return;
 
       setOverlayButtons([() => (
-        <Tooltip v-slots={{
-          trigger: ({ props: ttp }: any) => (
-            <NButton
-              {...ttp}
-              class='icon accent'
-              size='small'
-              circle
-              v-slots={{
-                icon: () => props.expanded.value ? <FullScreenMinimize24Filled /> : <FullScreenMaximize24Filled />
-              }}
-              onClick={() => props.expanded.value = !props.expanded.value}
-            />
-          )
-        }}>
-          {props.expanded.value ? 'Collapse' : 'Expand'}
-        </Tooltip>
+        <EasyTooltip text={props.expanded.value ? 'Collapse' : 'Expand'} v-slots={{
+          default: () => <NButton
+            class='icon accent'
+            size='small'
+            circle
+            v-slots={{
+              icon: () => props.expanded.value ? <FullScreenMinimize24Filled /> : <FullScreenMaximize24Filled />
+            }}
+            onClick={() => props.expanded.value = !props.expanded.value}
+          />
+        }} />
       )])
     })
 

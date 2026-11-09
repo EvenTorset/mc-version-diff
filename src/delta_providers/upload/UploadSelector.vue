@@ -5,7 +5,7 @@ import { NButton, NCard, NCheckbox, NSelect, type UploadFileInfo } from 'naive-u
 import { computed, nextTick, onMounted, reactive, ref, watch, type Ref } from 'vue'
 import { getDeltaProvider, listDeltaProviders } from '../registry'
 import Content from '@/components/Content.vue'
-import Tooltip from '@/components/Tooltip.vue'
+import EasyTooltip from 'easy-tooltips-vue'
 import SwapToggle from '@/components/SwapToggle.vue'
 import { RouterLink, type RouteLocationAsPathGeneric, type RouteLocationAsRelativeGeneric } from 'vue-router'
 import { deleteUserFile, readUserFile, writeUserFile } from '@/util/userFiles'
@@ -305,12 +305,9 @@ onMounted(async () => {
           v-model:mode="displayModeA"
           v-model:url="displayUrlA"
         />
-        <Tooltip>
-          <template #trigger="{ props }">
-            <SwapToggle v-bind="props" :swapped="swap" @click="swap = !swap" />
-          </template>
-          Swap sides
-        </Tooltip>
+        <EasyTooltip text="Swap sides">
+          <SwapToggle :swapped="swap" @click="swap = !swap" />
+        </EasyTooltip>
         <UploadSide
           :label="swap ? 'Version A' : 'Version B'"
           :accept="comparatorProvider.upload?.accept"
@@ -329,12 +326,12 @@ onMounted(async () => {
             <Transition name="reveal">
               <div v-if="option.type === 'bool' && optionShown(option)" class="option reveal-slot">
                 <div class="option-body">
-                  <Tooltip>
-                    <template #trigger="{ props }">
-                      <NCheckbox v-bind="props" v-model:checked="optionValues[i]">{{ option.label }}</NCheckbox>
+                  <EasyTooltip>
+                    <NCheckbox v-model:checked="optionValues[i]">{{ option.label }}</NCheckbox>
+                    <template #tooltip>
+                      <Content :content="option.tooltip" />
                     </template>
-                    <Content :content="option.tooltip" />
-                  </Tooltip>
+                  </EasyTooltip>
                 </div>
               </div>
             </Transition>

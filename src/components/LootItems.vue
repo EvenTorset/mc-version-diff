@@ -4,7 +4,7 @@ import { deltaTableReader, sameOdds, tableOddsCached, stackKey, toolGate, type L
 import { itemName as translate } from '@/util/itemNames'
 import { ItemIcon } from './lazyRenderers'
 import Meter from './Meter.vue'
-import Tooltip from './Tooltip.vue'
+import EasyTooltip from 'easy-tooltips-vue'
 import { computed, ref, watch } from 'vue'
 import NamespacedPath from './NamespacedPath.vue'
 import Dim from './Dim.vue'
@@ -191,12 +191,12 @@ function iconVersion(row: ItemRow) {
               <ItemIcon :dr="dr" :version="iconVersion(row)" :id="row.id" :components="row.components" :size="32" />
             </div>
             <div class="name">
-              <Tooltip>
-                <template #trigger="{ props }">
-                  <span v-bind="props">{{ itemName(row) }}</span>
+              <EasyTooltip>
+                <span>{{ itemName(row) }}</span>
+                <template #tooltip>
+                  <NamespacedPath :value="row.id" />
                 </template>
-                <NamespacedPath :value="row.id" />
-              </Tooltip>
+              </EasyTooltip>
               <span v-if="viaChanged(row)" class="via">
                 · <Dim>{{ via(row.before!) ? `via ${via(row.before!)}` : 'direct' }}</Dim>
                 <span class="arrow">→</span>{{ via(row.after!) ? `via ${via(row.after!)}` : 'direct' }}
