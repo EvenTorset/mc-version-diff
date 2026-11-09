@@ -2,7 +2,7 @@
 import Col from '@/components/Col.vue'
 import Row from '@/components/Row.vue'
 import Spacer from '@/components/Spacer.vue'
-import Tooltip from '@/components/Tooltip.vue'
+import EasyTooltip from 'easy-tooltips-vue'
 import { Settings } from '@/settings'
 import { formatBytes } from '@/util/bytes'
 import { applyCacheSize, assets, type Edition } from '@/delta_providers/loader'
@@ -63,43 +63,43 @@ for (const edition of editions) {
   <Row align="stretch">
     <NCard title="Settings">
       <Col align="stretch">
-        <Tooltip anchor="cursor-x">
-          <template #trigger="{ props }">
-            <Row v-bind="props" class="setting">
-              Color scheme
-              <Spacer bridge />
-              <NSelect v-model:value="Settings.colorScheme" :options="[
-                { label: 'Dark', value: 'dark' },
-                { label: 'Light', value: 'light' },
-                { label: 'OLED Dark', value: 'oled-dark' },
-              ]" />
-            </Row>
+        <EasyTooltip anchor="cursor-x">
+          <Row class="setting">
+            Color scheme
+            <Spacer bridge />
+            <NSelect v-model:value="Settings.colorScheme" :options="[
+              { label: 'Dark', value: 'dark' },
+              { label: 'Light', value: 'light' },
+              { label: 'OLED Dark', value: 'oled-dark' },
+            ]" />
+          </Row>
+          <template #tooltip>
+            <h3>Color scheme</h3>
+            <p>Controls the colors used on the site.</p>
           </template>
-          <h3>Color scheme</h3>
-          <p>Controls the colors used on the site.</p>
-        </Tooltip>
-        <Tooltip anchor="cursor-x">
-          <template #trigger="{ props }">
-            <Row v-bind="props" class="setting bool" @click="Settings.pixelFont = !Settings.pixelFont">
-              Pixel font
-              <Spacer bridge />
-              <NSwitch :value="Settings.pixelFont" />
-            </Row>
+        </EasyTooltip>
+        <EasyTooltip anchor="cursor-x">
+          <Row class="setting bool" @click="Settings.pixelFont = !Settings.pixelFont">
+            Pixel font
+            <Spacer bridge />
+            <NSwitch :value="Settings.pixelFont" />
+          </Row>
+          <template #tooltip>
+            <h3>Pixel font</h3>
+            <p>Use a pixel font when rendering the localization files to better match what it would look like in-game.</p>
           </template>
-          <h3>Pixel font</h3>
-          <p>Use a pixel font when rendering the localization files to better match what it would look like in-game.</p>
-        </Tooltip>
-        <Tooltip anchor="cursor-x">
-          <template #trigger="{ props }">
-            <Row v-bind="props" class="setting bool" @click="Settings.formatJSON = !Settings.formatJSON">
-              Format JSON
-              <Spacer bridge />
-              <NSwitch :value="Settings.formatJSON" />
-            </Row>
+        </EasyTooltip>
+        <EasyTooltip anchor="cursor-x">
+          <Row class="setting bool" @click="Settings.formatJSON = !Settings.formatJSON">
+            Format JSON
+            <Spacer bridge />
+            <NSwitch :value="Settings.formatJSON" />
+          </Row>
+          <template #tooltip>
+            <h3>Format JSON</h3>
+            <p>Use a custom JSON formatter when displaying JSON content. This ensures the JSON is always consistently formatted in a compact, but readable fashion.</p>
           </template>
-          <h3>Format JSON</h3>
-          <p>Use a custom JSON formatter when displaying JSON content. This ensures the JSON is always consistently formatted in a compact, but readable fashion.</p>
-        </Tooltip>
+        </EasyTooltip>
       </Col>
     </NCard>
     <NCard title="Version Cache">

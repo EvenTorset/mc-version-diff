@@ -4,7 +4,7 @@ import { renderTexture } from '@/util/blockModelRenderer'
 import { DEFAULT_FRAMES, numberedFrames } from '@/util/numberedFrames'
 import { renderImageWithMode } from '@/shared_renderer'
 import type { ImageViewMode } from '@/types'
-import { popupable } from '@/util/popupable'
+import { popupableAttrs } from 'popupable-vue'
 import { deltaVirtualHandler } from '@/util/virtualHandler'
 import { animationStats, arrayFrames, normalizeMcmeta, type Playhead } from '@/util/animation'
 import { formatBytes } from '@/util/bytes'
@@ -121,16 +121,16 @@ async function build() {
     info.value = `${frames} frames · ${seconds}s`
     emit('stats', { frames: frames!, duration: animation.duration })
     // popupable mirrors a live canvas, so the attributes have to sit on the canvas itself
-    for (const [ attr, value ] of Object.entries(popupable({
+    for (const [ attr, value ] of Object.entries(popupableAttrs({
       title: props.label ?? props.version,
       description: sheet
         ? `${sheet.width}×${sheet.height} · ${formatBytes(sheet.size)} · ${frames} frames of ${width}×${height} · ${seconds}s`
         : info.value,
       group: props.group,
       thumbnails: true,
-      zoom: true,
+      zoomable: true,
     }))) {
-      if (value != null) animation.canvas.setAttribute(attr, String(value))
+      if (value !== undefined) animation.canvas.setAttribute(attr, value)
     }
     containerRef.value?.append(animation.canvas)
     playerCanvas.value = animation.canvas

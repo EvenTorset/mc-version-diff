@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { NIcon } from 'naive-ui'
 import { Star12Filled, Star12Regular, Triangle12Regular } from '@vicons/fluent'
-import Tooltip from './Tooltip.vue'
+import EasyTooltip from 'easy-tooltips-vue'
 import { useRoute } from 'vue-router'
 import { Settings } from '@/settings'
 import { computed } from 'vue'
@@ -39,18 +39,17 @@ const favorite = computed({
     />
     <div v-else class="category-tab-count">{{ count }}</div>
     <div class="category-tab-name">{{ name }}</div>
-    <Tooltip>
-      <template #trigger="{ props }">
-        <NIcon
-          v-bind="props"
-          class="favorite-button"
-          @click.stop.prevent="favorite = name"
-          :component="favorite === name ? Star12Filled : Star12Regular"
-        />
+    <EasyTooltip>
+      <NIcon
+        class="favorite-button"
+        @click.stop.prevent="favorite = name"
+        :component="favorite === name ? Star12Filled : Star12Regular"
+      />
+      <template #tooltip>
+        <h3>Favorite Category</h3>
+        <p>Your favorite category will be opened automatically when opening a new comparison.</p>
       </template>
-      <h3>Favorite Category</h3>
-      <p>Your favorite category will be opened automatically when opening a new comparison.</p>
-    </Tooltip>
+    </EasyTooltip>
   </RouterLink>
 </template>
 

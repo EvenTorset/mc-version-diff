@@ -3,7 +3,7 @@ import type { ComputedRef } from 'vue'
 import { computed, inject, onBeforeUnmount, onMounted, ref } from 'vue'
 import { matchRanges } from '@/util/path.ts'
 import Dim from './Dim.vue'
-import Tooltip from './Tooltip.vue'
+import { vTooltip } from 'easy-tooltips-vue'
 
 const props = defineProps<{
   path: string
@@ -63,28 +63,26 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <Tooltip
-    anchor="pin-x"
-    :disabled="!isOverflowing"
-    :style="{
-      '--easy-tooltip-max-width': 'calc(100dvw - 40px)',
+  <span
+    ref="pathEl"
+    v-tooltip="{
+      text: path,
+      anchor: 'pin-x',
+      disabled: !isOverflowing,
+      tooltipStyle: { '--easy-tooltip-max-width': 'calc(100dvw - 40px)' },
     }"
-  >
-    <template #trigger="{ props }">
-      <span ref="pathEl" v-bind="props" class="file-path"><span class="bidi">&#8294;</span>
-        <template v-for="(part, i) of parts" :key="i">
-          <mark v-if="part.mark">
-            <Dim v-if="part.dim">{{ part.text }}</Dim>
-            <template v-else>{{ part.text }}</template>
-          </mark>
-          <Dim v-else-if="part.dim">{{ part.text }}</Dim>
-          <span v-else>{{ part.text }}</span>
-          <span class="bidi">&lrm;</span>
-        </template><span class="bidi">&#8297;</span>
-      </span>
-    </template>
-    {{ path }}
-  </Tooltip>
+    class="file-path"
+  ><span class="bidi">&#8294;</span>
+    <template v-for="(part, i) of parts" :key="i">
+      <mark v-if="part.mark">
+        <Dim v-if="part.dim">{{ part.text }}</Dim>
+        <template v-else>{{ part.text }}</template>
+      </mark>
+      <Dim v-else-if="part.dim">{{ part.text }}</Dim>
+      <span v-else>{{ part.text }}</span>
+      <span class="bidi">&lrm;</span>
+    </template><span class="bidi">&#8297;</span>
+  </span>
 </template>
 
 <style lang="scss" scoped>

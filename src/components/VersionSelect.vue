@@ -2,7 +2,7 @@
 import { NButton, NIcon, NInput, NPopover, type InputInst } from 'naive-ui'
 import { ChevronDown16Filled, Eraser20Filled } from '@vicons/fluent'
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import Tooltip from './Tooltip.vue'
+import EasyTooltip from 'easy-tooltips-vue'
 import VersionSelectPanel from './VersionSelectPanel.vue'
 
 const props = withDefaults(defineProps<{
@@ -102,16 +102,13 @@ defineExpose({ hide, itemSelected })
         @blur="onBlur"
       >
         <template #clear-icon>
-          <Tooltip>
-            <template #trigger="{ props: tip }">
-              <NButton v-bind="tip" class="icon" circle size="small">
-                <template #icon>
-                  <Eraser20Filled />
-                </template>
-              </NButton>
-            </template>
-            Clear
-          </Tooltip>
+          <EasyTooltip text="Clear">
+            <NButton class="icon" circle size="small">
+              <template #icon>
+                <Eraser20Filled />
+              </template>
+            </NButton>
+          </EasyTooltip>
         </template>
       </NInput>
     </template>

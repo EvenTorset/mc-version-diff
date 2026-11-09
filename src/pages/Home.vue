@@ -5,7 +5,7 @@ import GitHubIcon from '@/components/GitHubIcon.vue'
 import Row from '@/components/Row.vue'
 import SiteDisclaimer from '@/components/SiteDisclaimer.vue'
 import SettingsMenu from '@/components/SettingsMenu.vue'
-import Tooltip from '@/components/Tooltip.vue'
+import { vTooltip } from 'easy-tooltips-vue'
 import VersionDiffLogo from '@/components/VersionDiffLogo.vue'
 import { listDeltaProviders } from '@/delta_providers/registry'
 import { asyncRenderable } from '@/util/asyncRenderable'
@@ -45,41 +45,31 @@ watch([tab, settingsOpen], () => {
         >
           <template #suffix>
             <Row>
-              <Tooltip>
-                <template #trigger="{ props }">
-                  <a
-                    v-bind="props"
-                    href="https://github.com/EvenTorset/mc-version-diff"
-                    target="_blank"
-                  >
-                    <button
-                      type="button"
-                      class="github-link"
-                      aria-label="GitHub Repository"
-                    >
-                      <NIcon :size="24" :component="GitHubIcon" />
-                    </button>
-                  </a>
-                </template>
-                GitHub Repository
-              </Tooltip>
-              <Tooltip>
-                <template #trigger="{ props }">
-                  <button
-                    v-bind="props"
-                    type="button"
-                    class="settings-toggle"
-                    :class="{ open: settingsOpen }"
-                    :aria-label="settingsOpen ? 'Close settings' : 'Open settings'"
-                    :aria-expanded="settingsOpen"
-                    @click="settingsOpen = !settingsOpen"
-                  >
-                    <NIcon :size="24" :component="Settings24Filled" class="settings-icon gear" />
-                    <NIcon :size="24" :component="Dismiss24Filled" class="settings-icon cross" />
-                  </button>
-                </template>
-                {{ settingsOpen ? 'Close settings' : 'Settings' }}
-              </Tooltip>
+              <a
+                v-tooltip="'GitHub Repository'"
+                href="https://github.com/EvenTorset/mc-version-diff"
+                target="_blank"
+              >
+                <button
+                  type="button"
+                  class="github-link"
+                  aria-label="GitHub Repository"
+                >
+                  <NIcon :size="24" :component="GitHubIcon" />
+                </button>
+              </a>
+              <button
+                v-tooltip="settingsOpen ? 'Close settings' : 'Settings'"
+                type="button"
+                class="settings-toggle"
+                :class="{ open: settingsOpen }"
+                :aria-label="settingsOpen ? 'Close settings' : 'Open settings'"
+                :aria-expanded="settingsOpen"
+                @click="settingsOpen = !settingsOpen"
+              >
+                <NIcon :size="24" :component="Settings24Filled" class="settings-icon gear" />
+                <NIcon :size="24" :component="Dismiss24Filled" class="settings-icon cross" />
+              </button>
             </Row>
           </template>
           <NTab v-for="dp in dps" :name="dp.id" :tab="dp.provider.name" />

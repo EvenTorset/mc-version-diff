@@ -4,7 +4,7 @@ import PeaksWorker from './peaks.worker?worker'
 import { getCSSVar } from '@/util/getCSSVar'
 import { useElementVisible } from '@/util/useElementVisible'
 import IconButton from '@/components/IconButton.vue'
-import Tooltip from '@/components/Tooltip.vue'
+import EasyTooltip from 'easy-tooltips-vue'
 import { Settings } from '@/settings'
 import { Pause16Filled, Play16Filled } from '@vicons/fluent'
 import Row from '@/components/Row.vue'
@@ -1094,21 +1094,20 @@ onUnmounted(() => {
 
           <div class="lane-bottom">
             <Row gap="12px" align="flex-end">
-              <Tooltip>
-                <template #trigger="{ props: tooltipProps }">
-                  <IconButton
-                    v-bind="tooltipProps"
-                    class="accent"
-                    style="pointer-events: auto;"
-                    :disabled="playback[track.id]?.waiting"
-                    @click.stop="toggleTrackPlay(track.id)"
-                  >
-                    <Pause16Filled v-if="playback[track.id]?.isPlaying" />
-                    <Play16Filled v-else />
-                  </IconButton>
+              <EasyTooltip>
+                <IconButton
+                  class="accent"
+                  style="pointer-events: auto;"
+                  :disabled="playback[track.id]?.waiting"
+                  @click.stop="toggleTrackPlay(track.id)"
+                >
+                  <Pause16Filled v-if="playback[track.id]?.isPlaying" />
+                  <Play16Filled v-else />
+                </IconButton>
+                <template #tooltip>
+                  <h3>{{ playback[track.id]?.waiting ? 'Decoding' : playback[track.id]?.isPlaying ? 'Pause' : 'Play' }}</h3>
                 </template>
-                <h3>{{ playback[track.id]?.waiting ? 'Decoding' : playback[track.id]?.isPlaying ? 'Pause' : 'Play' }}</h3>
-              </Tooltip>
+              </EasyTooltip>
 
               <span class="time-display">
                 {{ formatTime(playback[track.id]?.currentTime ?? 0) }} / {{ formatTime(track.duration) }}

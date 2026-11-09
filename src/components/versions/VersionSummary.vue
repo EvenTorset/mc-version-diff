@@ -4,7 +4,7 @@ import type { ManifestVersion, VersionDetails } from 'minecraft-asset-loader'
 import { NTime } from 'naive-ui'
 import Dim from '@/components/Dim.vue'
 import Row from '@/components/Row.vue'
-import Tooltip from '@/components/Tooltip.vue'
+import EasyTooltip from 'easy-tooltips-vue'
 import { findVersion } from '@/delta_providers/manifest'
 import { typeName, useEdition } from './edition'
 import VersionName from './VersionName.vue'
@@ -30,12 +30,12 @@ onMounted(async () => {
       <Row>
         <Dim>Released:</Dim>
         <div>
-          <Tooltip>
-            <template #trigger="{ props }">
-              <NTime v-bind="props" :time="new Date(version.releaseTime)" :to="Date.now()" type='relative' />
+          <EasyTooltip>
+            <NTime :time="new Date(version.releaseTime)" :to="Date.now()" type='relative' />
+            <template #tooltip>
+              <NTime :time="new Date(version.releaseTime)" />
             </template>
-            <NTime :time="new Date(version.releaseTime)" />
-          </Tooltip>
+          </EasyTooltip>
         </div>
       </Row>
 
