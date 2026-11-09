@@ -18,7 +18,7 @@ import { prefetchTextViews } from '@/monaco/lazyText'
 import { prefetchRenderers } from '@/components/lazyRenderers'
 import Col from '@/components/Col.vue'
 import Dim from '@/components/Dim.vue'
-import Tooltip from '@/components/Tooltip.vue'
+import EasyTooltip, { vTooltip } from 'easy-tooltips-vue'
 import { animateTextures, imageViewMode } from '@/viewers/image'
 import { hasAnimations, mcmetaTexture } from '@/viewers/mcje/mcmeta'
 import { DeltaTrackState, type DeltaTrackStateName } from '@/delta_providers/states'
@@ -548,39 +548,32 @@ function runCategoryMenu() {
                     v-model:value="pathFilter"
                   >
                     <template #clear-icon>
-                      <Tooltip>
-                        <template #trigger="{ props }">
-                          <NButton v-bind="props" class="icon" circle size="small">
-                            <template #icon>
-                              <Eraser20Filled />
-                            </template>
-                          </NButton>
-                        </template>
-                        Clear
-                      </Tooltip>
+                      <EasyTooltip text="Clear">
+                        <NButton class="icon" circle size="small">
+                          <template #icon>
+                            <Eraser20Filled />
+                          </template>
+                        </NButton>
+                      </EasyTooltip>
                     </template>
                     <template #suffix>
-                      <Tooltip>
-                        <template #trigger="{ props }">
-                          <NButton
-                            v-bind="props"
-                            circle
-                            class="icon"
-                            :class="{
-                              selected: findRegex,
-                              accent: findRegex,
-                            }"
-                            size="small"
-                            :bordered="false"
-                            @click="findRegex = !findRegex"
-                          >
-                            <template #icon>
-                              <TextPeriodAsterisk20Filled />
-                            </template>
-                          </NButton>
-                        </template>
-                        Use Regular Expression
-                      </Tooltip>
+                      <EasyTooltip text="Use Regular Expression">
+                        <NButton
+                          circle
+                          class="icon"
+                          :class="{
+                            selected: findRegex,
+                            accent: findRegex,
+                          }"
+                          size="small"
+                          :bordered="false"
+                          @click="findRegex = !findRegex"
+                        >
+                          <template #icon>
+                            <TextPeriodAsterisk20Filled />
+                          </template>
+                        </NButton>
+                      </EasyTooltip>
                     </template>
                   </NInput>
                   <Row align="stretch">
@@ -602,21 +595,16 @@ function runCategoryMenu() {
                       v-model:value="sortBy"
                       :options="sortOptions"
                     />
-                    <Tooltip>
-                      <template #trigger="{ props: tip }">
-                        <button
-                          v-bind="tip"
-                          type="button"
-                          class="sort-dir"
-                          :class="{ asc: sortDir === 'asc' }"
-                          @click="sortDir = sortDir === 'asc' ? 'desc' : 'asc'"
-                        >
-                          <NIcon :size="28" :component="ArrowSortDownLines20Regular" class="down" />
-                          <NIcon :size="28" :component="ArrowSortDownLines20Regular" class="up" />
-                        </button>
-                      </template>
-                      {{ sortDir === 'asc' ? 'Ascending' : 'Descending' }}
-                    </Tooltip>
+                    <button
+                      v-tooltip="sortDir === 'asc' ? 'Ascending' : 'Descending'"
+                      type="button"
+                      class="sort-dir"
+                      :class="{ asc: sortDir === 'asc' }"
+                      @click="sortDir = sortDir === 'asc' ? 'desc' : 'asc'"
+                    >
+                      <NIcon :size="28" :component="ArrowSortDownLines20Regular" class="down" />
+                      <NIcon :size="28" :component="ArrowSortDownLines20Regular" class="up" />
+                    </button>
                   </Row>
                 </template>
                 <CardSectionHeader :text="`Categories${stateFilter || debouncedPathFilter ? ' (Filtered)' : ''}`" />

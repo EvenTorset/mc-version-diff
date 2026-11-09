@@ -17,7 +17,7 @@ import Col from './Col.vue'
 import MarkFilePathChanges from './MarkFilePathChanges.vue'
 import { basename } from '@/util/path.ts'
 import { saveAs } from 'file-saver'
-import Tooltip from './Tooltip.vue'
+import EasyTooltip from 'easy-tooltips-vue'
 import { getCopier } from '@/util/clipboard.ts'
 import { errorMessage } from '@/util/errorMessage.ts'
 import { holdFocus, isInitialFocus } from '@/util/trackFocus.ts'
@@ -288,57 +288,57 @@ const isNarrow = useBreakpoint(maxWidthQuery('1100px'))
       />
       <div class="delta-track-spacer" @click="toggle"></div>
       <div v-if="interacted" class="delta-track-action-buttons">
-        <Tooltip v-if="
+        <EasyTooltip v-if="
           copyFunc && (
             track.state === DeltaTrackState.Removed ||
             track.state === DeltaTrackState.Edited
           )
         ">
-          <template #trigger="{ props }">
-            <IconButton v-bind="props" class="accent" :aria-label="`Copy ${basename(track.a)} from ${dr.a}`" @click="copy('a')">
-              <Copy24Regular />
-            </IconButton>
+          <IconButton class="accent" :aria-label="`Copy ${basename(track.a)} from ${dr.a}`" @click="copy('a')">
+            <Copy24Regular />
+          </IconButton>
+          <template #tooltip>
+            <h3>Copy to clipboard</h3>
+            <p><b>{{ basename(track.a) }}</b> from <b>{{ dr.a }}</b></p>
           </template>
-          <h3>Copy to clipboard</h3>
-          <p><b>{{ basename(track.a) }}</b> from <b>{{ dr.a }}</b></p>
-        </Tooltip>
-        <Tooltip v-if="track.state === DeltaTrackState.Removed || track.state === DeltaTrackState.Edited">
-          <template #trigger="{ props }">
-            <IconButton v-bind="props" class="accent" :aria-label="`Download ${basename(track.a)} from ${dr.a}`" @click="download('a')">
-              <ArrowDownload24Regular />
-            </IconButton>
+        </EasyTooltip>
+        <EasyTooltip v-if="track.state === DeltaTrackState.Removed || track.state === DeltaTrackState.Edited">
+          <IconButton class="accent" :aria-label="`Download ${basename(track.a)} from ${dr.a}`" @click="download('a')">
+            <ArrowDownload24Regular />
+          </IconButton>
+          <template #tooltip>
+            <h3>Download</h3>
+            <p><b>{{ basename(track.a) }}</b> from <b>{{ dr.a }}</b></p>
           </template>
-          <h3>Download</h3>
-          <p><b>{{ basename(track.a) }}</b> from <b>{{ dr.a }}</b></p>
-        </Tooltip>
-        <Tooltip v-if="
+        </EasyTooltip>
+        <EasyTooltip v-if="
           copyFunc && (
             track.state === DeltaTrackState.Added ||
             track.state === DeltaTrackState.Edited ||
             track.state === DeltaTrackState.Moved
           )
         ">
-          <template #trigger="{ props }">
-            <IconButton v-bind="props" class="accent" :aria-label="`Copy ${basename(track.b)} from ${dr.b}`" @click="copy('b')">
-              <Copy24Regular />
-            </IconButton>
+          <IconButton class="accent" :aria-label="`Copy ${basename(track.b)} from ${dr.b}`" @click="copy('b')">
+            <Copy24Regular />
+          </IconButton>
+          <template #tooltip>
+            <h3>Copy to clipboard</h3>
+            <p><b>{{ basename(track.b) }}</b> from <b>{{ dr.b }}</b></p>
           </template>
-          <h3>Copy to clipboard</h3>
-          <p><b>{{ basename(track.b) }}</b> from <b>{{ dr.b }}</b></p>
-        </Tooltip>
-        <Tooltip v-if="
+        </EasyTooltip>
+        <EasyTooltip v-if="
           track.state === DeltaTrackState.Added ||
           track.state === DeltaTrackState.Edited ||
           track.state === DeltaTrackState.Moved
         ">
-          <template #trigger="{ props }">
-            <IconButton v-bind="props" class="accent" :aria-label="`Download ${basename(track.b)} from ${dr.b}`" @click="download('b')">
-              <ArrowDownload24Regular />
-            </IconButton>
+          <IconButton class="accent" :aria-label="`Download ${basename(track.b)} from ${dr.b}`" @click="download('b')">
+            <ArrowDownload24Regular />
+          </IconButton>
+          <template #tooltip>
+            <h3>Download</h3>
+            <p><b>{{ basename(track.b) }}</b> from <b>{{ dr.b }}</b></p>
           </template>
-          <h3>Download</h3>
-          <p><b>{{ basename(track.b) }}</b> from <b>{{ dr.b }}</b></p>
-        </Tooltip>
+        </EasyTooltip>
       </div>
     </div>
 

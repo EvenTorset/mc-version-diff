@@ -2,8 +2,8 @@
 import { DeltaTrackState } from '@/delta_providers/states'
 import { maxWidthQuery, useBreakpoint } from '@/util/useBreakpoint'
 import { Add16Filled, Delete16Filled, Edit16Filled, Location16Filled } from '@vicons/fluent'
-import { computed, mergeProps } from 'vue'
-import Tooltip from './Tooltip.vue'
+import { computed } from 'vue'
+import { vTooltip } from 'easy-tooltips-vue'
 
 const props = defineProps<{
   state: DeltaTrackState
@@ -46,21 +46,17 @@ const config = computed(() => ({
       '--tag-border-alpha': config.borderAlpha ?? 0.4,
     }"
   >{{ config.text }}</div>
-  <Tooltip v-else>
-    <template #trigger="{ props }">
-      <div
-        v-bind="mergeProps(props, $attrs)"
-        class="track-tag narrow"
-        :style="{
-          '--tag-color': config.color,
-          '--tag-border-alpha': config.borderAlpha ?? 0.4,
-        }"
-      >
-        <component :is="config.icon" />
-      </div>
-    </template>
-    {{ config.text }}
-  </Tooltip>
+  <div
+    v-else
+    v-tooltip="config.text"
+    class="track-tag narrow"
+    :style="{
+      '--tag-color': config.color,
+      '--tag-border-alpha': config.borderAlpha ?? 0.4,
+    }"
+  >
+    <component :is="config.icon" />
+  </div>
 </template>
 
 <style>

@@ -15,10 +15,6 @@ export type Renderable = SingleOrArray<
  | (() => ComponentOrStaticRenderableContent)
 >
 
-export interface TooltipTriggerProps {
-  props: Record<string, unknown>
-}
-
 export type ImageViewMode =
   | 'rgba'
   | 'rgb'
@@ -26,8 +22,6 @@ export type ImageViewMode =
   | 'g'
   | 'b'
   | 'a'
-
-export type TooltipSide = 'above' | 'below' | 'left' | 'right'
 
 export interface VersionPair {
   a: string

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { createDiffer, type DiffFrame, type DiffSide } from '@/util/imageDiff'
 import { frameOffset, type Playhead } from '@/util/animation'
-import { popupable } from '@/util/popupable'
+import { popupableAttrs } from 'popupable-vue'
 import { onBeforeUnmount, onMounted, ref, useSlots } from 'vue'
 import FitBox from './FitBox.vue'
 import MediaColumn from './MediaColumn.vue'
@@ -62,14 +62,14 @@ onMounted(() => {
   differ.setSources(props.sideA.image, props.sideB.image)
   size.value = { width, height }
 
-  for (const [ attr, value ] of Object.entries(popupable({
+  for (const [ attr, value ] of Object.entries(popupableAttrs({
     title: slots.popup ? undefined : props.label,
     content: slots.popup ? 'prev' : undefined,
     group: props.group,
     thumbnails: true,
-    zoom: true,
+    zoomable: true,
   }))) {
-    if (value != null) differ.canvas.setAttribute(attr, String(value))
+    if (value !== undefined) differ.canvas.setAttribute(attr, value)
   }
   containerRef.value?.append(differ.canvas)
   ready.value = true

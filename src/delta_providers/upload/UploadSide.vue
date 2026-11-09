@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import Col from '@/components/Col.vue'
-import Tooltip from '@/components/Tooltip.vue'
+import EasyTooltip from 'easy-tooltips-vue'
 import VersionModeTabs from '@/components/VersionModeTabs.vue'
 import Notify from '@/notify'
 import { errorMessage } from '@/util/errorMessage'
@@ -151,22 +151,18 @@ function onDrop(event: DragEvent) {
         <NIcon :component="Dismiss24Filled" />
       </template>
     </NButton>
-    <Tooltip v-else-if="mode === 'file' && !stage">
-      <template #trigger="{ props }">
-        <NButton
-          v-bind="props"
-          circle
-          class="icon corner right"
-          size="small"
-          @click="chooseFolder"
-        >
-          <template #icon>
-            <NIcon :component="Folder24Regular" />
-          </template>
-        </NButton>
-      </template>
-      Choose a folder
-    </Tooltip>
+    <EasyTooltip v-else-if="mode === 'file' && !stage" text="Choose a folder">
+      <NButton
+        circle
+        class="icon corner right"
+        size="small"
+        @click="chooseFolder"
+      >
+        <template #icon>
+          <NIcon :component="Folder24Regular" />
+        </template>
+      </NButton>
+    </EasyTooltip>
   </div>
 </template>
 

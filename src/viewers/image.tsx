@@ -3,18 +3,17 @@ import Bitmap from '@/components/Bitmap.vue'
 import { formatBytes } from '@/util/bytes'
 import Row from '@/components/Row.vue'
 import FitBox from '@/components/FitBox.vue'
-import Tooltip from '@/components/Tooltip.vue'
-import type { ImageViewMode, TooltipTriggerProps } from '@/types'
+import EasyTooltip from 'easy-tooltips-vue'
+import Popupable, { popupableAttrs } from 'popupable-vue'
+import type { ImageViewMode } from '@/types'
 import { ref, type CSSProperties } from 'vue'
 import { DeltaTrackState } from '@/delta_providers/states'
-import { popupable } from '@/util/popupable'
 import type { DeltaResult, DeltaTrack } from '@/delta_providers'
 import MediaColumn from '@/components/MediaColumn.vue'
 import { TextureAnimation } from '@/components/lazyRenderers'
 import { animationOf, animationStats, readAnimation, type Playhead } from '@/util/animation'
 import TextureDifference from '@/components/TextureDifference.vue'
 import { diffImage } from '@/util/imageDiff'
-import NativeTemplate from '@/components/NativeTemplate.vue'
 import { imageFromBytes } from '@/util/imageFromBytes'
 import RawImage from '@/components/RawImage.vue'
 import type { RawBytes } from 'minecraft-asset-loader'
@@ -73,12 +72,12 @@ function versionImage(
       <RawImage
         bytes={bytes}
         mode={imageViewMode.value}
-        {...popupable({
+        {...popupableAttrs({
           title: dr[version],
           description,
           group,
           thumbnails: true,
-          zoom: true,
+          zoomable: true,
         })}
       />
     </FitBox>
@@ -242,14 +241,13 @@ registerViewer('image', {
     const popupLegend = () => <>
       <div class='popupable-title'>Difference</div>
       <Row gap='16px' class='popupable-description'>
-        {legend.map((l, i) => legendIgnore.includes(i) ? '' : <Tooltip v-slots={{
-          trigger: ({ props: ttp }: any) => (
-            <Row {...ttp}><div style={l.style}></div>{l.title}</Row>
-          )
-        }}>
-          <h3>{l.title}</h3>
-          <p>{l.desc}</p>
-        </Tooltip>)}
+        {legend.map((l, i) => legendIgnore.includes(i) ? '' : <EasyTooltip v-slots={{
+          default: () => <Row><div style={l.style}></div>{l.title}</Row>,
+          tooltip: () => <>
+            <h3>{l.title}</h3>
+            <p>{l.desc}</p>
+          </>,
+        }} />)}
       </Row>
     </>
     if (imgA.width === imgB.width) {
@@ -290,12 +288,11 @@ registerViewer('image', {
         contentA.byteLength !== contentB.byteLength,
         'new'
       )}
-      {animateTextures.value && liveDiff ? <Tooltip
-        distance={20}
-        side='right'
+      {animateTextures.value && liveDiff ? <EasyTooltip
+        prefer='right'
+        tooltipStyle={{ '--easy-tooltip-distance': '20px' }}
         v-slots={{
-          trigger: ({ props }: TooltipTriggerProps) => <TextureDifference
-            {...props}
+          default: () => <TextureDifference
             ref={diffView}
             sideA={{ image: imgA, frame: statsA!.frame }}
             sideB={{ image: imgB, frame: statsB!.frame }}
@@ -303,47 +300,35 @@ registerViewer('image', {
             group={track.id}
             v-slots={{ popup: popupLegend }}
           />,
+          tooltip: legendEntries,
         }}
-      >
-        {legendEntries()}
-      </Tooltip> : <MediaColumn title='Difference'>
-        <Tooltip
-          distance={20}
-          side='right'
+      /> : <MediaColumn title='Difference'>
+        <EasyTooltip
+          prefer='right'
+          tooltipStyle={{ '--easy-tooltip-distance': '20px' }}
           disabled={diffTooltipDisable.value}
           v-slots={{
-            trigger: ({ props }: TooltipTriggerProps) => <>
-              <NativeTemplate>{popupLegend()}</NativeTemplate>
-              <FitBox
-                {...props}
-                width={diff.width}
-                height={diff.height}
-                maxWidth={512}
-                maxHeight={128}
-              >
-                <Bitmap
-                  bitmap={diff}
-                  {...popupable({
-                    content: 'prev',
-                    group: track.id,
-                    thumbnails: true,
-                    zoom: true,
-                  })}
-                  onVnodeMounted={comp => {
-                    comp.el?.addEventListener('popupable:open', () => {
-                      diffTooltipDisable.value = true
-                    })
-                    comp.el?.addEventListener('popupable:close', () => {
-                      diffTooltipDisable.value = false
-                    })
-                  }}
-                />
-              </FitBox>
-            </>
+            default: () => <FitBox
+              width={diff.width}
+              height={diff.height}
+              maxWidth={512}
+              maxHeight={128}
+            >
+              <Popupable
+                group={track.id}
+                thumbnails
+                zoomable
+                onOpen={() => diffTooltipDisable.value = true}
+                onClose={() => diffTooltipDisable.value = false}
+                v-slots={{
+                  default: () => <Bitmap bitmap={diff} />,
+                  content: popupLegend,
+                }}
+              />
+            </FitBox>,
+            tooltip: legendEntries,
           }}
-        >
-          {legendEntries()}
-        </Tooltip>
+        />
       </MediaColumn>}
     </Row>
   },

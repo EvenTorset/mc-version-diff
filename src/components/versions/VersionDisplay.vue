@@ -4,19 +4,19 @@ import type { ManifestVersion, VersionDetails } from 'minecraft-asset-loader'
 import VersionName from './VersionName.vue'
 import releaseVersionIcon from '@/assets/release_version.webp'
 import snapshotVersionIcon from '@/assets/snapshot_version.webp'
-import Tooltip from '@/components/Tooltip.vue'
-import { mergeProps, ref, watch } from 'vue'
+import EasyTooltip from 'easy-tooltips-vue'
+import { ref, watch } from 'vue'
 import Row from '@/components/Row.vue'
 import Dim from '@/components/Dim.vue'
 import Col from '@/components/Col.vue'
-import type { TooltipSide } from '@/types'
+import type { TooltipPrefer } from 'easy-tooltips-vue'
 import { findVersion } from '@/delta_providers/manifest'
 import { typeName, useEdition } from './edition'
 
 const props = withDefaults(defineProps<{
   version: ManifestVersion | string
   brighter?: boolean
-  tooltipSide?: TooltipSide
+  tooltipSide?: TooltipPrefer
 }>(), {
   tooltipSide: 'above',
 })
@@ -48,41 +48,41 @@ async function loadDetails() {
 </script>
 
 <template>
-  <Tooltip v-if="manVer" @tooltip-open="loadDetails" :side="tooltipSide">
-    <template #trigger="{ props }">
-      <Row gap="8px" v-bind="mergeProps($attrs, props)">
-        <NAvatar
-          :src="manVer.type === 'release' ? releaseVersionIcon : snapshotVersionIcon"
-          :img-props="{
-            width: 20,
-            height: 20,
-            style: 'image-rendering: pixelated;'
-          }"
-        />
-        <Col align="flex-start">
-          <VersionName :version="manVer" style="font-size: 16px; line-height: 1;"/>
-          <Dim pure>
-            <NTime
-              :time="new Date(manVer.releaseTime)"
-              :to="Date.now()"
-              type="relative"
-              style="font-size: 14px; line-height: 1;"
-            />
-          </Dim>
-        </Col>
-      </Row>
+  <EasyTooltip v-if="manVer" v-bind="$attrs" @open="loadDetails" :prefer="tooltipSide">
+    <Row gap="8px">
+      <NAvatar
+        :src="manVer.type === 'release' ? releaseVersionIcon : snapshotVersionIcon"
+        :img-props="{
+          width: 20,
+          height: 20,
+          style: 'image-rendering: pixelated;'
+        }"
+      />
+      <Col align="flex-start">
+        <VersionName :version="manVer" style="font-size: 16px; line-height: 1;"/>
+        <Dim pure>
+          <NTime
+            :time="new Date(manVer.releaseTime)"
+            :to="Date.now()"
+            type="relative"
+            style="font-size: 14px; line-height: 1;"
+          />
+        </Dim>
+      </Col>
+    </Row>
+    <template #tooltip>
+      <h3><VersionName :version="manVer" /></h3>
+      <p>
+        <Row>
+          <Dim>Released:</Dim>
+          <NTime :time="new Date(manVer.releaseTime)" />
+        </Row>
+        <component :is="edition.tooltip" v-if="edition.tooltip" :version="manVer" :details="details" />
+        <Row>
+          <Dim>Type:</Dim>
+          {{ typeName(edition, manVer.type) }}
+        </Row>
+      </p>
     </template>
-    <h3><VersionName :version="manVer" /></h3>
-    <p>
-      <Row>
-        <Dim>Released:</Dim>
-        <NTime :time="new Date(manVer.releaseTime)" />
-      </Row>
-      <component :is="edition.tooltip" v-if="edition.tooltip" :version="manVer" :details="details" />
-      <Row>
-        <Dim>Type:</Dim>
-        {{ typeName(edition, manVer.type) }}
-      </Row>
-    </p>
-  </Tooltip>
+  </EasyTooltip>
 </template>

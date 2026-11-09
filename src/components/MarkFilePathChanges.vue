@@ -5,7 +5,7 @@ import { inject, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { matchRanges } from '@/util/path.ts'
 import Content from '@/components/Content.vue'
 import Dim from './Dim.vue'
-import Tooltip from './Tooltip.vue'
+import { vTooltip } from 'easy-tooltips-vue'
 
 const props = defineProps<{
   original: string
@@ -243,26 +243,16 @@ function nextTickCheck() {
 <template>
   <div class="line original">
     <div class="content">
-      <Tooltip :disabled="!originalOverflowing">
-        <template #trigger="{ props: tooltipProps }">
-          <span ref="originalEl" v-bind="tooltipProps" class="file-path">
-            <Content :content="() => markPathChanges(modified, original)" />
-          </span>
-        </template>
-        {{ original }}
-      </Tooltip>
+      <span ref="originalEl" v-tooltip="originalOverflowing && original" class="file-path">
+        <Content :content="() => markPathChanges(modified, original)" />
+      </span>
     </div>
   </div>
   <div class="line modified">
     <div class="content">
-      <Tooltip :disabled="!modifiedOverflowing">
-        <template #trigger="{ props: tooltipProps }">
-          <span ref="modifiedEl" v-bind="tooltipProps" class="file-path">
-            <Content :content="() => markPathChanges(original, modified)" />
-          </span>
-        </template>
-        {{ modified }}
-      </Tooltip>
+      <span ref="modifiedEl" v-tooltip="modifiedOverflowing && modified" class="file-path">
+        <Content :content="() => markPathChanges(original, modified)" />
+      </span>
     </div>
   </div>
 </template>
