@@ -23,8 +23,8 @@ const cache = new Map<string, Promise<ImageBitmap | null>>()
 
 async function assetId(assets: any, id: string) {
   const [ ns, path ] = id.includes(':') ? id.split(':') : [ 'minecraft', id ]
-  if (await readFile(`assets/${ns}/items/${path}.json`, assets)) return id
-  if (await readFile(`assets/${ns}/models/item/${path}.json`, assets)) return id
+  if (await readFile(assets, `assets/${ns}/items/${path}.json`)) return id
+  if (await readFile(assets, `assets/${ns}/models/item/${path}.json`)) return id
   const alias = legacyAssetAlias(path)
   return alias ? `${ns}:${alias}` : id
 }
