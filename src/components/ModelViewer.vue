@@ -137,7 +137,8 @@ async function loadModelGroup() {
 
   const resolved = await resolveModelData(assets, { model })
   const g = new THREE.Group()
-  await loadModel(g, assets, resolved, {
+  await loadModel(assets, resolved, {
+    parent: g,
     animate: false,
     lighting: 'world',
     display: { rotation: [0, 0, 0], translation: [0, 0, 0], scale: [1, 1, 1] },
